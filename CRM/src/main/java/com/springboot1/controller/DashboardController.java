@@ -21,6 +21,11 @@ public class DashboardController {
 		return "dashboard-user";
 	}
 
+	@GetMapping("/dashboard/manager")
+	public String managerDashboard() {
+		return "dashboard-manager"; // → templates/dashboard-manager.html
+	}
+
 	@GetMapping("/dashboard/sales-executive")
 	public String salesExecutiveDashboard() {
 		return "dashboard-sales-executive";

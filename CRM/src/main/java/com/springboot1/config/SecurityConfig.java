@@ -38,8 +38,9 @@ public class SecurityConfig {
 				// ── Role-based page access ───────────────────────────────────
 				.requestMatchers("/dashboard/super-admin").hasRole("SUPER_ADMIN").requestMatchers("/dashboard/admin")
 				.hasAnyRole("SUPER_ADMIN", "ADMIN").requestMatchers("/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
-				.requestMatchers("/dashboard/sales-executive").hasAnyRole("SUPER_ADMIN", "ADMIN", "SALES_EXECUTIVE")
-				.requestMatchers("/dashboard/user").hasAnyRole("SUPER_ADMIN", "ADMIN", "USER", "SALES_EXECUTIVE")
+				.requestMatchers("/dashboard/manager").hasAnyRole("SUPER_ADMIN", "ADMIN", "MANAGER")
+				.requestMatchers("/dashboard/sales-executive").hasAnyRole("SUPER_ADMIN", "ADMIN", "MANAGER", "SALES_EXECUTIVE")
+				.requestMatchers("/dashboard/user").hasAnyRole("SUPER_ADMIN", "ADMIN", "MANAGER", "USER", "SALES_EXECUTIVE")
 
 				// ── Everything else requires login ───────────────────────────
 				.anyRequest().authenticated())

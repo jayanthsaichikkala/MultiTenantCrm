@@ -17,6 +17,7 @@ public class DataInitializer {
         return args -> {
             upsertUser(userRepository, passwordEncoder, "superadmin", "superadmin@crm.com", Role.SUPER_ADMIN);
             upsertUser(userRepository, passwordEncoder, "admin", "admin@crm.com", Role.ADMIN);
+            upsertUser(userRepository, passwordEncoder, "manager", "manager@crm.com", Role.MANAGER);
             upsertUser(userRepository, passwordEncoder, "user", "user@crm.com", Role.USER);
             upsertUser(userRepository, passwordEncoder, "sales", "sales@crm.com", Role.SALES_EXECUTIVE);
         };
