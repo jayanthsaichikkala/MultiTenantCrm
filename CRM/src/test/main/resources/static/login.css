@@ -1,0 +1,323 @@
+/* ── Reset ─────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+/* ── Base ──────────────────────────────────────────── */
+html,
+body {
+	height: 100%;
+	font-family: 'Inter', sans-serif;
+	background: #F5F6F8;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 100vh;
+	position: relative;
+	overflow: hidden;
+}
+
+/* ── Decorative blobs ──────────────────────────────── */
+.blob-tr {
+	position: fixed;
+	top: -40px;
+	right: -40px;
+	width: 180px;
+	height: 180px;
+	background: #E53935;
+	border-radius: 50%;
+	z-index: 0;
+}
+
+.blob-bl {
+	position: fixed;
+	bottom: -50px;
+	left: -50px;
+	width: 200px;
+	height: 200px;
+	background: #FF9800;
+	border-radius: 50%;
+	z-index: 0;
+}
+
+/* ── Card ──────────────────────────────────────────── */
+.card {
+	display: flex;
+	width: min(860px, 96vw);
+	min-height: 500px;
+	border-radius: 20px;
+	overflow: hidden;
+	box-shadow: 0 20px 60px rgba(0, 0, 0, 0.13);
+	position: relative;
+	z-index: 1;
+}
+
+/* ── Left panel ────────────────────────────────────── */
+.panel-left {
+	width: 290px;
+	background: linear-gradient(145deg, #81C784, #4CAF50);
+	padding: 40px;
+	color: #fff;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+.logo-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.logo-icon {
+	width: 36px;
+	height: 36px;
+	background: rgba(255, 255, 255, 0.25);
+	border-radius: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.logo-icon svg {
+	width: 20px;
+	height: 20px;
+	fill: #fff;
+}
+
+.logo-name {
+	font-size: 1rem;
+	font-weight: 600;
+	letter-spacing: 0.5px;
+}
+
+/* ── Diamond decorations ───────────────────────────── */
+.diamonds {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 14px;
+}
+
+.diamond {
+	width: 40px;
+	height: 40px;
+	border: 3px solid rgba(255, 255, 255, 0.5);
+	transform: rotate(45deg);
+	border-radius: 4px;
+}
+
+.diamond.lg {
+	width: 60px;
+	height: 60px;
+	border-color: rgba(255, 255, 255, 0.8);
+}
+
+/* ── Diamond Animations ────────────────────────────── */
+
+/*
+  Keyframe: slides from -18px (top) down to +18px (bottom) and back.
+  The base rotate(45deg) is preserved so the diamond shape stays intact.
+*/
+@keyframes diamondFloat {
+	0% {
+		transform: rotate(45deg) translateY(-18px);
+		opacity: 0.6;
+	}
+
+	50% {
+		transform: rotate(45deg) translateY(18px);
+		opacity: 1;
+	}
+
+	100% {
+		transform: rotate(45deg) translateY(-18px);
+		opacity: 0.6;
+	}
+}
+
+/*
+  Each diamond gets the same animation but with a staggered delay so they
+  ripple top → middle → bottom, then reverse naturally on the way back up.
+  - duration  : 3s  — comfortable, not too fast or slow
+  - timing    : ease-in-out — smooth acceleration / deceleration
+  - iteration : infinite — loops forever
+*/
+.diamonds .diamond:nth-child(1) {
+	animation: diamondFloat 3s ease-in-out infinite;
+	animation-delay: 0s;
+}
+
+.diamonds .diamond:nth-child(2) {
+	animation: diamondFloat 3s ease-in-out infinite;
+	animation-delay: 0.4s;
+	/* starts slightly after the first  */
+}
+
+.diamonds .diamond:nth-child(3) {
+	animation: diamondFloat 3s ease-in-out infinite;
+	animation-delay: 0.8s;
+	/* starts slightly after the second */
+}
+
+/* ── Panel bottom ──────────────────────────────────── */
+.panel-bottom h2 {
+	font-size: 1.4rem;
+	margin-bottom: 10px;
+}
+
+.panel-bottom p {
+	font-size: 0.85rem;
+	opacity: 0.85;
+	line-height: 1.5;
+}
+
+/* ── Right panel ───────────────────────────────────── */
+.panel-right {
+	flex: 1;
+	background: #fff;
+	padding: 50px 45px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+.panel-right h1 {
+	text-align: center;
+	color: #2E7D32;
+	font-size: 1.8rem;
+	margin-bottom: 6px;
+}
+
+.or-text {
+	text-align: center;
+	font-size: 0.82rem;
+	color: #aaa;
+	margin-bottom: 24px;
+}
+
+/* ── Alerts ────────────────────────────────────────── */
+.alert {
+	padding: 10px 14px;
+	border-radius: 8px;
+	margin-bottom: 14px;
+	font-size: 0.85rem;
+	text-align: center;
+}
+
+.alert-error {
+	background: #fdecea;
+	color: #c0392b;
+}
+
+.alert-success {
+	background: #eafaf1;
+	color: #1e8449;
+}
+
+/* ── Form ──────────────────────────────────────────── */
+.form-group {
+	margin-bottom: 16px;
+	position: relative;
+	/* ← needed for icon positioning */
+}
+
+/* FIX: icon positioned inside the input */
+.input-icon {
+	position: absolute;
+	left: 14px;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 18px;
+	/* ← explicit size */
+	height: 18px;
+	pointer-events: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #aaa;
+}
+
+/* FIX: SVG inherits parent size, no fill so stroke shows */
+.input-icon svg {
+	width: 100%;
+	height: 100%;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+/* FIX: left padding makes room for the icon */
+.form-input {
+	width: 100%;
+	padding: 12px 15px 12px 42px;
+	/* ← left padding = icon space */
+	border-radius: 8px;
+	border: 1px solid #ddd;
+	font-size: 0.9rem;
+	font-family: inherit;
+	outline: none;
+	transition: border-color 0.2s;
+}
+
+.form-input:focus {
+	border-color: #4CAF50;
+	box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.12);
+}
+
+/* ── Button ────────────────────────────────────────── */
+.btn-primary {
+	width: 100%;
+	padding: 13px;
+	background: #4CAF50;
+	color: #fff;
+	border: none;
+	border-radius: 50px;
+	font-size: 0.95rem;
+	font-weight: 600;
+	cursor: pointer;
+	margin-top: 8px;
+	transition: background 0.2s, transform 0.1s;
+}
+
+/* Eye icon (right side) */
+.toggle-password {
+	position: absolute;
+	right: 14px;
+	top: 50%;
+	transform: translateY(-50%);
+	cursor: pointer;
+}
+
+.toggle-password svg {
+	width: 18px;
+	height: 18px;
+	stroke: #bbc3d4;
+	fill: none;
+	stroke-width: 2;
+}
+
+.btn-primary:hover {
+	background: #388E3C;
+}
+
+.btn-primary:active {
+	transform: scale(0.98);
+}
+
+/* ── Responsive ────────────────────────────────────── */
+@media (max-width: 620px) {
+	.panel-left {
+		display: none;
+	}
+
+	.panel-right {
+		padding: 40px 28px;
+	}
+}
