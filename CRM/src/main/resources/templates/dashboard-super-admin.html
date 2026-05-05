@@ -4,7 +4,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Dashboard | CRMS — Teal Depths</title> <!-- Styles -->
+	<title>Dashboard | CRMS — Teal Depths</title>
 
 	<link rel="icon" type="image/svg+xml"
 		href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23DC2626'/%3E%3Ctext x='16' y='23' font-family='Arial' font-size='20' font-weight='bold' text-anchor='middle' fill='white'%3EC%3C/text%3E%3C/svg%3E" />
@@ -33,26 +33,16 @@
 				<input type="text" placeholder="Search anything…" id="searchInput">
 				<kbd id="searchKbd">⌘K</kbd>
 				<div class="search-dropdown" id="searchDropdown">
-					<div class="search-drop-section">Recent</div>
-					<div class="search-drop-item"><i class="fas fa-handshake"></i><span><strong>Annual Software</strong>
-							— Deal</span></div>
-					<div class="search-drop-item"><i class="fas fa-user"></i><span><strong>Robert Johnson</strong> —
-							Contact</span></div>
-					<div class="search-drop-item"><i class="fas fa-building"></i><span><strong>NovaWave LLC</strong> —
-							Company</span></div>
-					<div class="search-drop-divider"></div>
 					<div class="search-drop-section">Quick Actions</div>
 					<div class="search-drop-item"><i class="fas fa-plus"></i><span>New Deal</span></div>
 					<div class="search-drop-item"><i class="fas fa-user-plus"></i><span>Add Contact</span></div>
-					<div class="search-drop-item"><i class="fas fa-calendar-plus"></i><span>Schedule Meeting</span>
-					</div>
+					<div class="search-drop-item"><i class="fas fa-calendar-plus"></i><span>Schedule Meeting</span></div>
 				</div>
 			</div>
 		</div>
 
 		<div class="topbar-right">
-			<button class="tb-btn" id="fullscreenBtn" title="Fullscreen"><i class="fas fa-expand"
-					id="fullscreenIcon"></i></button>
+			<button class="tb-btn" id="fullscreenBtn" title="Fullscreen"><i class="fas fa-expand" id="fullscreenIcon"></i></button>
 			<button class="tb-btn" id="darkModeBtn" title="Dark mode"><i class="fas fa-moon"></i></button>
 
 			<!-- Apps dropdown -->
@@ -61,33 +51,27 @@
 				<div class="apps-dropdown" id="appsDropdown">
 					<div class="apps-grid">
 						<div class="app-item">
-							<div class="app-icon" style="background:linear-gradient(135deg,#0d9488,#0891b2)"><i
-									class="fas fa-chart-line"></i></div>
+							<div class="app-icon" style="background:linear-gradient(135deg,#0d9488,#0891b2)"><i class="fas fa-chart-line"></i></div>
 							<span class="app-label">Analytics</span>
 						</div>
 						<div class="app-item">
-							<div class="app-icon" style="background:linear-gradient(135deg,#059669,#0d9488)"><i
-									class="fas fa-users"></i></div>
+							<div class="app-icon" style="background:linear-gradient(135deg,#059669,#0d9488)"><i class="fas fa-users"></i></div>
 							<span class="app-label">Contacts</span>
 						</div>
 						<div class="app-item">
-							<div class="app-icon" style="background:linear-gradient(135deg,#0891b2,#06b6d4)"><i
-									class="fas fa-tasks"></i></div>
+							<div class="app-icon" style="background:linear-gradient(135deg,#0891b2,#06b6d4)"><i class="fas fa-tasks"></i></div>
 							<span class="app-label">Tasks</span>
 						</div>
 						<div class="app-item">
-							<div class="app-icon" style="background:linear-gradient(135deg,#0d9488,#059669)"><i
-									class="fas fa-envelope"></i></div>
+							<div class="app-icon" style="background:linear-gradient(135deg,#0d9488,#059669)"><i class="fas fa-envelope"></i></div>
 							<span class="app-label">Email</span>
 						</div>
 						<div class="app-item">
-							<div class="app-icon" style="background:linear-gradient(135deg,#0369a1,#0891b2)"><i
-									class="fas fa-calendar"></i></div>
+							<div class="app-icon" style="background:linear-gradient(135deg,#0369a1,#0891b2)"><i class="fas fa-calendar"></i></div>
 							<span class="app-label">Calendar</span>
 						</div>
 						<div class="app-item">
-							<div class="app-icon" style="background:linear-gradient(135deg,#14b8a6,#34d399)"><i
-									class="fas fa-file-alt"></i></div>
+							<div class="app-icon" style="background:linear-gradient(135deg,#14b8a6,#34d399)"><i class="fas fa-file-alt"></i></div>
 							<span class="app-label">Reports</span>
 						</div>
 					</div>
@@ -104,30 +88,6 @@
 					<div class="msg-header">
 						<h4>Messages</h4>
 					</div>
-					<div class="msg-item">
-						<div class="msg-av" style="background:linear-gradient(135deg,#0d9488,#0891b2)">RJ</div>
-						<div class="msg-body">
-							<div class="msg-name">Robert Johnson</div>
-							<div class="msg-text">Hey, can we review the Annual Software deal?</div>
-						</div>
-						<div class="msg-meta"><span class="msg-time">2m</span><span class="msg-badge">2</span></div>
-					</div>
-					<div class="msg-item">
-						<div class="msg-av" style="background:linear-gradient(135deg,#059669,#0d9488)">IC</div>
-						<div class="msg-body">
-							<div class="msg-name">Isabella Cooper</div>
-							<div class="msg-text">The CRM onboarding is ready for review</div>
-						</div>
-						<div class="msg-meta"><span class="msg-time">15m</span></div>
-					</div>
-					<div class="msg-item">
-						<div class="msg-av" style="background:linear-gradient(135deg,#0891b2,#14b8a6)">SP</div>
-						<div class="msg-body">
-							<div class="msg-name">Sophia Parker</div>
-							<div class="msg-text">BrightWorks presentation confirmed ✓</div>
-						</div>
-						<div class="msg-meta"><span class="msg-time">1h</span></div>
-					</div>
 					<div class="msg-footer"><a href="#">View all messages</a></div>
 				</div>
 			</div>
@@ -136,36 +96,12 @@
 			<div class="notif-wrapper">
 				<button class="tb-btn" id="notifBtn" title="Notifications" style="position:relative">
 					<i class="fas fa-bell"></i>
-					<span class="tb-badge" id="notifBadge">3</span>
+					<span class="tb-badge" id="notifBadge">0</span>
 				</button>
 				<div class="notif-dropdown" id="notifDropdown">
 					<div class="notif-header">
 						<h4>Notifications</h4>
 						<span class="notif-mark-all" id="markAllRead">Mark all read</span>
-					</div>
-					<div class="notif-item unread">
-						<div class="notif-icon ni-indigo"><i class="fas fa-handshake"></i></div>
-						<div class="notif-body">
-							<div class="notif-title">New Deal Assigned</div>
-							<div class="notif-desc">Annual Software deal assigned to you by Admin</div>
-							<div class="notif-time">2 minutes ago</div>
-						</div>
-					</div>
-					<div class="notif-item unread">
-						<div class="notif-icon ni-emerald"><i class="fas fa-check-circle"></i></div>
-						<div class="notif-body">
-							<div class="notif-title">Deal Won!</div>
-							<div class="notif-desc">Enterprise Plan deal closed — $10,36,390</div>
-							<div class="notif-time">1 hour ago</div>
-						</div>
-					</div>
-					<div class="notif-item unread">
-						<div class="notif-icon ni-amber"><i class="fas fa-calendar"></i></div>
-						<div class="notif-body">
-							<div class="notif-title">Meeting Reminder</div>
-							<div class="notif-desc">NovaWave LLC call in 30 minutes</div>
-							<div class="notif-time">3 hours ago</div>
-						</div>
 					</div>
 					<div class="notif-footer"><a href="#">View all notifications</a></div>
 				</div>
@@ -196,9 +132,7 @@
 					<div class="user-drop-item"><i class="fas fa-palette"></i>Appearance</div>
 					<div class="user-drop-divider"></div>
 					<div class="user-drop-item danger" id="logoutBtn">
-
-						onclick="closeModal('logoutModal');showToast('Logged out successfully','success')"<i
-							class="fas fa-arrow-right-from-bracket"></i>Logout
+						<i class="fas fa-arrow-right-from-bracket"></i>Logout
 					</div>
 				</div>
 			</div>
@@ -275,11 +209,11 @@
 					</a>
 				</div>
 				<form th:action="@{/logout}" method="post" style="display:inline; width:100%">
-                    <button type="submit" class="logout-btn">
-                        <i class="fas fa-arrow-right-from-bracket"></i>
-                        <span class="logout-text">Logout</span>
-                    </button>
-                </form>
+					<button type="submit" class="logout-btn">
+						<i class="fas fa-arrow-right-from-bracket"></i>
+						<span class="logout-text">Logout</span>
+					</button>
+				</form>
 			</div>
 
 		</aside>
@@ -301,20 +235,16 @@
 						<div class="av-item av-c" title="John Smith"></div>
 						<div class="av-item av-d" title="Sophia Parker"></div>
 						<div class="av-item av-e" title="Emma Reynolds"></div>
-						<div class="av-plus" title="Add member" onclick="openAddMemberModal()"><i
-								class="fas fa-plus"></i></div>
+						<div class="av-plus" title="Add member" onclick="openAddMemberModal()"><i class="fas fa-plus"></i></div>
 					</div>
 					<button class="date-btn" onclick="openDateModal()">
 						<i class="far fa-calendar"></i>
 						<span id="dateRange">19 Mar 26 – 17 Apr 26</span>
 						<i class="fas fa-chevron-down" style="font-size:.6rem;opacity:.6"></i>
 					</button>
-					<button class="icon-btn" title="Download Report" onclick="downloadReport()"><i
-							class="fas fa-arrow-down-to-line"></i></button>
-					<button class="icon-btn" title="Refresh" onclick="refreshDashboard()"><i
-							class="fas fa-arrows-rotate" id="refreshIcon"></i></button>
-					<button class="icon-btn" title="Profile" onclick="openProfileModal()"><i
-							class="fas fa-user-circle"></i></button>
+					<button class="icon-btn" title="Download Report" onclick="downloadReport()"><i class="fas fa-arrow-down-to-line"></i></button>
+					<button class="icon-btn" title="Refresh" onclick="refreshDashboard()"><i class="fas fa-arrows-rotate" id="refreshIcon"></i></button>
+					<button class="icon-btn" title="Profile" onclick="openProfileModal()"><i class="fas fa-user-circle"></i></button>
 				</div>
 			</div>
 
@@ -332,8 +262,7 @@
 					<div class="kpi-body">
 						<p class="kpi-label">Active Deals</p>
 						<h2 class="kpi-value">147</h2>
-						<span class="kpi-change kpi-down"><i class="fas fa-arrow-trend-down"></i>-21.15% vs Last
-							Week</span>
+						<span class="kpi-change kpi-down"><i class="fas fa-arrow-trend-down"></i>-21.15% vs Last Week</span>
 					</div>
 					<div class="kpi-icon kpi-icon-2"><i class="fas fa-handshake"></i></div>
 				</div>
@@ -348,9 +277,7 @@
 				<div class="kpi-card" onclick="showToast('Contacts list opened','info')">
 					<div class="kpi-body">
 						<p class="kpi-label">Total Contacts</p>
-						<h2 class="kpi-value">4,569 <small
-								style="font-size:.65rem;color:#0a6b60;background:rgba(13,148,136,.12);padding:2px 6px;border-radius:20px;font-family:var(--font);">+2.5%</small>
-						</h2>
+						<h2 class="kpi-value">4,569 <small style="font-size:.65rem;color:#0a6b60;background:rgba(13,148,136,.12);padding:2px 6px;border-radius:20px;font-family:var(--font);">+2.5%</small></h2>
 						<div class="kpi-av-row">
 							<div class="av-item av-a"></div>
 							<div class="av-item av-b"></div>
@@ -375,14 +302,14 @@
 				<div class="card">
 					<div class="card-head">
 						<h3 class="card-title" style="display:flex;align-items:center;gap:0.5rem;font-size:0.95rem;font-weight:600">
-                            <span style="color:var(--orange)"><i class="fas fa-chart-pie"></i></span>
-                            Task Status
-                        </h3>
+							<span style="color:var(--orange)"><i class="fas fa-chart-pie"></i></span>
+							Task Status
+						</h3>
 						<span style="font-size:0.75rem;color:var(--muted)">By current status</span>
 					</div>
 					<div style="display:flex;justify-content:center;align-items:center;height:220px">
-                        <div style="width:180px;height:180px;border-radius:50%;background:conic-gradient(var(--primary) 0% 70%, var(--orange) 70% 85%, var(--bluegrey) 85% 100%)"></div>
-                    </div>
+						<div style="width:180px;height:180px;border-radius:50%;background:conic-gradient(var(--primary) 0% 70%, var(--orange) 70% 85%, var(--bluegrey) 85% 100%)"></div>
+					</div>
 					<div class="legend" style="justify-content:center;margin-top:1.5rem;flex-wrap:wrap;gap:1rem">
 						<div class="leg-item"><div class="leg-dot" style="background:var(--bluegrey)"></div><span style="color:var(--muted);font-size:.75rem">Assigned: 0</span></div>
 						<div class="leg-item"><div class="leg-dot" style="background:var(--primary)"></div><span style="color:var(--muted);font-size:.75rem">Completed: 20</span></div>
@@ -394,19 +321,19 @@
 				<div class="card">
 					<div class="card-head">
 						<h3 class="card-title" style="display:flex;align-items:center;gap:0.5rem;font-size:0.95rem;font-weight:600">
-                            <span style="color:var(--rose)"><i class="fas fa-fire"></i></span>
-                            Task Priority
-                        </h3>
+							<span style="color:var(--rose)"><i class="fas fa-fire"></i></span>
+							Task Priority
+						</h3>
 						<span style="font-size:0.75rem;color:var(--muted)">Distribution by priority level</span>
 					</div>
 					<div style="display:flex;justify-content:center;align-items:center;height:220px">
-                        <svg viewBox="0 0 160 160" class="donut-svg" style="width:180px;height:180px">
+						<svg viewBox="0 0 160 160" class="donut-svg" style="width:180px;height:180px">
 							<circle class="donut-bg" cx="80" cy="80" r="60" style="stroke:var(--bg-2);stroke-width:30;fill:none"/>
 							<circle class="donut-seg" cx="80" cy="80" r="60" style="stroke:var(--orange);stroke-width:30;stroke-dasharray:377;stroke-dashoffset:188;fill:none" transform="rotate(-90 80 80)" />
 							<circle class="donut-seg" cx="80" cy="80" r="60" style="stroke:var(--peach);stroke-width:30;stroke-dasharray:377;stroke-dashoffset:280;fill:none" transform="rotate(90 80 80)" />
 							<circle class="donut-seg" cx="80" cy="80" r="60" style="stroke:var(--primary);stroke-width:30;stroke-dasharray:377;stroke-dashoffset:280;fill:none" transform="rotate(180 80 80)" />
 						</svg>
-                    </div>
+					</div>
 					<div class="legend" style="justify-content:center;margin-top:1.5rem;gap:1.5rem">
 						<div class="leg-item"><div class="leg-dot" style="background:var(--orange)"></div><span style="color:var(--muted);font-size:.75rem">High: 10</span></div>
 						<div class="leg-item"><div class="leg-dot" style="background:var(--peach)"></div><span style="color:var(--muted);font-size:.75rem">Med: 5</span></div>
@@ -417,52 +344,52 @@
 				<div class="card">
 					<div class="card-head">
 						<h3 class="card-title" style="display:flex;align-items:center;gap:0.5rem;font-size:0.95rem;font-weight:600">
-                            <span style="color:var(--primary)"><i class="fas fa-chart-line"></i></span>
-                            Completion Trend
-                        </h3>
+							<span style="color:var(--primary)"><i class="fas fa-chart-line"></i></span>
+							Completion Trend
+						</h3>
 						<span style="font-size:0.75rem;color:var(--muted)">Tasks completed — last 4 weeks</span>
 					</div>
 					<div style="height:220px;position:relative;margin-top:1rem;border-left:1px solid var(--border);border-bottom:1px solid var(--border);padding:10px;margin-bottom:1.5rem">
-                        <svg viewBox="0 0 100 100" style="width:100%;height:100%;overflow:visible" preserveAspectRatio="none">
-                            <polyline points="0,80 33,40 66,20 100,40" fill="none" stroke="var(--primary)" stroke-width="2"/>
-                            <polygon points="0,100 0,80 33,40 66,20 100,40 100,100" fill="var(--glow-green)" />
-                            <circle cx="0" cy="80" r="3" fill="var(--primary)"/>
-                            <circle cx="33" cy="40" r="3" fill="var(--primary)"/>
-                            <circle cx="66" cy="20" r="3" fill="var(--primary)"/>
-                            <circle cx="100" cy="40" r="3" fill="var(--primary)"/>
-                        </svg>
-                        <div style="position:absolute;bottom:-20px;left:0;width:100%;display:flex;justify-content:space-between;font-size:0.6rem;color:var(--muted)">
-                            <span>Wk 11</span><span>Wk 12</span><span>Wk 13</span><span>Wk 14</span>
-                        </div>
-                    </div>
+						<svg viewBox="0 0 100 100" style="width:100%;height:100%;overflow:visible" preserveAspectRatio="none">
+							<polyline points="0,80 33,40 66,20 100,40" fill="none" stroke="var(--primary)" stroke-width="2"/>
+							<polygon points="0,100 0,80 33,40 66,20 100,40 100,100" fill="var(--glow-green)" />
+							<circle cx="0" cy="80" r="3" fill="var(--primary)"/>
+							<circle cx="33" cy="40" r="3" fill="var(--primary)"/>
+							<circle cx="66" cy="20" r="3" fill="var(--primary)"/>
+							<circle cx="100" cy="40" r="3" fill="var(--primary)"/>
+						</svg>
+						<div style="position:absolute;bottom:-20px;left:0;width:100%;display:flex;justify-content:space-between;font-size:0.6rem;color:var(--muted)">
+							<span>Wk 11</span><span>Wk 12</span><span>Wk 13</span><span>Wk 14</span>
+						</div>
+					</div>
 					<div class="legend" style="justify-content:flex-start;margin-top:2rem">
 						<div class="leg-item"><div class="leg-dot" style="background:var(--primary)"></div><span style="color:var(--muted);font-size:.8rem;font-weight:600">Total completed: 20</span></div>
 					</div>
 				</div>
 			</section>
 
-            <!-- LEAVE ANALYTICS -->
-            <h3 style="margin-top:2rem;font-size:0.85rem;color:var(--muted-2);text-transform:uppercase;letter-spacing:0.05em;display:flex;align-items:center;gap:0.5rem"><i class="fas fa-calendar-times" style="color:var(--rose)"></i> LEAVE ANALYTICS</h3>
-            <section class="charts-row" style="margin-top:1rem;grid-template-columns: 1fr 1fr;">
-                <div class="card">
-                    <div class="card-head">
-                        <h3 class="card-title" style="display:flex;align-items:center;gap:0.5rem;font-size:0.95rem;font-weight:600">
-                            <span style="color:var(--peach)"><i class="fas fa-umbrella-beach"></i></span>
-                            Leave Breakdown
-                        </h3>
-                    </div>
-                    <div style="height:150px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:0.85rem;font-weight:500">No leave data for this period</div>
-                </div>
-                <div class="card">
-                    <div class="card-head">
-                        <h3 class="card-title" style="display:flex;align-items:center;gap:0.5rem;font-size:0.95rem;font-weight:600">
-                            <span style="color:var(--violet)"><i class="fas fa-chart-area"></i></span>
-                            Leave Trends & Approval
-                        </h3>
-                    </div>
-                    <div style="height:150px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:0.85rem;font-weight:500">No trend data available</div>
-                </div>
-            </section>
+			<!-- LEAVE ANALYTICS -->
+			<h3 style="margin-top:2rem;font-size:0.85rem;color:var(--muted-2);text-transform:uppercase;letter-spacing:0.05em;display:flex;align-items:center;gap:0.5rem"><i class="fas fa-calendar-times" style="color:var(--rose)"></i> LEAVE ANALYTICS</h3>
+			<section class="charts-row" style="margin-top:1rem;grid-template-columns: 1fr 1fr;">
+				<div class="card">
+					<div class="card-head">
+						<h3 class="card-title" style="display:flex;align-items:center;gap:0.5rem;font-size:0.95rem;font-weight:600">
+							<span style="color:var(--peach)"><i class="fas fa-umbrella-beach"></i></span>
+							Leave Breakdown
+						</h3>
+					</div>
+					<div style="height:150px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:0.85rem;font-weight:500">No leave data for this period</div>
+				</div>
+				<div class="card">
+					<div class="card-head">
+						<h3 class="card-title" style="display:flex;align-items:center;gap:0.5rem;font-size:0.95rem;font-weight:600">
+							<span style="color:var(--violet)"><i class="fas fa-chart-area"></i></span>
+							Leave Trends &amp; Approval
+						</h3>
+					</div>
+					<div style="height:150px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:0.85rem;font-weight:500">No trend data available</div>
+				</div>
+			</section>
 
 			<footer class="dash-footer">
 				<span>© 2026 <a href="#" style="color:var(--teal)">CRMS</a> — All rights reserved</span>
@@ -520,8 +447,7 @@
 			</div>
 			<div class="modal-footer">
 				<button class="btn btn-ghost" onclick="closeModal('dealModal')">Close</button>
-				<button class="btn btn-primary"
-					onclick="closeModal('dealModal');showToast('Note saved successfully','success')">Save Note</button>
+				<button class="btn btn-primary" onclick="closeModal('dealModal');showToast('Note saved successfully','success')">Save Note</button>
 			</div>
 		</div>
 	</div>
@@ -572,8 +498,7 @@
 			</div>
 			<div class="modal-footer">
 				<button class="btn btn-ghost" onclick="closeModal('settingsModal')">Cancel</button>
-				<button class="btn btn-primary"
-					onclick="closeModal('settingsModal');showToast('Settings saved!','success')">Save Changes</button>
+				<button class="btn btn-primary" onclick="closeModal('settingsModal');showToast('Settings saved!','success')">Save Changes</button>
 			</div>
 		</div>
 	</div>
@@ -586,11 +511,8 @@
 				<button class="modal-close" onclick="closeModal('profileModal')"><i class="fas fa-times"></i></button>
 			</div>
 			<div class="modal-body">
-				<div
-					style="display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem;padding:1rem;background:var(--bg);border-radius:var(--r-sm)">
-					<div
-						style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-blue));flex-shrink:0">
-					</div>
+				<div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem;padding:1rem;background:var(--bg);border-radius:var(--r-sm)">
+					<div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal-blue));flex-shrink:0"></div>
 					<div>
 						<div style="font-size:.95rem;font-weight:700;color:var(--text)">Admin User</div>
 						<div style="font-size:.75rem;color:var(--muted)">Super Administrator</div>
@@ -612,8 +534,7 @@
 			</div>
 			<div class="modal-footer">
 				<button class="btn btn-ghost" onclick="closeModal('profileModal')">Cancel</button>
-				<button class="btn btn-primary"
-					onclick="closeModal('profileModal');showToast('Profile updated!','success')">Update Profile</button>
+				<button class="btn btn-primary" onclick="closeModal('profileModal');showToast('Profile updated!','success')">Update Profile</button>
 			</div>
 		</div>
 	</div>
@@ -626,13 +547,11 @@
 				<button class="modal-close" onclick="closeModal('logoutModal')"><i class="fas fa-times"></i></button>
 			</div>
 			<div class="modal-body">
-				<p style="font-size:.82rem;color:var(--text-2);line-height:1.6">Are you sure you want to logout? Your
-					session will be ended and you'll be redirected to the login page.</p>
+				<p style="font-size:.82rem;color:var(--text-2);line-height:1.6">Are you sure you want to logout? Your session will be ended and you'll be redirected to the login page.</p>
 			</div>
 			<div class="modal-footer">
 				<button class="btn btn-ghost" onclick="closeModal('logoutModal')">Cancel</button>
-				<button class="btn btn-danger"
-					onclick="closeModal('logoutModal');showToast('Logged out successfully','success')">Logout</button>
+				<button class="btn btn-danger">Logout</button>
 			</div>
 		</div>
 	</div>
@@ -665,9 +584,7 @@
 			</div>
 			<div class="modal-footer">
 				<button class="btn btn-ghost" onclick="closeModal('addMemberModal')">Cancel</button>
-				<button class="btn btn-primary"
-					onclick="closeModal('addMemberModal');showToast('Member invited successfully!','success')">Send
-					Invite</button>
+				<button class="btn btn-primary" onclick="closeModal('addMemberModal');showToast('Member invited successfully!','success')">Send Invite</button>
 			</div>
 		</div>
 	</div>
@@ -693,27 +610,21 @@
 				<div class="form-row">
 					<label class="form-label">Quick Select</label>
 					<div style="display:flex;flex-wrap:wrap;gap:.42rem">
-						<button class="btn btn-ghost" style="padding:.35rem .75rem;font-size:.72rem"
-							onclick="setDateRange('Last 7 Days')">Last 7 Days</button>
-						<button class="btn btn-ghost" style="padding:.35rem .75rem;font-size:.72rem"
-							onclick="setDateRange('Last 30 Days')">Last 30 Days</button>
-						<button class="btn btn-ghost" style="padding:.35rem .75rem;font-size:.72rem"
-							onclick="setDateRange('This Month')">This Month</button>
-						<button class="btn btn-ghost" style="padding:.35rem .75rem;font-size:.72rem"
-							onclick="setDateRange('This Quarter')">This Quarter</button>
+						<button class="btn btn-ghost" style="padding:.35rem .75rem;font-size:.72rem" onclick="setDateRange('Last 7 Days')">Last 7 Days</button>
+						<button class="btn btn-ghost" style="padding:.35rem .75rem;font-size:.72rem" onclick="setDateRange('Last 30 Days')">Last 30 Days</button>
+						<button class="btn btn-ghost" style="padding:.35rem .75rem;font-size:.72rem" onclick="setDateRange('This Month')">This Month</button>
+						<button class="btn btn-ghost" style="padding:.35rem .75rem;font-size:.72rem" onclick="setDateRange('This Quarter')">This Quarter</button>
 					</div>
 				</div>
 			</div>
 			<div class="modal-footer">
 				<button class="btn btn-ghost" onclick="closeModal('dateModal')">Cancel</button>
-				<button class="btn btn-primary"
-					onclick="closeModal('dateModal');showToast('Date range applied','success')">Apply</button>
+				<button class="btn btn-primary" onclick="closeModal('dateModal');showToast('Date range applied','success')">Apply</button>
 			</div>
 		</div>
 	</div>
 
-</body>y
+	<script th:src="@{/dashboard-super-admin.js}"></script>
 
-<!--<script th:src="@{/dashboard-super-admin.js}"></script>-->
-
+</body>
 </html>
