@@ -169,7 +169,7 @@ public class AdminController {
 		model.addAttribute("rejectedCount", leadService.countRejected());
 		model.addAttribute("totalLeads", leadService.countTotal());
 
-		return "admin-lead-approvals";
+		return "admin-view-leads";
 	}
 
 	// ════════════════════════════════════════════════════════════════════════
@@ -235,16 +235,25 @@ public class AdminController {
 	}
 
 	// ════════════════════════════════════════════════════════════════════════
-	// USERS — Add User page
+	// USERS — Add User page (list + "Add User" button)
 	// ════════════════════════════════════════════════════════════════════════
 
 	@GetMapping("/users/add")
 	public String showAddUserPage(Model model) {
-		model.addAttribute("roles", new String[]{"MANAGER", "SALES_EXECUTIVE"});
+		model.addAttribute("allUsers", userService.getAllStaffUsers());
 		return "admin-add-user";
 	}
 
-	@PostMapping("/users/add")
+	// ════════════════════════════════════════════════════════════════════════
+	// USERS — New User form (separate page)
+	// ════════════════════════════════════════════════════════════════════════
+
+	@GetMapping("/users/new")
+	public String showNewUserForm(Model model) {
+		return "admin-new-user";
+	}
+
+	@PostMapping("/users/new")
 	public String createUser(
 			@RequestParam String fullName,
 			@RequestParam String username,
@@ -270,8 +279,23 @@ public class AdminController {
 			ra.addFlashAttribute("formPhone", phone);
 			ra.addFlashAttribute("formDepartment", department);
 			ra.addFlashAttribute("formRole", role);
-			return "redirect:/admin/users/add";
+			return "redirect:/admin/users/new";
 		}
+	}
+
+	// ════════════════════════════════════════════════════════════════════════
+	// USERS — Delete User
+	// ════════════════════════════════════════════════════════════════════════
+
+	@PostMapping("/users/{id}/delete")
+	public String deleteUser(@PathVariable Long id, RedirectAttributes ra) {
+		try {
+			userService.deleteUser(id);
+			ra.addFlashAttribute("success", "User deleted successfully.");
+		} catch (Exception e) {
+			ra.addFlashAttribute("error", "Cannot delete user: " + e.getMessage());
+		}
+		return "redirect:/admin/users/add";
 	}
 
 	// ════════════════════════════════════════════════════════════════════════
@@ -283,5 +307,153 @@ public class AdminController {
 		model.addAttribute("managers", userService.getUsersByRole(Role.MANAGER));
 		model.addAttribute("salesExecs", userService.getUsersByRole(Role.SALES_EXECUTIVE));
 		return "admin-users";
+	}
+
+	// ════════════════════════════════════════════════════════════════════════
+	// USERS — Assign Roles
+	// ════════════════════════════════════════════════════════════════════════
+
+	@GetMapping("/users/roles")
+	public String assignRoles(Model model) {
+		return "admin-assign-roles";
+	}
+
+	// ════════════════════════════════════════════════════════════════════════
+	// LEADS — Add Lead page
+	// ════════════════════════════════════════════════════════════════════════
+
+	@GetMapping("/leads/add")
+	public String showAddLeadPage(Model model) {
+		return "admin-add-lead";
+	}
+
+	// ════════════════════════════════════════════════════════════════════════
+	// LEADS — Assign Leads page
+	// ════════════════════════════════════════════════════════════════════════
+
+	@GetMapping("/leads/assign")
+	public String assignLeads(Model model) {
+		return "admin-assign-leads";
+	}
+
+	// ════════════════════════════════════════════════════════════════════════
+	// LEADS — Lead Status page
+	// ════════════════════════════════════════════════════════════════════════
+
+	@GetMapping("/leads/status")
+	public String leadStatus(Model model) {
+		return "admin-lead-status";
+	}
+
+	// ════════════════════════════════════════════════════════════════════════
+	// PIPELINE — Deals
+	// ════════════════════════════════════════════════════════════════════════
+
+	@GetMapping("/pipeline/deals")
+	public String deals(Model model) {
+		return "admin-deals";
+	}
+
+	// ════════════════════════════════════════════════════════════════════════
+	// PIPELINE — Stages
+	// ════════════════════════════════════════════════════════════════════════
+
+	@GetMapping("/pipeline/stages")
+	public String pipelineStages(Model model) {
+		return "admin-pipeline-stages";
+	}
+
+	// ════════════════════════════════════════════════════════════════════════
+	// PIPELINE — Won / Lost
+	// ════════════════════════════════════════════════════════════════════════
+
+	@GetMapping("/pipeline/won-lost")
+	public String wonLost(Model model) {
+		return "admin-won-lost";
+	}
+
+	// ════════════════════════════════════════════════════════════════════════
+	// ACTIVITIES — Calls
+	// ════════════════════════════════════════════════════════════════════════
+
+	@GetMapping("/activities/calls")
+	public String calls(Model model) {
+		return "admin-calls";
+	}
+
+	// ════════════════════════════════════════════════════════════════════════
+	// ACTIVITIES — Meetings
+	// ════════════════════════════════════════════════════════════════════════
+
+	@GetMapping("/activities/meetings")
+	public String meetings(Model model) {
+		return "admin-meetings";
+	}
+
+	// ════════════════════════════════════════════════════════════════════════
+	// ACTIVITIES — Tasks
+	// ════════════════════════════════════════════════════════════════════════
+
+	@GetMapping("/activities/tasks")
+	public String tasks(Model model) {
+		return "admin-tasks";
+	}
+
+	// ════════════════════════════════════════════════════════════════════════
+	// REPORTS — Sales
+	// ════════════════════════════════════════════════════════════════════════
+
+	@GetMapping("/reports/sales")
+	public String salesReports(Model model) {
+		model.addAttribute("totalLeads", leadService.countTotal());
+		model.addAttribute("approvedLeads", leadService.countApproved());
+		model.addAttribute("pendingLeads", leadService.countPending());
+		model.addAttribute("approvedValue", leadService.sumApprovedValue());
+		return "admin-sales-reports";
+	}
+
+	// ════════════════════════════════════════════════════════════════════════
+	// REPORTS — Performance
+	// ════════════════════════════════════════════════════════════════════════
+
+	@GetMapping("/reports/performance")
+	public String performanceReports(Model model) {
+		return "admin-performance-reports";
+	}
+
+	// ════════════════════════════════════════════════════════════════════════
+	// REPORTS — Revenue
+	// ════════════════════════════════════════════════════════════════════════
+
+	@GetMapping("/reports/revenue")
+	public String revenueReports(Model model) {
+		return "admin-revenue-reports";
+	}
+
+	// ════════════════════════════════════════════════════════════════════════
+	// SYSTEM — Notifications
+	// ════════════════════════════════════════════════════════════════════════
+
+	@GetMapping("/notifications")
+	public String notifications(Model model) {
+		return "admin-notifications";
+	}
+
+	// ════════════════════════════════════════════════════════════════════════
+	// SYSTEM — Settings
+	// ════════════════════════════════════════════════════════════════════════
+
+	@GetMapping("/settings")
+	public String settings(Model model) {
+		return "admin-settings";
+	}
+
+	// ════════════════════════════════════════════════════════════════════════
+	// SYSTEM — Profile
+	// ════════════════════════════════════════════════════════════════════════
+
+	@GetMapping("/profile")
+	public String profile(Model model) {
+		return "admin-profile";
 	}
 }

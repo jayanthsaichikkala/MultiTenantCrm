@@ -1,697 +1,254 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+	th:replace="~{fragments/admin-layout :: layout('Dashboard', 'dashboard', ~{::section})}">
 
-<head>
-	<meta charset="UTF-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>Admin Dashboard – CRM Portal</title>
-	<link rel="icon" type="image/svg+xml"
-		href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23DC2626'/%3E%3Ctext x='16' y='23' font-family='Arial' font-size='20' font-weight='bold' text-anchor='middle' fill='white'%3EC%3C/text%3E%3C/svg%3E" />
-	<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-		rel="stylesheet" />
-	<link rel="stylesheet" th:href="@{/dashboard-admin.css}" />
-</head>
-
+<head></head>
 <body>
 
-	<!-- ================= SIDEBAR ================= -->
-	<aside class="sidebar" id="sidebar">
-
-		<!-- Logo -->
-		<div class="sidebar-logo">
-			<div class="logo-icon">
-				<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-					<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="white" stroke-width="2"
-						stroke-linecap="round" stroke-linejoin="round" />
-				</svg>
-			</div>
-			<span class="logo-text">CRM Portal</span>
+<section>
+	<!-- Page Header -->
+	<div class="page-header">
+		<div>
+			<h1>Dashboard</h1>
+			<p>Welcome back — here's your CRM overview for today.</p>
 		</div>
-
-		<!-- Navigation -->
-		<nav class="sidebar-nav" id="sidebarNav">
-
-			<!-- Main -->
-			<p class="nav-label">Main</p>
-			<a th:href="@{/admin/dashboard}" class="nav-item active" data-icon="⊞">
-				<span class="nav-icon">
-					<svg viewBox="0 0 20 20" fill="currentColor">
-						<path d="M2 11h8V2H2v9zm0 7h8v-5H2v5zm10 0h6v-9h-6v9zm0-16v5h6V2h-6z" />
-					</svg>
-				</span>
-				<span>Dashboard</span>
-			</a>
-
-			<!-- User Management -->
-			<p class="nav-label">User Management</p>
-			<a th:href="@{/admin/users/add}" class="nav-item">
-				<span class="nav-icon">
-					<svg viewBox="0 0 20 20" fill="currentColor">
-						<path
-							d="M8 9a3 3 0 100-6 3 3 0 000 6zm-5 6a5 5 0 0110 0H3zm13-6a1 1 0 10-2 0v2h-2a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V9z" />
-					</svg>
-				</span>
-				<span>Add User</span>
-			</a>
-			<a th:href="@{/admin/users}" class="nav-item">
-				<span class="nav-icon">
-					<svg viewBox="0 0 20 20" fill="currentColor">
-						<path
-							d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-					</svg>
-				</span>
-				<span>Manage Users</span>
-			</a>
-			<a th:href="@{/admin/users/roles}" class="nav-item">
-				<span class="nav-icon">
-					<svg viewBox="0 0 20 20" fill="currentColor">
-						<path fill-rule="evenodd"
-							d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-							clip-rule="evenodd" />
-					</svg>
-				</span>
-				<span>Assign Roles</span>
-			</a>
-
-			<!-- Lead Management -->
-			<p class="nav-label">Lead Management</p>
-			<a th:href="@{/admin/leads/add}" class="nav-item">
-				<span class="nav-icon">
-					<svg viewBox="0 0 20 20" fill="currentColor">
-						<path fill-rule="evenodd"
-							d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-							clip-rule="evenodd" />
-					</svg>
-				</span>
-				<span>Add Lead</span>
-			</a>
-			<a th:href="@{/admin/leads}" class="nav-item">
-				<span class="nav-icon">
-					<svg viewBox="0 0 20 20" fill="currentColor">
-						<path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-						<path fill-rule="evenodd"
-							d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
-							clip-rule="evenodd" />
-					</svg>
-				</span>
-				<span>View Leads</span>
-			</a>
-			<a th:href="@{/admin/leads/assign}" class="nav-item">
-				<span class="nav-icon">
-					<svg viewBox="0 0 20 20" fill="currentColor">
-						<path
-							d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8zM12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z" />
-					</svg>
-				</span>
-				<span>Assign Leads</span>
-			</a>
-			<a th:href="@{/admin/leads/status}" class="nav-item">
-				<span class="nav-icon">
-					<svg viewBox="0 0 20 20" fill="currentColor">
-						<path fill-rule="evenodd"
-							d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z"
-							clip-rule="evenodd" />
-					</svg>
-				</span>
-				<span>Lead Status</span>
-			</a>
-
-			<!-- Sales Pipeline -->
-			<p class="nav-label">Sales Pipeline</p>
-			<a th:href="@{/admin/pipeline/deals}" class="nav-item">
-				<span class="nav-icon">
-					<svg viewBox="0 0 20 20" fill="currentColor">
-						<path fill-rule="evenodd"
-							d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"
-							clip-rule="evenodd" />
-					</svg>
-				</span>
-				<span>Deals</span>
-			</a>
-			<a th:href="@{/admin/pipeline/stages}" class="nav-item">
-				<span class="nav-icon">
-					<svg viewBox="0 0 20 20" fill="currentColor">
-						<path
-							d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM14 11a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-1a1 1 0 011-1z" />
-					</svg>
-				</span>
-				<span>Pipeline Stages</span>
-			</a>
-			<a th:href="@{/admin/pipeline/won-lost}" class="nav-item">
-				<span class="nav-icon">
-					<svg viewBox="0 0 20 20" fill="currentColor">
-						<path fill-rule="evenodd"
-							d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-							clip-rule="evenodd" />
-					</svg>
-				</span>
-				<span>Won / Lost Deals</span>
-			</a>
-
-			<!-- Activities -->
-			<p class="nav-label">Activities</p>
-			<a th:href="@{/admin/activities/calls}" class="nav-item">
-				<span class="nav-icon">
-					<svg viewBox="0 0 20 20" fill="currentColor">
-						<path
-							d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-					</svg>
-				</span>
-				<span>Calls</span>
-			</a>
-			<a th:href="@{/admin/activities/meetings}" class="nav-item">
-				<span class="nav-icon">
-					<svg viewBox="0 0 20 20" fill="currentColor">
-						<path fill-rule="evenodd"
-							d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
-							clip-rule="evenodd" />
-					</svg>
-				</span>
-				<span>Meetings</span>
-			</a>
-			<a th:href="@{/admin/activities/tasks}" class="nav-item">
-				<span class="nav-icon">
-					<svg viewBox="0 0 20 20" fill="currentColor">
-						<path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-						<path fill-rule="evenodd"
-							d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-							clip-rule="evenodd" />
-					</svg>
-				</span>
-				<span>Tasks</span>
-			</a>
-
-			<!-- Reports -->
-			<p class="nav-label">Reports</p>
-			<a th:href="@{/admin/reports/sales}" class="nav-item">
-				<span class="nav-icon">
-					<svg viewBox="0 0 20 20" fill="currentColor">
-						<path fill-rule="evenodd"
-							d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z"
-							clip-rule="evenodd" />
-					</svg>
-				</span>
-				<span>Sales Reports</span>
-			</a>
-			<a th:href="@{/admin/reports/performance}" class="nav-item">
-				<span class="nav-icon">
-					<svg viewBox="0 0 20 20" fill="currentColor">
-						<path
-							d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-					</svg>
-				</span>
-				<span>Performance Reports</span>
-			</a>
-			<a th:href="@{/admin/reports/revenue}" class="nav-item">
-				<span class="nav-icon">
-					<svg viewBox="0 0 20 20" fill="currentColor">
-						<path
-							d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
-						<path fill-rule="evenodd"
-							d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z"
-							clip-rule="evenodd" />
-					</svg>
-				</span>
-				<span>Revenue Reports</span>
-			</a>
-
-			<!-- System -->
-			<p class="nav-label">System</p>
-			<a th:href="@{/admin/notifications}" class="nav-item">
-				<span class="nav-icon">
-					<svg viewBox="0 0 20 20" fill="currentColor">
-						<path
-							d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-					</svg>
-				</span>
-				<span>Notifications</span>
-				<span class="nav-badge" th:text="${notificationCount ?: 0}">3</span>
-			</a>
-			<a th:href="@{/admin/settings}" class="nav-item">
-				<span class="nav-icon">
-					<svg viewBox="0 0 20 20" fill="currentColor">
-						<path fill-rule="evenodd"
-							d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
-							clip-rule="evenodd" />
-					</svg>
-				</span>
-				<span>Settings</span>
-			</a>
-			<a th:href="@{/admin/profile}" class="nav-item">
-				<span class="nav-icon">
-					<svg viewBox="0 0 20 20" fill="currentColor">
-						<path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-							clip-rule="evenodd" />
-					</svg>
-				</span>
-				<span>Profile</span>
-			</a>
-
-		</nav>
-
-		<!-- Logout -->
-		<div class="sidebar-footer">
-			<form th:action="@{/logout}" method="post">
-				<input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-				<button type="submit" class="logout-btn">
-					<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-						<path fill-rule="evenodd"
-							d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z"
-							clip-rule="evenodd" />
-					</svg>
-					Logout
-				</button>
-			</form>
+		<div class="page-header-actions">
+			<a th:href="@{/admin/leads/add}" class="btn-secondary">+ Add Lead</a>
+			<a th:href="@{/admin/leads}" class="btn-primary">View All Leads</a>
 		</div>
-
-	</aside>
-
-	<!-- Sidebar overlay (mobile) -->
-	<div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-	<!-- ================= MAIN ================= -->
-	<div class="main-wrapper">
-
-		<!-- Topbar -->
-		<header class="topbar">
-			<button class="hamburger" id="hamburger" aria-label="Toggle menu">
-				<span></span><span></span><span></span>
-			</button>
-
-			<div class="search-box">
-				<svg viewBox="0 0 20 20" fill="currentColor" class="search-icon">
-					<path fill-rule="evenodd"
-						d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-						clip-rule="evenodd" />
-				</svg>
-				<input type="text" placeholder="Search users, leads, deals..." />
-			</div>
-
-			<div class="topbar-right">
-				<a th:href="@{/admin/notifications}" class="notif-btn" aria-label="Notifications">
-					<svg viewBox="0 0 20 20" fill="currentColor">
-						<path
-							d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-					</svg>
-					<span class="notif-dot" th:if="${notificationCount > 0}"></span>
-				</a>
-
-				<div class="avatar-wrap">
-					<div class="avatar">A</div>
-					<div class="avatar-info">
-						<span th:text="${#authentication?.name ?: 'Admin'}">Admin</span>
-						<small>Administrator</small>
-					</div>
-				</div>
-			</div>
-		</header>
-
-		<!-- Content -->
-		<main class="content">
-
-			<!-- Page Header -->
-			<div class="page-header">
-				<div>
-					<h1>Dashboard</h1>
-					<p>Welcome back — here's your CRM overview for today.</p>
-				</div>
-				<div class="page-header-actions">
-					<a th:href="@{/admin/leads/add}" class="btn-secondary">+ Add Lead</a>
-					<a th:href="@{/admin/leads}" class="btn-primary">View All Leads</a>
-				</div>
-			</div>
-
-			<!-- Toast Notifications -->
-			<div th:if="${success}" class="toast toast-success" th:text="${success}"></div>
-			<div th:if="${error}" class="toast toast-error" th:text="${error}"></div>
-
-			<!-- ── KPI Cards: Employees ──────────────────────────────────── -->
-			<h2 class="section-title">
-				<span class="section-title-icon">👥</span> Team Overview
-			</h2>
-			<section class="kpi-grid">
-				<div class="kpi-card kpi-blue">
-					<div class="kpi-header">
-						<p class="kpi-label">Total Employees</p>
-						<span class="kpi-trend up">↑ Active</span>
-					</div>
-					<p class="kpi-value" th:text="${totalEmployees}">0</p>
-					<div class="kpi-bar">
-						<div th:style="|width:${totalEmployees > 0 ? 100 : 0}%|"></div>
-					</div>
-				</div>
-
-				<div class="kpi-card kpi-purple">
-					<div class="kpi-header">
-						<p class="kpi-label">Managers</p>
-						<span class="kpi-trend neutral">Role</span>
-					</div>
-					<p class="kpi-value" th:text="${totalManagers}">0</p>
-					<div class="kpi-bar">
-						<div th:style="|width:${totalEmployees > 0 ? (totalManagers * 100 / totalEmployees) : 0}%|">
-						</div>
-					</div>
-				</div>
-
-				<div class="kpi-card kpi-cyan">
-					<div class="kpi-header">
-						<p class="kpi-label">Sales Executives</p>
-						<span class="kpi-trend neutral">Role</span>
-					</div>
-					<p class="kpi-value" th:text="${totalSalesExecs}">0</p>
-					<div class="kpi-bar">
-						<div th:style="|width:${totalEmployees > 0 ? (totalSalesExecs * 100 / totalEmployees) : 0}%|">
-						</div>
-					</div>
-				</div>
-
-				<div class="kpi-card kpi-green">
-					<div class="kpi-header">
-						<p class="kpi-label">Active Employees</p>
-						<span class="kpi-trend up">↑ Online</span>
-					</div>
-					<p class="kpi-value" th:text="${activeEmployees}">0</p>
-					<div class="kpi-bar">
-						<div th:style="|width:${totalEmployees > 0 ? (activeEmployees * 100 / totalEmployees) : 0}%|">
-						</div>
-					</div>
-				</div>
-			</section>
-
-			<!-- ── KPI Cards: Leads ──────────────────────────────────────── -->
-			<h2 class="section-title">
-				<span class="section-title-icon">📊</span> Lead Pipeline
-			</h2>
-			<section class="kpi-grid">
-				<div class="kpi-card kpi-orange">
-					<div class="kpi-header">
-						<p class="kpi-label">Total Leads</p>
-						<span class="kpi-trend neutral">All</span>
-					</div>
-					<p class="kpi-value" th:text="${totalLeads}">0</p>
-					<div class="stage-bar">
-						<div style="width:100%"></div>
-					</div>
-				</div>
-
-				<div class="kpi-card kpi-yellow">
-					<div class="kpi-header">
-						<p class="kpi-label">Pending Leads</p>
-						<span class="kpi-trend down">⏳ Review</span>
-					</div>
-					<p class="kpi-value" th:text="${pendingLeads}">0</p>
-					<div class="stage-bar">
-						<div th:style="|width:${totalLeads > 0 ? (pendingLeads * 100 / totalLeads) : 0}%|"></div>
-					</div>
-				</div>
-
-				<div class="kpi-card kpi-green">
-					<div class="kpi-header">
-						<p class="kpi-label">Approved Leads</p>
-						<span class="kpi-trend up">↑ Won</span>
-					</div>
-					<p class="kpi-value" th:text="${approvedLeads}">0</p>
-					<div class="stage-bar">
-						<div th:style="|width:${totalLeads > 0 ? (approvedLeads * 100 / totalLeads) : 0}%|"></div>
-					</div>
-				</div>
-
-				<div class="kpi-card kpi-red">
-					<div class="kpi-header">
-						<p class="kpi-label">Deal Value (₹)</p>
-						<span class="kpi-trend up">↑ Revenue</span>
-					</div>
-					<p class="kpi-value kpi-value-sm"
-						th:text="${#numbers.formatDecimal(approvedValue, 1, 'COMMA', 2, 'POINT')}">0.00</p>
-				</div>
-			</section>
-
-			<!-- ── Quick Actions ─────────────────────────────────────────── -->
-			<h2 class="section-title">
-				<span class="section-title-icon">⚡</span> Quick Actions
-			</h2>
-			<section class="quick-actions">
-				<a th:href="@{/admin/users/add}" class="action-card">
-					<div class="action-icon action-icon-blue">
-						<svg viewBox="0 0 20 20" fill="currentColor">
-							<path
-								d="M8 9a3 3 0 100-6 3 3 0 000 6zm-5 6a5 5 0 0110 0H3zm13-6a1 1 0 10-2 0v2h-2a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V9z" />
-						</svg>
-					</div>
-					<span>Add User</span>
-				</a>
-				<a th:href="@{/admin/leads/add}" class="action-card">
-					<div class="action-icon action-icon-green">
-						<svg viewBox="0 0 20 20" fill="currentColor">
-							<path fill-rule="evenodd"
-								d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-								clip-rule="evenodd" />
-						</svg>
-					</div>
-					<span>New Lead</span>
-				</a>
-				<a th:href="@{/admin/activities/calls}" class="action-card">
-					<div class="action-icon action-icon-purple">
-						<svg viewBox="0 0 20 20" fill="currentColor">
-							<path
-								d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-						</svg>
-					</div>
-					<span>Log Call</span>
-				</a>
-				<a th:href="@{/admin/activities/meetings}" class="action-card">
-					<div class="action-icon action-icon-orange">
-						<svg viewBox="0 0 20 20" fill="currentColor">
-							<path fill-rule="evenodd"
-								d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
-								clip-rule="evenodd" />
-						</svg>
-					</div>
-					<span>Schedule Meeting</span>
-				</a>
-				<a th:href="@{/admin/reports/sales}" class="action-card">
-					<div class="action-icon action-icon-cyan">
-						<svg viewBox="0 0 20 20" fill="currentColor">
-							<path fill-rule="evenodd"
-								d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z"
-								clip-rule="evenodd" />
-						</svg>
-					</div>
-					<span>View Reports</span>
-				</a>
-				<a th:href="@{/admin/pipeline/deals}" class="action-card">
-					<div class="action-icon action-icon-red">
-						<svg viewBox="0 0 20 20" fill="currentColor">
-							<path fill-rule="evenodd"
-								d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"
-								clip-rule="evenodd" />
-						</svg>
-					</div>
-					<span>View Deals</span>
-				</a>
-			</section>
-
-			<!-- ── Sales Pipeline Stages ─────────────────────────────────── -->
-			<h2 class="section-title">
-				<span class="section-title-icon">🔄</span> Pipeline Stages
-			</h2>
-			<section class="pipeline-section">
-				<div class="pipeline-stage">
-					<div class="stage-header">
-						<span class="stage-dot stage-dot-blue"></span>
-						<span class="stage-name">Prospecting</span>
-						<span class="stage-count" th:text="${prospectingCount ?: 0}">0</span>
-					</div>
-					<div class="stage-bar">
-						<div th:style="|width:${prospectingPct ?: 0}%|"></div>
-					</div>
-				</div>
-				<div class="pipeline-stage">
-					<div class="stage-header">
-						<span class="stage-dot stage-dot-yellow"></span>
-						<span class="stage-name">Qualification</span>
-						<span class="stage-count" th:text="${qualificationCount ?: 0}">0</span>
-					</div>
-					<div class="stage-bar">
-						<div th:style="|width:${qualificationPct ?: 0}%|"></div>
-					</div>
-				</div>
-				<div class="pipeline-stage">
-					<div class="stage-header">
-						<span class="stage-dot stage-dot-orange"></span>
-						<span class="stage-name">Proposal</span>
-						<span class="stage-count" th:text="${proposalCount ?: 0}">0</span>
-					</div>
-					<div class="stage-bar">
-						<div th:style="|width:${proposalPct ?: 0}%|"></div>
-					</div>
-				</div>
-				<div class="pipeline-stage">
-					<div class="stage-header">
-						<span class="stage-dot stage-dot-purple"></span>
-						<span class="stage-name">Negotiation</span>
-						<span class="stage-count" th:text="${negotiationCount ?: 0}">0</span>
-					</div>
-					<div class="stage-bar">
-						<div th:style="|width:${negotiationPct ?: 0}%|"></div>
-					</div>
-				</div>
-				<div class="pipeline-stage">
-					<div class="stage-header">
-						<span class="stage-dot stage-dot-green"></span>
-						<span class="stage-name">Closed Won</span>
-						<span class="stage-count" th:text="${closedWonCount ?: 0}">0</span>
-					</div>
-					<div class="stage-bar">
-						<div th:style="|width:${closedWonPct ?: 0}%|"></div>
-					</div>
-				</div>
-				<div class="pipeline-stage">
-					<div class="stage-header">
-						<span class="stage-dot stage-dot-red"></span>
-						<span class="stage-name">Closed Lost</span>
-						<span class="stage-count" th:text="${closedLostCount ?: 0}">0</span>
-					</div>
-					<div class="stage-bar">
-						<div th:style="|width:${closedLostPct ?: 0}%|"></div>
-					</div>
-				</div>
-			</section>
-
-			<!-- ── Recent Activities ──────────────────────────────────────── -->
-			<h2 class="section-title">
-				<span class="section-title-icon">📅</span> Recent Activities
-			</h2>
-			<section class="activities-grid">
-				<!-- Calls -->
-				<div class="activity-card">
-					<div class="activity-card-header">
-						<h3>📞 Recent Calls</h3>
-						<a th:href="@{/admin/activities/calls}" class="link-sm">View All</a>
-					</div>
-					<ul class="activity-list">
-						<li th:each="call : ${recentCalls}" class="activity-item">
-							<span class="activity-dot call-dot"></span>
-							<div>
-								<p class="activity-name" th:text="${call.contactName ?: 'Unknown'}">—</p>
-								<p class="activity-meta"
-									th:text="${#temporals.format(call.callDate,'dd MMM, hh:mm a')}">—</p>
-							</div>
-							<span class="activity-status" th:text="${call.status}">—</span>
-						</li>
-						<li th:if="${#lists.isEmpty(recentCalls)}" class="activity-empty">No recent calls.</li>
-					</ul>
-				</div>
-
-				<!-- Meetings -->
-				<div class="activity-card">
-					<div class="activity-card-header">
-						<h3>🗓️ Upcoming Meetings</h3>
-						<a th:href="@{/admin/activities/meetings}" class="link-sm">View All</a>
-					</div>
-					<ul class="activity-list">
-						<li th:each="meet : ${upcomingMeetings}" class="activity-item">
-							<span class="activity-dot meet-dot"></span>
-							<div>
-								<p class="activity-name" th:text="${meet.title ?: 'Meeting'}">—</p>
-								<p class="activity-meta"
-									th:text="${#temporals.format(meet.meetingDate,'dd MMM, hh:mm a')}">—</p>
-							</div>
-							<span class="activity-status" th:text="${meet.status}">—</span>
-						</li>
-						<li th:if="${#lists.isEmpty(upcomingMeetings)}" class="activity-empty">No upcoming meetings.
-						</li>
-					</ul>
-				</div>
-
-				<!-- Tasks -->
-				<div class="activity-card">
-					<div class="activity-card-header">
-						<h3>✅ Pending Tasks</h3>
-						<a th:href="@{/admin/activities/tasks}" class="link-sm">View All</a>
-					</div>
-					<ul class="activity-list">
-						<li th:each="task : ${pendingTasks}" class="activity-item">
-							<span class="activity-dot task-dot"></span>
-							<div>
-								<p class="activity-name" th:text="${task.title ?: 'Task'}">—</p>
-								<p class="activity-meta" th:text="${#temporals.format(task.dueDate,'dd MMM yyyy')}">—
-								</p>
-							</div>
-							<span class="activity-status"
-								th:class="|activity-status ${task.priority == 'HIGH' ? 'priority-high' : 'priority-normal'}|"
-								th:text="${task.priority}">—</span>
-						</li>
-						<li th:if="${#lists.isEmpty(pendingTasks)}" class="activity-empty">No pending tasks.</li>
-					</ul>
-				</div>
-			</section>
-
-			<!-- ── Pending Leads Table ──────────────────────────────────── -->
-			<h2 class="section-title">
-				<span class="section-title-icon">🎯</span> Pending Leads
-			</h2>
-			<section class="table-card">
-				<div class="table-header">
-					<div class="table-header-left">
-						<span class="table-count" th:text="${pendingLeads} + ' leads awaiting review'">0 leads awaiting
-							review</span>
-					</div>
-					<a th:href="@{/admin/leads(status='PENDING')}" class="btn-primary">View All Pending</a>
-				</div>
-
-				<div class="table-wrap">
-					<table>
-						<thead>
-							<tr>
-								<th>#</th>
-								<th>Customer</th>
-								<th>Email</th>
-								<th>Company</th>
-								<th>Deal Value (₹)</th>
-								<th>Source</th>
-								<th>Created By</th>
-								<th>Assigned To</th>
-								<th>Date</th>
-								<th>Status</th>
-								<th>Actions</th>
-							</tr>
-						</thead>
-						<tbody>
-							<tr th:each="lead, iterStat : ${recentLeads}">
-								<td th:text="${iterStat.count}">1</td>
-								<td class="td-bold" th:text="${lead.customerName}">—</td>
-								<td th:text="${lead.email}">—</td>
-								<td th:text="${lead.company ?: '—'}">—</td>
-								<td th:text="${#numbers.formatDecimal(lead.dealValue, 1, 'COMMA', 2, 'POINT')}">0.00
-								</td>
-								<td th:text="${lead.source?.name()}">—</td>
-								<td th:text="${lead.createdBy?.name ?: '—'}">—</td>
-								<td th:text="${lead.assignedTo?.name ?: 'Unassigned'}">—</td>
-								<td th:text="${#temporals.format(lead.createdAt, 'dd MMM yyyy')}">—</td>
-								<td>
-									<span class="badge badge-pending"
-										th:text="${lead.status.getDisplayName()}">Pending</span>
-								</td>
-								<td class="td-actions">
-									<a th:href="@{/admin/leads/{id}/approve(id=${lead.id})}"
-										class="action-link action-approve">Approve</a>
-									<a th:href="@{/admin/leads/{id}/assign(id=${lead.id})}"
-										class="action-link action-assign">Assign</a>
-								</td>
-							</tr>
-							<tr th:if="${#lists.isEmpty(recentLeads)}">
-								<td colspan="11" class="table-empty">No pending leads at the moment. 🎉</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-			</section>
-
-		</main>
 	</div>
 
-	<script th:src="@{/dashboard-admin.js}"></script>
-</body>
+	<!-- Toast Notifications -->
+	<div th:if="${success}" class="toast toast-success" th:text="${success}"></div>
+	<div th:if="${error}" class="toast toast-error" th:text="${error}"></div>
 
+	<!-- ── KPI Cards: Employees ──────────────────────────────────── -->
+	<h2 class="section-title">
+		<span class="section-title-icon">👥</span> Team Overview
+	</h2>
+	<section class="kpi-grid">
+		<div class="kpi-card kpi-blue">
+			<div class="kpi-header">
+				<p class="kpi-label">Total Employees</p>
+				<span class="kpi-trend up">↑ Active</span>
+			</div>
+			<p class="kpi-value" th:text="${totalEmployees}">0</p>
+			<div class="kpi-bar">
+				<div th:style="|width:${totalEmployees > 0 ? 100 : 0}%|"></div>
+			</div>
+		</div>
+
+		<div class="kpi-card kpi-purple">
+			<div class="kpi-header">
+				<p class="kpi-label">Managers</p>
+				<span class="kpi-trend neutral">Role</span>
+			</div>
+			<p class="kpi-value" th:text="${totalManagers}">0</p>
+			<div class="kpi-bar">
+				<div th:style="|width:${totalEmployees > 0 ? (totalManagers * 100 / totalEmployees) : 0}%|">
+				</div>
+			</div>
+		</div>
+
+		<div class="kpi-card kpi-cyan">
+			<div class="kpi-header">
+				<p class="kpi-label">Sales Executives</p>
+				<span class="kpi-trend neutral">Role</span>
+			</div>
+			<p class="kpi-value" th:text="${totalSalesExecs}">0</p>
+			<div class="kpi-bar">
+				<div th:style="|width:${totalEmployees > 0 ? (totalSalesExecs * 100 / totalEmployees) : 0}%|">
+				</div>
+			</div>
+		</div>
+
+		<div class="kpi-card kpi-green">
+			<div class="kpi-header">
+				<p class="kpi-label">Active Employees</p>
+				<span class="kpi-trend up">↑ Online</span>
+			</div>
+			<p class="kpi-value" th:text="${activeEmployees}">0</p>
+			<div class="kpi-bar">
+				<div th:style="|width:${totalEmployees > 0 ? (activeEmployees * 100 / totalEmployees) : 0}%|">
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- ── KPI Cards: Leads ──────────────────────────────────────── -->
+	<h2 class="section-title">
+		<span class="section-title-icon">📊</span> Lead Pipeline
+	</h2>
+	<section class="kpi-grid">
+		<div class="kpi-card kpi-orange">
+			<div class="kpi-header">
+				<p class="kpi-label">Total Leads</p>
+				<span class="kpi-trend neutral">All</span>
+			</div>
+			<p class="kpi-value" th:text="${totalLeads}">0</p>
+			<div class="stage-bar">
+				<div style="width:100%"></div>
+			</div>
+		</div>
+
+		<div class="kpi-card kpi-yellow">
+			<div class="kpi-header">
+				<p class="kpi-label">Pending Leads</p>
+				<span class="kpi-trend down">⏳ Review</span>
+			</div>
+			<p class="kpi-value" th:text="${pendingLeads}">0</p>
+			<div class="stage-bar">
+				<div th:style="|width:${totalLeads > 0 ? (pendingLeads * 100 / totalLeads) : 0}%|"></div>
+			</div>
+		</div>
+
+		<div class="kpi-card kpi-green">
+			<div class="kpi-header">
+				<p class="kpi-label">Approved Leads</p>
+				<span class="kpi-trend up">↑ Won</span>
+			</div>
+			<p class="kpi-value" th:text="${approvedLeads}">0</p>
+			<div class="stage-bar">
+				<div th:style="|width:${totalLeads > 0 ? (approvedLeads * 100 / totalLeads) : 0}%|"></div>
+			</div>
+		</div>
+
+		<div class="kpi-card kpi-red">
+			<div class="kpi-header">
+				<p class="kpi-label">Deal Value (₹)</p>
+				<span class="kpi-trend up">↑ Revenue</span>
+			</div>
+			<p class="kpi-value kpi-value-sm"
+				th:text="${#numbers.formatDecimal(approvedValue, 1, 'COMMA', 2, 'POINT')}">0.00</p>
+		</div>
+	</section>
+
+	<!-- ── Quick Actions ─────────────────────────────────────────── -->
+	<h2 class="section-title">
+		<span class="section-title-icon">⚡</span> Quick Actions
+	</h2>
+	<section class="quick-actions">
+		<a th:href="@{/admin/users/add}" class="action-card">
+			<div class="action-icon action-icon-blue">
+				<svg viewBox="0 0 20 20" fill="currentColor">
+					<path
+						d="M8 9a3 3 0 100-6 3 3 0 000 6zm-5 6a5 5 0 0110 0H3zm13-6a1 1 0 10-2 0v2h-2a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V9z" />
+				</svg>
+			</div>
+			<span>Add User</span>
+		</a>
+		<a th:href="@{/admin/leads/add}" class="action-card">
+			<div class="action-icon action-icon-green">
+				<svg viewBox="0 0 20 20" fill="currentColor">
+					<path fill-rule="evenodd"
+						d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+						clip-rule="evenodd" />
+				</svg>
+			</div>
+			<span>New Lead</span>
+		</a>
+		<a th:href="@{/admin/activities/calls}" class="action-card">
+			<div class="action-icon action-icon-purple">
+				<svg viewBox="0 0 20 20" fill="currentColor">
+					<path
+						d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+				</svg>
+			</div>
+			<span>Log Call</span>
+		</a>
+		<a th:href="@{/admin/activities/meetings}" class="action-card">
+			<div class="action-icon action-icon-orange">
+				<svg viewBox="0 0 20 20" fill="currentColor">
+					<path fill-rule="evenodd"
+						d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+						clip-rule="evenodd" />
+				</svg>
+			</div>
+			<span>Schedule Meeting</span>
+		</a>
+		<a th:href="@{/admin/reports/sales}" class="action-card">
+			<div class="action-icon action-icon-cyan">
+				<svg viewBox="0 0 20 20" fill="currentColor">
+					<path fill-rule="evenodd"
+						d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z"
+						clip-rule="evenodd" />
+				</svg>
+			</div>
+			<span>View Reports</span>
+		</a>
+		<a th:href="@{/admin/pipeline/deals}" class="action-card">
+			<div class="action-icon action-icon-red">
+				<svg viewBox="0 0 20 20" fill="currentColor">
+					<path fill-rule="evenodd"
+						d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"
+						clip-rule="evenodd" />
+				</svg>
+			</div>
+			<span>View Deals</span>
+		</a>
+	</section>
+
+	<!-- ── Pending Leads Table ──────────────────────────────────── -->
+	<h2 class="section-title">
+		<span class="section-title-icon">🎯</span> Pending Leads
+	</h2>
+	<section class="table-card">
+		<div class="table-header">
+			<div class="table-header-left">
+				<span class="table-count" th:text="${pendingLeads} + ' leads awaiting review'">0 leads awaiting
+					review</span>
+			</div>
+			<a th:href="@{/admin/leads(status='PENDING')}" class="btn-primary">View All Pending</a>
+		</div>
+
+		<div class="table-wrap">
+			<table>
+				<thead>
+					<tr>
+						<th>#</th>
+						<th>Customer</th>
+						<th>Email</th>
+						<th>Company</th>
+						<th>Deal Value (₹)</th>
+						<th>Source</th>
+						<th>Created By</th>
+						<th>Assigned To</th>
+						<th>Date</th>
+						<th>Status</th>
+						<th>Actions</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr th:each="lead, iterStat : ${recentLeads}">
+						<td th:text="${iterStat.count}">1</td>
+						<td class="td-bold" th:text="${lead.customerName}">—</td>
+						<td th:text="${lead.email}">—</td>
+						<td th:text="${lead.company ?: '—'}">—</td>
+						<td th:text="${#numbers.formatDecimal(lead.dealValue, 1, 'COMMA', 2, 'POINT')}">0.00
+						</td>
+						<td th:text="${lead.source?.name()}">—</td>
+						<td th:text="${lead.createdBy?.name ?: '—'}">—</td>
+						<td th:text="${lead.assignedTo?.name ?: 'Unassigned'}">—</td>
+						<td th:text="${#temporals.format(lead.createdAt, 'dd MMM yyyy')}">—</td>
+						<td>
+							<span class="badge badge-pending"
+								th:text="${lead.status.getDisplayName()}">Pending</span>
+						</td>
+						<td class="td-actions">
+							<a th:href="@{/admin/leads/{id}/approve(id=${lead.id})}"
+								class="action-link action-approve">Approve</a>
+							<a th:href="@{/admin/leads/{id}/assign(id=${lead.id})}"
+								class="action-link action-assign">Assign</a>
+						</td>
+					</tr>
+					<tr th:if="${#lists.isEmpty(recentLeads)}">
+						<td colspan="11" class="table-empty">No pending leads at the moment. 🎉</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</section>
+</section>
+
+</body>
 </html>

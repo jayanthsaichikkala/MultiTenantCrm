@@ -19,15 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ── Mark active nav item based on current URL ──────────────────────────────
-    const currentPath = window.location.pathname;
-    document.querySelectorAll('.nav-item').forEach(item => {
-        const href = item.getAttribute('href') || item.getAttribute('th:href') || '';
-        if (href && currentPath.startsWith(href) && href !== '/') {
-            item.classList.add('active');
-        } else if (href === '/' && currentPath === '/') {
-            item.classList.add('active');
-        }
-    });
+    // NOTE: Active state is handled server-side via Thymeleaf th:classappend in
+    // the layout fragment. No JS needed here — removing avoids double-highlight.
 
     // ── Auto-dismiss toast notifications ──────────────────────────────────────
     document.querySelectorAll('.toast').forEach(t => {
@@ -131,3 +124,33 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 });
+
+
+// ── Add User page — form toggle & table search ────────────────────────────────
+function toggleAddUserForm() {
+    const form = document.getElementById('addUserForm');
+    const btn  = document.getElementById('toggleFormBtn');
+    if (!form || !btn) return;
+
+    const open = form.style.display === 'block';
+    form.style.display = open ? 'none' : 'block';
+
+    if (open) {
+        btn.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" style="display:inline;vertical-align:middle;margin-right:4px"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg> Add User';
+    } else {
+        btn.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" style="display:inline;vertical-align:middle;margin-right:4px"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg> Close';
+    }
+}
+
+function filterUserTable(query) {
+    const rows = document.querySelectorAll('#usersTable tbody tr:not(#emptyRow):not(#noResultsRow)');
+    const q = query.toLowerCase().trim();
+    let visible = 0;
+    rows.forEach(row => {
+        const match = row.textContent.toLowerCase().includes(q);
+        row.style.display = match ? '' : 'none';
+        if (match) visible++;
+    });
+    const noResults = document.getElementById('noResultsRow');
+    if (noResults) noResults.style.display = (q && visible === 0) ? '' : 'none';
+}

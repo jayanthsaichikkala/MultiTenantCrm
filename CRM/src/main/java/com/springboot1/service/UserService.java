@@ -39,6 +39,18 @@ public class UserService {
 		return userRepo.findByRoleAndStatus(role, TenantStatus.ACTIVE);
 	}
 
+	// ── Delete a staff user and their linked employee record ─────────────────
+	public void deleteUser(Long userId) {
+		User user = userRepo.findById(userId)
+				.orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+		if (user.getRole() != Role.MANAGER && user.getRole() != Role.SALES_EXECUTIVE) {
+			throw new IllegalArgumentException("Cannot delete this user type.");
+		}
+		// Remove linked employee record if exists
+		empRepo.findByUserId(userId).ifPresent(empRepo::delete);
+		userRepo.delete(user);
+	}
+
 	// ── Create a new MANAGER or SALES_EXECUTIVE user ──────────────────────────
 	// This creates:
 	//   1. A User record (for login)
