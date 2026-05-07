@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{fragments/user-layout :: layout('Dashboard', 'home', ~{::section})}">
+<head></head>
+<body>
+<section>
+
+  <!-- Stats Cards -->
+  <section class="stats-grid">
+    <div class="stat-card stat-card--dark">
+      <div class="stat-header">
+        <span class="stat-label">My Leads</span>
+        <div class="stat-icon stat-icon--dollar"><i class="fas fa-users"></i></div>
+      </div>
+      <div class="stat-value" th:text="${totalLeads ?: 0}">0</div>
+      <div class="stat-bar"><div class="stat-bar-fill"></div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Approved</span>
+        <div class="stat-icon stat-icon--share"><i class="fas fa-check-circle"></i></div>
+      </div>
+      <div class="stat-value stat-value--dark" th:text="${approvedLeads ?: 0}">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Pending</span>
+        <div class="stat-icon stat-icon--like"><i class="fas fa-clock"></i></div>
+      </div>
+      <div class="stat-value stat-value--dark" th:text="${pendingLeads ?: 0}">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Messages</span>
+        <div class="stat-icon stat-icon--star"><i class="fas fa-envelope"></i></div>
+      </div>
+      <div class="stat-value stat-value--dark" th:text="${messageCount ?: 0}">0</div>
+    </div>
+  </section>
+
+  <!-- Charts Row -->
+  <section class="charts-row">
+    <div class="chart-card chart-card--wide">
+      <div class="chart-header">
+        <span class="chart-title">Lead Activity</span>
+        <a th:href="@{/user/graph}" class="check-btn">View Graph</a>
+      </div>
+      <div class="bar-chart-wrap">
+        <div class="y-axis">
+          <span>50</span><span>40</span><span>30</span><span>20</span><span>10</span>
+        </div>
+        <div class="bar-chart" id="barChart"></div>
+      </div>
+      <div class="x-axis" id="xAxis"></div>
+      <div class="chart-legend">
+        <span class="legend-dot legend-dot--dark"></span><span>Pending</span>
+        <span class="legend-dot legend-dot--orange"></span><span>Approved</span>
+      </div>
+    </div>
+
+    <div class="chart-card chart-card--donut">
+      <div class="donut-wrap">
+        <svg class="donut-svg" viewBox="0 0 120 120">
+          <circle class="donut-track" cx="60" cy="60" r="46" fill="none" stroke="#e8ecf0" stroke-width="14"/>
+          <circle class="donut-fill donut-fill--dark" cx="60" cy="60" r="46" fill="none"
+            stroke="#2B2D31" stroke-width="14" stroke-dasharray="289" stroke-dashoffset="289"
+            stroke-linecap="round" transform="rotate(-90 60 60)"/>
+          <circle class="donut-fill donut-fill--orange" cx="60" cy="60" r="46" fill="none"
+            stroke="#4CAF50" stroke-width="14" stroke-dasharray="289" stroke-dashoffset="289"
+            stroke-linecap="round" transform="rotate(-90 60 60)"/>
+          <text x="60" y="65" text-anchor="middle" class="donut-label"
+            th:text="${approvedPct ?: 0} + '%'">0%</text>
+        </svg>
+      </div>
+      <ul class="donut-list">
+        <li>Total Leads: <strong th:text="${totalLeads ?: 0}">0</strong></li>
+        <li>Approved: <strong th:text="${approvedLeads ?: 0}">0</strong></li>
+        <li>Pending: <strong th:text="${pendingLeads ?: 0}">0</strong></li>
+        <li>Rejected: <strong th:text="${rejectedLeads ?: 0}">0</strong></li>
+      </ul>
+      <a th:href="@{/user/graph}" class="check-btn check-btn--full">Full Report</a>
+    </div>
+  </section>
+
+  <!-- Bottom Row -->
+  <section class="bottom-row">
+    <div class="chart-card chart-card--area">
+      <div class="area-legend">
+        <span class="legend-dot legend-dot--orange"></span><span>Approved Leads</span>
+        <span class="legend-dot legend-dot--dark" style="margin-left:1rem"></span><span>Pending Leads</span>
+      </div>
+      <div class="area-chart-wrap">
+        <svg class="area-svg" viewBox="0 0 500 160" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="gradOrange" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#4CAF50" stop-opacity="0.85"/>
+              <stop offset="100%" stop-color="#4CAF50" stop-opacity="0.1"/>
+            </linearGradient>
+            <linearGradient id="gradDark" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#2B2D31" stop-opacity="0.9"/>
+              <stop offset="100%" stop-color="#2B2D31" stop-opacity="0.1"/>
+            </linearGradient>
+          </defs>
+          <path class="area-path area-path--orange"
+            d="M0,120 C40,110 60,50 100,60 C140,70 160,90 200,70 C240,50 260,30 300,40 C340,50 360,80 400,60 C440,40 470,80 500,70 L500,160 L0,160 Z"
+            fill="url(#gradOrange)"/>
+          <path class="area-path area-path--dark"
+            d="M0,140 C40,130 60,90 100,100 C140,110 160,120 200,100 C240,80 260,70 300,80 C340,90 360,110 400,90 C440,70 470,100 500,90 L500,160 L0,160 Z"
+            fill="url(#gradDark)"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="chart-card chart-card--calendar">
+      <div class="calendar" id="calendar"></div>
+    </div>
+  </section>
+
+</section>
+
+<script>
+  // Bar chart
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP'];
+  const d1 = [28,35,22,38,30,50,42,32,25];
+  const d2 = [20,25,18,28,22,38,30,20,18];
+  const bc = document.getElementById('barChart');
+  const xa = document.getElementById('xAxis');
+  months.forEach((m,i) => {
+    const g = document.createElement('div'); g.className = 'bar-group';
+    const b1 = document.createElement('div'); b1.className = 'bar bar--dark';
+    b1.style.setProperty('--h', d1[i]+'%'); b1.setAttribute('data-val', d1[i]);
+    const b2 = document.createElement('div'); b2.className = 'bar bar--orange';
+    b2.style.setProperty('--h', d2[i]+'%'); b2.setAttribute('data-val', d2[i]);
+    g.appendChild(b1); g.appendChild(b2); bc.appendChild(g);
+    const l = document.createElement('span'); l.textContent = m; xa.appendChild(l);
+  });
+  setTimeout(() => document.querySelectorAll('.bar').forEach((b,i) => setTimeout(() => b.classList.add('bar--animated'), i*60)), 300);
+
+  // Donut
+  const C = 2*Math.PI*46;
+  const dp = 0.55, op = 0.45;
+  const df = document.querySelector('.donut-fill--dark');
+  const of = document.querySelector('.donut-fill--orange');
+  setTimeout(() => {
+    df.style.transition = 'stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)';
+    df.style.strokeDashoffset = C*(1-dp);
+    of.setAttribute('transform', `rotate(${-90+dp*360} 60 60)`);
+    of.style.transition = 'stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1) 0.3s';
+    of.style.strokeDashoffset = C*(1-op);
+  }, 600);
+
+  // Calendar
+  (function() {
+    const cal = document.getElementById('calendar');
+    const now = new Date();
+    const mn = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const dn = ['S','M','T','W','T','F','S'];
+    const h = document.createElement('div'); h.className = 'cal-header';
+    h.textContent = mn[now.getMonth()] + ' ' + now.getFullYear(); cal.appendChild(h);
+    const g = document.createElement('div'); g.className = 'cal-grid';
+    dn.forEach(d => { const s = document.createElement('span'); s.className = 'cal-day-name'; s.textContent = d; g.appendChild(s); });
+    const fd = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
+    for (let i=0;i<fd;i++) g.appendChild(document.createElement('span'));
+    const td = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+    for (let d=1;d<=td;d++) {
+      const c = document.createElement('span'); c.className = 'cal-day'; c.textContent = d;
+      if (d === now.getDate()) c.classList.add('cal-day--today');
+      g.appendChild(c);
+    }
+    cal.appendChild(g);
+  })();
+</script>
+</body>
+</html>

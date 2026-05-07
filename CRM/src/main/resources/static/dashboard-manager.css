@@ -378,7 +378,7 @@ button,select{cursor:pointer;font-family:var(--font);border:none;outline:none;ba
 .banner-close{width:28px;height:28px;border-radius:var(--r-xs);background:rgba(217,119,6,.15);display:flex;align-items:center;justify-content:center;color:#d97706;font-size:.72rem;transition:all var(--trans)}
 .banner-close:hover{background:#d97706;color:#fff}
 
-/* ══════════════════════════
+/* ══════════════════════════`
    KPI CARDS
 ══════════════════════════ */
 .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.08rem}

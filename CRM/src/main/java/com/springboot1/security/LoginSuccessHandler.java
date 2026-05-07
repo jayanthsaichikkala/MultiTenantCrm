@@ -38,9 +38,9 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
             return;
         }
         if (isSalesExecutive) {
-            response.sendRedirect("/dashboard/sales-executive");
+            response.sendRedirect("/sales/dashboard");
             return;
         }
-        response.sendRedirect("/dashboard/user");
+        response.sendRedirect("/user/home");
     }
 }

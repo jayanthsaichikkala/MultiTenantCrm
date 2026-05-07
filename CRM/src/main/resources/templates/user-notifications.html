@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{fragments/user-layout :: layout('Notifications', 'notifications', ~{::section})}">
+<head></head>
+<body>
+<section>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.4rem">
+    <div>
+      <h2 style="font-size:1.1rem;font-weight:700;color:var(--text)">Notifications</h2>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:2px">Your latest alerts and updates</p>
+    </div>
+    <span style="background:var(--navy);color:#fff;font-size:.72rem;font-weight:700;padding:4px 12px;border-radius:99px"
+      th:text="${notifCount ?: 0} + ' unread'">0 unread</span>
+  </div>
+
+  <!-- Summary row -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.4rem">
+    <div style="background:var(--surface);border-radius:var(--radius);padding:1rem 1.2rem;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px">
+      <div style="width:40px;height:40px;border-radius:10px;background:rgba(76,175,80,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="fas fa-check-circle" style="color:#4CAF50"></i>
+      </div>
+      <div>
+        <p style="font-size:1.3rem;font-weight:700;color:var(--navy);font-family:var(--font-mono)" th:text="${approvedCount ?: 0}">0</p>
+        <p style="font-size:.7rem;color:var(--muted)">Approved</p>
+      </div>
+    </div>
+    <div style="background:var(--surface);border-radius:var(--radius);padding:1rem 1.2rem;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px">
+      <div style="width:40px;height:40px;border-radius:10px;background:rgba(245,158,11,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="fas fa-clock" style="color:#f59e0b"></i>
+      </div>
+      <div>
+        <p style="font-size:1.3rem;font-weight:700;color:var(--navy);font-family:var(--font-mono)" th:text="${pendingCount ?: 0}">0</p>
+        <p style="font-size:.7rem;color:var(--muted)">Pending</p>
+      </div>
+    </div>
+    <div style="background:var(--navy);border-radius:var(--radius);padding:1rem 1.2rem;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px">
+      <div style="width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="fas fa-bell" style="color:#fff"></i>
+      </div>
+      <div>
+        <p style="font-size:1.3rem;font-weight:700;color:#fff;font-family:var(--font-mono)" th:text="${notifCount ?: 0}">0</p>
+        <p style="font-size:.7rem;color:rgba(255,255,255,.5)">Total Alerts</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification feed -->
+  <div style="background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden">
+    <div style="padding:1rem 1.4rem;border-bottom:1px solid var(--border)">
+      <span style="font-size:.88rem;font-weight:600;color:var(--text)">All Notifications</span>
+    </div>
+
+    <div th:each="lead : ${allLeads}"
+      style="display:flex;align-items:center;gap:14px;padding:.9rem 1.4rem;border-bottom:1px solid #f3f4f6;transition:background .15s"
+      onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+      <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0"
+        th:style="${lead.status?.name() == 'APPROVED'} ? 'background:rgba(76,175,80,.12)' : (${lead.status?.name() == 'REJECTED'} ? 'background:rgba(239,68,68,.1)' : 'background:rgba(245,158,11,.1)')">
+        <i th:class="${lead.status?.name() == 'APPROVED'} ? 'fas fa-check' : (${lead.status?.name() == 'REJECTED'} ? 'fas fa-times' : 'fas fa-clock')"
+           th:style="${lead.status?.name() == 'APPROVED'} ? 'color:#4CAF50;font-size:.8rem' : (${lead.status?.name() == 'REJECTED'} ? 'color:#ef4444;font-size:.8rem' : 'color:#f59e0b;font-size:.8rem')"></i>
+      </div>
+      <div style="flex:1;min-width:0">
+        <p style="font-size:.82rem;font-weight:600;color:var(--text)"
+          th:text="'Lead ' + ${lead.status?.getDisplayName()} + ' — ' + ${lead.customerName}">—</p>
+        <p style="font-size:.7rem;color:var(--muted);margin-top:1px" th:text="${lead.company ?: ''}">—</p>
+      </div>
+      <span style="font-size:.68rem;color:var(--muted);white-space:nowrap"
+        th:text="${#temporals.format(lead.createdAt, 'dd MMM yyyy')}">—</span>
+    </div>
+
+    <div th:if="${#lists.isEmpty(allLeads)}"
+      style="padding:3rem;text-align:center;color:var(--muted);font-size:.85rem">
+      No notifications yet.
+    </div>
+  </div>
+
+</section>
+</body>
+</html>

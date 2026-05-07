@@ -1,526 +1,155 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
-
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Sales Executive Dashboard – CRM Portal</title>
-	<link rel="icon" type="image/svg+xml"
-		href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23DC2626'/%3E%3Ctext x='16' y='23' font-family='Arial' font-size='20' font-weight='bold' text-anchor='middle' fill='white'%3EC%3C/text%3E%3C/svg%3E" />
-
-	<link
-		href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
-		rel="stylesheet">
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-	<link rel="stylesheet" th:href="@{/dashboard-sales-executive.css}">
-</head>
-
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{fragments/sales-layout :: layout('Sales Dashboard', 'dashboard', ~{::section})}">
+<head></head>
 <body>
+<section>
 
-	<div class="dashboard" id="dashboardRoot">
+  <!-- KPI STATS -->
+  <section class="stats-grid">
+    <div class="stat-card stat-card--dark">
+      <div class="stat-header">
+        <span class="stat-label">My Leads</span>
+        <div class="stat-icon stat-icon--orange"><i class="fas fa-users"></i></div>
+      </div>
+      <div class="stat-value" th:text="${myLeadsCount ?: 0}">0</div>
+      <div class="stat-bar">
+        <div class="stat-bar-fill" th:style="|width:${totalLeads > 0 ? (myLeadsCount * 100 / totalLeads) : 0}%|"></div>
+      </div>
+      <p class="stat-sub">of <span th:text="${totalLeads ?: 0}">0</span> total</p>
+    </div>
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Follow-ups Due</span>
+        <div class="stat-icon stat-icon--blue"><i class="fas fa-redo-alt"></i></div>
+      </div>
+      <div class="stat-value stat-value--dark" th:text="${followupCount ?: 0}">0</div>
+      <p class="stat-sub stat-sub--warn">Pending review</p>
+    </div>
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Active Deals</span>
+        <div class="stat-icon stat-icon--green"><i class="fas fa-handshake"></i></div>
+      </div>
+      <div class="stat-value stat-value--dark" th:text="${activeDeals ?: 0}">0</div>
+      <p class="stat-sub">In pipeline</p>
+    </div>
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Won Deals</span>
+        <div class="stat-icon stat-icon--star"><i class="fas fa-trophy"></i></div>
+      </div>
+      <div class="stat-value stat-value--dark" th:text="${wonDeals ?: 0}">0</div>
+      <p class="stat-sub stat-sub--success">This month</p>
+    </div>
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Revenue (₹)</span>
+        <div class="stat-icon stat-icon--orange"><i class="fas fa-rupee-sign"></i></div>
+      </div>
+      <div class="stat-value stat-value--dark" th:text="${#numbers.formatDecimal(myRevenue ?: 0, 1, 'COMMA', 0, 'POINT')}">0</div>
+      <p class="stat-sub stat-sub--success">Closed value</p>
+    </div>
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Tasks Pending</span>
+        <div class="stat-icon stat-icon--share"><i class="fas fa-tasks"></i></div>
+      </div>
+      <div class="stat-value stat-value--dark" th:text="${pendingTasksCount ?: 0}">0</div>
+      <p class="stat-sub stat-sub--warn">Need action</p>
+    </div>
+  </section>
 
-		<!-- ===================== SIDEBAR ===================== -->
-		<aside class="sidebar" id="sidebar">
+  <!-- PIPELINE STAGES -->
+  <div class="section-header">
+    <h2 class="section-title"><i class="fas fa-layer-group"></i> Deal Pipeline Stages</h2>
+    <a th:href="@{/sales/pipeline/deals}" class="link-all">View All Deals →</a>
+  </div>
+  <section class="pipeline-track">
+    <div class="pipeline-stage-card" th:each="stage : ${pipelineStages}">
+      <div class="ps-icon" th:classappend="${stage == 'Closed Won'} ? 'ps-icon--won' : (${stage == 'Closed Lost'} ? 'ps-icon--lost' : '')">
+        <i class="fas fa-circle-dot" th:if="${stage == 'Prospecting'}"></i>
+        <i class="fas fa-filter" th:if="${stage == 'Qualification'}"></i>
+        <i class="fas fa-file-alt" th:if="${stage == 'Proposal'}"></i>
+        <i class="fas fa-comments-dollar" th:if="${stage == 'Negotiation'}"></i>
+        <i class="fas fa-check-circle" th:if="${stage == 'Closed Won'}"></i>
+        <i class="fas fa-times-circle" th:if="${stage == 'Closed Lost'}"></i>
+      </div>
+      <p class="ps-name" th:text="${stage}">Stage</p>
+      <p class="ps-count">0 deals</p>
+    </div>
+  </section>
 
-			<!-- Profile -->
-			<div class="sidebar-profile">
-				<div class="avatar-ring">
-					<div class="avatar">
-						<i class="fas fa-user"></i>
-					</div>
-				</div>
-				<h2 class="user-name" th:text="${#authentication?.name ?: 'Sales Exec'}">JOHN DON</h2>
-				<p class="user-email" th:text="${userEmail ?: 'exec@company.com'}">exec@company.com</p>
-				<span class="user-role-badge">Sales Executive</span>
-			</div>
+  <!-- RECENT LEADS TABLE -->
+  <div class="section-header">
+    <h2 class="section-title"><i class="fas fa-users"></i> My Recent Leads</h2>
+    <a th:href="@{/sales/leads}" class="link-all">View All →</a>
+  </div>
+  <section class="table-card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Customer</th><th>Company</th><th>Deal Value (₹)</th><th>Source</th><th>Status</th><th>Date</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="lead, s : ${myLeads}">
+            <td th:text="${s.count}">1</td>
+            <td class="td-name" th:text="${lead.customerName}">—</td>
+            <td th:text="${lead.company ?: '—'}">—</td>
+            <td th:text="${#numbers.formatDecimal(lead.dealValue, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+            <td th:text="${lead.source?.name()}">—</td>
+            <td>
+              <span class="badge"
+                th:classappend="${lead.status?.name() == 'APPROVED'} ? ' badge--green' : (${lead.status?.name() == 'REJECTED'} ? ' badge--red' : ' badge--orange')"
+                th:text="${lead.status?.getDisplayName()}">Pending</span>
+            </td>
+            <td th:text="${#temporals.format(lead.createdAt, 'dd MMM yyyy')}">—</td>
+            <td class="td-actions">
+              <a th:href="@{/sales/leads/{id}(id=${lead.id})}" class="act-link act-view">View</a>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(myLeads)}">
+            <td colspan="8" class="td-empty">No leads assigned yet.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 
-			<!-- Navigation -->
-			<nav class="sidebar-nav" id="sidebarNav">
+  <!-- PERFORMANCE MINI -->
+  <div class="section-header">
+    <h2 class="section-title"><i class="fas fa-chart-line"></i> My Performance</h2>
+    <a th:href="@{/sales/performance}" class="link-all">Full Report →</a>
+  </div>
+  <section class="perf-grid">
+    <div class="perf-card">
+      <p class="perf-label">Leads Converted</p>
+      <p class="perf-value" th:text="${leadsConverted ?: 0}">0</p>
+      <div class="perf-bar"><div th:style="|width:${conversionRate ?: 0}%|"></div></div>
+      <p class="perf-rate" th:text="${conversionRate ?: 0} + '% conversion'">0%</p>
+    </div>
+    <div class="perf-card">
+      <p class="perf-label">Calls Made</p>
+      <p class="perf-value" th:text="${callsMade ?: 0}">0</p>
+      <div class="perf-bar perf-bar--blue"><div th:style="|width:${callsMade > 0 ? (callsMade * 100 / (callsTarget ?: 1)) : 0}%|"></div></div>
+      <p class="perf-rate" th:text="${callsTarget ?: 0} + ' target'">0 target</p>
+    </div>
+    <div class="perf-card">
+      <p class="perf-label">Meetings Done</p>
+      <p class="perf-value" th:text="${meetingsDone ?: 0}">0</p>
+      <div class="perf-bar perf-bar--green"><div th:style="|width:${meetingsDone > 0 ? (meetingsDone * 100 / (meetingsTarget ?: 1)) : 0}%|"></div></div>
+      <p class="perf-rate" th:text="${meetingsTarget ?: 0} + ' target'">0 target</p>
+    </div>
+    <div class="perf-card">
+      <p class="perf-label">Revenue Target</p>
+      <p class="perf-value" th:text="'₹' + ${#numbers.formatDecimal(myRevenue ?: 0, 1, 'COMMA', 0, 'POINT')}">₹0</p>
+      <div class="perf-bar perf-bar--orange"><div th:style="|width:${revenueTarget > 0 ? (myRevenue * 100 / revenueTarget) : 0}%|"></div></div>
+      <p class="perf-rate" th:text="'₹' + ${#numbers.formatDecimal(revenueTarget ?: 0, 1, 'COMMA', 0, 'POINT')} + ' target'">₹0 target</p>
+    </div>
+  </section>
 
-				<!-- Main -->
-				<p class="nav-section-label">Main</p>
-
-				<a th:href="@{/sales/dashboard}" class="nav-item active" id="nav-dashboard">
-					<i class="fas fa-th-large"></i>
-					<span>Dashboard</span>
-				</a>
-
-				<!-- Leads -->
-				<p class="nav-section-label">Leads</p>
-
-				<a th:href="@{/sales/leads}" class="nav-item" id="nav-myleads">
-					<i class="fas fa-users"></i>
-					<span>My Leads</span>
-					<span class="nav-badge" th:text="${myLeadsCount ?: 0}">0</span>
-				</a>
-				<a th:href="@{/sales/leads/add}" class="nav-item" id="nav-addlead">
-					<i class="fas fa-user-plus"></i>
-					<span>Add Lead</span>
-				</a>
-				<a th:href="@{/sales/leads/followups}" class="nav-item" id="nav-followups">
-					<i class="fas fa-redo-alt"></i>
-					<span>Lead Follow-ups</span>
-					<span class="nav-badge nav-badge--warn" th:text="${followupCount ?: 0}">0</span>
-				</a>
-
-				<!-- Sales Pipeline -->
-				<p class="nav-section-label">Sales Pipeline</p>
-
-				<a th:href="@{/sales/pipeline/deals}" class="nav-item" id="nav-deals">
-					<i class="fas fa-handshake"></i>
-					<span>My Deals</span>
-				</a>
-				<a th:href="@{/sales/pipeline/stages}" class="nav-item" id="nav-stages">
-					<i class="fas fa-layer-group"></i>
-					<span>Deal Stages</span>
-				</a>
-
-				<!-- Activities -->
-				<p class="nav-section-label">Activities</p>
-
-				<a th:href="@{/sales/activities/calls}" class="nav-item" id="nav-calls">
-					<i class="fas fa-phone-alt"></i>
-					<span>Calls</span>
-				</a>
-				<a th:href="@{/sales/activities/meetings}" class="nav-item" id="nav-meetings">
-					<i class="fas fa-calendar-check"></i>
-					<span>Meetings</span>
-				</a>
-				<a th:href="@{/sales/activities/tasks}" class="nav-item" id="nav-tasks">
-					<i class="fas fa-tasks"></i>
-					<span>Tasks</span>
-					<span class="nav-badge nav-badge--warn" th:text="${pendingTasksCount ?: 0}">0</span>
-				</a>
-
-				<!-- Other -->
-				<p class="nav-section-label">More</p>
-
-				<a th:href="@{/sales/calendar}" class="nav-item" id="nav-calendar">
-					<i class="fas fa-calendar-alt"></i>
-					<span>Calendar</span>
-				</a>
-				<a th:href="@{/sales/performance}" class="nav-item" id="nav-performance">
-					<i class="fas fa-chart-line"></i>
-					<span>Performance</span>
-				</a>
-				<a th:href="@{/sales/notifications}" class="nav-item" id="nav-notifications">
-					<i class="fas fa-bell"></i>
-					<span>Notifications</span>
-					<span class="nav-badge" th:text="${notifCount ?: 0}">0</span>
-				</a>
-				<a th:href="@{/sales/profile}" class="nav-item" id="nav-profile">
-					<i class="fas fa-user-circle"></i>
-					<span>Profile</span>
-				</a>
-
-			</nav>
-
-			<!-- Logout -->
-			<form th:action="@{/logout}" method="post" class="logout-form">
-				<input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-				<button type="submit" class="logout-btn">
-					<i class="fas fa-sign-out-alt"></i>
-					<span>Logout</span>
-				</button>
-			</form>
-
-		</aside>
-
-		<!-- Mobile overlay -->
-		<div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-		<!-- ===================== MAIN CONTENT ===================== -->
-		<main class="main-content">
-
-			<!-- Top Bar -->
-			<header class="top-bar">
-				<div class="top-bar-left">
-					<button class="menu-toggle" id="menuToggle" aria-label="Toggle Sidebar">
-						<span></span><span></span><span></span>
-					</button>
-					<div>
-						<h1 class="page-title">Sales Dashboard</h1>
-						<p class="page-subtitle">Welcome back — here's your daily overview.</p>
-					</div>
-				</div>
-				<div class="top-bar-right">
-					<a th:href="@{/sales/leads/add}" class="top-btn">
-						<i class="fas fa-plus"></i> New Lead
-					</a>
-					<a th:href="@{/sales/notifications}" class="top-notif" aria-label="Notifications">
-						<i class="fas fa-bell"></i>
-						<span class="notif-dot" th:if="${notifCount > 0}"></span>
-					</a>
-					<div class="top-avatar">
-						<div class="avatar-sm"><i class="fas fa-user"></i></div>
-						<span th:text="${#authentication?.name ?: 'Exec'}">Exec</span>
-					</div>
-				</div>
-			</header>
-
-			<!-- Toast -->
-			<div th:if="${success}" class="toast toast--success" th:text="${success}"></div>
-			<div th:if="${error}" class="toast toast--error" th:text="${error}"></div>
-
-			<!-- ── KPI STATS ─────────────────────────────────────────── -->
-			<section class="stats-grid">
-
-				<div class="stat-card stat-card--dark">
-					<div class="stat-header">
-						<span class="stat-label">My Leads</span>
-						<div class="stat-icon stat-icon--orange"><i class="fas fa-users"></i></div>
-					</div>
-					<div class="stat-value" th:text="${myLeadsCount ?: 0}">0</div>
-					<div class="stat-bar">
-						<div class="stat-bar-fill"
-							th:style="|width:${totalLeads > 0 ? (myLeadsCount * 100 / totalLeads) : 0}%|"></div>
-					</div>
-					<p class="stat-sub">of <span th:text="${totalLeads ?: 0}">0</span> total</p>
-				</div>
-
-				<div class="stat-card">
-					<div class="stat-header">
-						<span class="stat-label">Follow-ups Due</span>
-						<div class="stat-icon stat-icon--blue"><i class="fas fa-redo-alt"></i></div>
-					</div>
-					<div class="stat-value stat-value--dark" th:text="${followupCount ?: 0}">0</div>
-					<p class="stat-sub stat-sub--warn">Pending review</p>
-				</div>
-
-				<div class="stat-card">
-					<div class="stat-header">
-						<span class="stat-label">Active Deals</span>
-						<div class="stat-icon stat-icon--green"><i class="fas fa-handshake"></i></div>
-					</div>
-					<div class="stat-value stat-value--dark" th:text="${activeDeals ?: 0}">0</div>
-					<p class="stat-sub">In pipeline</p>
-				</div>
-
-				<div class="stat-card">
-					<div class="stat-header">
-						<span class="stat-label">Won Deals</span>
-						<div class="stat-icon stat-icon--star"><i class="fas fa-trophy"></i></div>
-					</div>
-					<div class="stat-value stat-value--dark" th:text="${wonDeals ?: 0}">0</div>
-					<p class="stat-sub stat-sub--success">This month</p>
-				</div>
-
-				<div class="stat-card">
-					<div class="stat-header">
-						<span class="stat-label">Revenue (₹)</span>
-						<div class="stat-icon stat-icon--orange"><i class="fas fa-rupee-sign"></i></div>
-					</div>
-					<div class="stat-value stat-value--dark kpi-animate"
-						th:text="${#numbers.formatDecimal(myRevenue ?: 0, 1, 'COMMA', 0, 'POINT')}">0</div>
-					<p class="stat-sub stat-sub--success">Closed value</p>
-				</div>
-
-				<div class="stat-card">
-					<div class="stat-header">
-						<span class="stat-label">Tasks Pending</span>
-						<div class="stat-icon stat-icon--share"><i class="fas fa-tasks"></i></div>
-					</div>
-					<div class="stat-value stat-value--dark" th:text="${pendingTasksCount ?: 0}">0</div>
-					<p class="stat-sub stat-sub--warn">Need action</p>
-				</div>
-
-			</section>
-
-			<!-- ── PIPELINE STAGES ───────────────────────────────────── -->
-			<div class="section-header">
-				<h2 class="section-title"><i class="fas fa-layer-group"></i> Deal Pipeline Stages</h2>
-				<a th:href="@{/sales/pipeline/deals}" class="link-all">View All Deals →</a>
-			</div>
-			<section class="pipeline-track">
-				<div class="pipeline-stage-card"
-					th:each="stage : ${pipelineStages ?: #lists.toList({'Prospecting','Qualification','Proposal','Negotiation','Closed Won','Closed Lost'})}">
-					<div class="ps-icon"
-						th:classappend="${stage == 'Closed Won'} ? 'ps-icon--won' : (${stage == 'Closed Lost'} ? 'ps-icon--lost' : '')">
-						<i class="fas fa-circle-dot" th:if="${stage == 'Prospecting'}"></i>
-						<i class="fas fa-filter" th:if="${stage == 'Qualification'}"></i>
-						<i class="fas fa-file-alt" th:if="${stage == 'Proposal'}"></i>
-						<i class="fas fa-comments-dollar" th:if="${stage == 'Negotiation'}"></i>
-						<i class="fas fa-check-circle" th:if="${stage == 'Closed Won'}"></i>
-						<i class="fas fa-times-circle" th:if="${stage == 'Closed Lost'}"></i>
-					</div>
-					<p class="ps-name" th:text="${stage}">Stage</p>
-					<p class="ps-count">0 deals</p>
-				</div>
-			</section>
-
-			<!-- ── CHARTS ROW ────────────────────────────────────────── -->
-			<div class="charts-row">
-
-				<!-- Bar Chart: Monthly Performance -->
-				<div class="chart-card chart-card--wide">
-					<div class="chart-header">
-						<span class="chart-title">Monthly Performance</span>
-						<div class="chart-legend">
-							<span class="legend-dot legend-dot--dark"></span><span>Leads</span>
-							<span class="legend-dot legend-dot--orange"></span><span>Deals</span>
-						</div>
-						<a th:href="@{/sales/performance}" class="check-btn">Full Report</a>
-					</div>
-					<div class="bar-chart-wrap">
-						<div class="y-axis" id="yAxis">
-							<span>50</span><span>40</span><span>30</span><span>20</span><span>10</span>
-						</div>
-						<div class="bar-chart" id="barChart"></div>
-					</div>
-					<div class="x-axis" id="xAxis"></div>
-				</div>
-
-				<!-- Donut: Lead Status Distribution -->
-				<div class="chart-card chart-card--donut">
-					<div class="chart-header">
-						<span class="chart-title">Lead Status</span>
-					</div>
-					<div class="donut-wrap">
-						<svg class="donut-svg" viewBox="0 0 120 120">
-							<circle class="donut-track" cx="60" cy="60" r="46" fill="none" stroke="#1e3a5f"
-								stroke-width="14" />
-							<circle class="donut-fill donut-fill--dark" cx="60" cy="60" r="46" fill="none"
-								stroke="#f5a623" stroke-width="14" stroke-dasharray="289" stroke-dashoffset="289"
-								stroke-linecap="round" transform="rotate(-90 60 60)" />
-							<circle class="donut-fill donut-fill--orange" cx="60" cy="60" r="46" fill="none"
-								stroke="#34d399" stroke-width="14" stroke-dasharray="289" stroke-dashoffset="289"
-								stroke-linecap="round" transform="rotate(-90 60 60)" />
-							<text x="60" y="58" text-anchor="middle" class="donut-label-main"
-								th:text="${approvedPct ?: '0'}">0</text>
-							<text x="60" y="71" text-anchor="middle" class="donut-label-sub">% Won</text>
-						</svg>
-					</div>
-					<ul class="donut-list">
-						<li><span class="dl-dot dl-dot--orange"></span><span>Pending</span><span class="dl-val"
-								th:text="${pendingLeads ?: 0}">0</span></li>
-						<li><span class="dl-dot dl-dot--green"></span><span>Approved</span><span class="dl-val"
-								th:text="${approvedLeads ?: 0}">0</span></li>
-						<li><span class="dl-dot dl-dot--blue"></span><span>Follow-up</span><span class="dl-val"
-								th:text="${followupCount ?: 0}">0</span></li>
-						<li><span class="dl-dot dl-dot--red"></span><span>Rejected</span><span class="dl-val"
-								th:text="${rejectedLeads ?: 0}">0</span></li>
-					</ul>
-					<a th:href="@{/sales/leads}" class="check-btn check-btn--full">View My Leads</a>
-				</div>
-
-			</div>
-
-			<!-- ── LEADS TABLE ───────────────────────────────────────── -->
-			<div class="section-header">
-				<h2 class="section-title"><i class="fas fa-users"></i> My Recent Leads</h2>
-				<a th:href="@{/sales/leads}" class="link-all">View All →</a>
-			</div>
-			<section class="table-card">
-				<div class="table-wrap">
-					<table>
-						<thead>
-							<tr>
-								<th>#</th>
-								<th>Customer</th>
-								<th>Company</th>
-								<th>Phone</th>
-								<th>Deal Value (₹)</th>
-								<th>Source</th>
-								<th>Follow-up Date</th>
-								<th>Status</th>
-								<th>Actions</th>
-							</tr>
-						</thead>
-						<tbody>
-							<tr th:each="lead, s : ${myLeads}">
-								<td th:text="${s.count}">1</td>
-								<td class="td-name" th:text="${lead.customerName}">—</td>
-								<td th:text="${lead.company ?: '—'}">—</td>
-								<td th:text="${lead.phone ?: '—'}">—</td>
-								<td th:text="${#numbers.formatDecimal(lead.dealValue, 1, 'COMMA', 2, 'POINT')}">0.00
-								</td>
-								<td th:text="${lead.source?.name()}">—</td>
-								<td
-									th:text="${lead.followUpDate != null ? #temporals.format(lead.followUpDate,'dd MMM yyyy') : '—'}">
-									—</td>
-								<td>
-									<span class="badge"
-										th:classappend="${lead.status?.name() == 'APPROVED'} ? ' badge--green' : (${lead.status?.name() == 'REJECTED'} ? ' badge--red' : ' badge--orange')"
-										th:text="${lead.status?.getDisplayName() ?: lead.status}">Pending</span>
-								</td>
-								<td class="td-actions">
-									<a th:href="@{/sales/leads/{id}(id=${lead.id})}" class="act-link act-view">View</a>
-									<a th:href="@{/sales/leads/{id}/followup(id=${lead.id})}"
-										class="act-link act-followup">Follow-up</a>
-								</td>
-							</tr>
-							<tr th:if="${#lists.isEmpty(myLeads)}">
-								<td colspan="9" class="td-empty">No leads assigned to you yet.</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-			</section>
-
-			<!-- ── FOLLOW-UPS & ACTIVITIES ROW ──────────────────────── -->
-			<div class="two-col-row">
-
-				<!-- Upcoming Follow-ups -->
-				<div class="info-card">
-					<div class="info-card-header">
-						<h3><i class="fas fa-redo-alt"></i> Upcoming Follow-ups</h3>
-						<a th:href="@{/sales/leads/followups}" class="link-all">All →</a>
-					</div>
-					<ul class="info-list">
-						<li th:each="fu : ${upcomingFollowups}" class="info-item">
-							<div class="info-dot info-dot--orange"></div>
-							<div class="info-body">
-								<p class="info-name" th:text="${fu.customerName}">—</p>
-								<p class="info-meta" th:text="${#temporals.format(fu.followUpDate,'dd MMM yyyy')}">—</p>
-							</div>
-							<span class="info-tag" th:text="${fu.status?.getDisplayName()}">—</span>
-						</li>
-						<li th:if="${#lists.isEmpty(upcomingFollowups)}" class="info-empty">No follow-ups due.</li>
-					</ul>
-				</div>
-
-				<!-- Recent Activities -->
-				<div class="info-card">
-					<div class="info-card-header">
-						<h3><i class="fas fa-bolt"></i> Recent Activities</h3>
-						<a th:href="@{/sales/activities/calls}" class="link-all">All →</a>
-					</div>
-					<ul class="info-list">
-						<li th:each="act : ${recentActivities}" class="info-item">
-							<div class="info-dot"
-								th:classappend="${act.type == 'CALL'} ? ' info-dot--blue' : (${act.type == 'MEETING'} ? ' info-dot--green' : ' info-dot--orange')">
-							</div>
-							<div class="info-body">
-								<p class="info-name" th:text="${act.title ?: act.contactName ?: 'Activity'}">—</p>
-								<p class="info-meta" th:text="${#temporals.format(act.activityDate,'dd MMM, hh:mm a')}">
-									—</p>
-							</div>
-							<span class="info-tag"
-								th:classappend="${act.type == 'CALL'} ? ' tag--blue' : (${act.type == 'MEETING'} ? ' tag--green' : ' tag--orange')"
-								th:text="${act.type}">—</span>
-						</li>
-						<li th:if="${#lists.isEmpty(recentActivities)}" class="info-empty">No recent activities.</li>
-					</ul>
-				</div>
-
-			</div>
-
-			<!-- ── TASKS & CALENDAR ROW ─────────────────────────────── -->
-			<div class="two-col-row">
-
-				<!-- Pending Tasks -->
-				<div class="info-card">
-					<div class="info-card-header">
-						<h3><i class="fas fa-tasks"></i> My Tasks</h3>
-						<a th:href="@{/sales/activities/tasks}" class="link-all">All →</a>
-					</div>
-					<ul class="info-list">
-						<li th:each="task : ${myTasks}" class="info-item task-item">
-							<input type="checkbox" class="task-check" th:checked="${task.completed}"
-								th:data-id="${task.id}" aria-label="Mark complete">
-							<div class="info-body">
-								<p class="info-name" th:classappend="${task.completed} ? ' task-done'"
-									th:text="${task.title}">—</p>
-								<p class="info-meta" th:text="${#temporals.format(task.dueDate,'dd MMM yyyy')}">—</p>
-							</div>
-							<span class="info-tag"
-								th:classappend="${task.priority == 'HIGH'} ? ' tag--red' : ' tag--blue'"
-								th:text="${task.priority}">—</span>
-						</li>
-						<li th:if="${#lists.isEmpty(myTasks)}" class="info-empty">No pending tasks. 🎉</li>
-					</ul>
-				</div>
-
-				<!-- Calendar -->
-				<div class="info-card info-card--dark">
-					<div class="info-card-header">
-						<h3><i class="fas fa-calendar-alt"></i> Calendar</h3>
-						<a th:href="@{/sales/calendar}" class="link-all link-all--light">Full →</a>
-					</div>
-					<div class="calendar" id="calendar"></div>
-				</div>
-
-			</div>
-
-			<!-- ── PERFORMANCE MINI ──────────────────────────────────── -->
-			<div class="section-header">
-				<h2 class="section-title"><i class="fas fa-chart-line"></i> My Performance</h2>
-				<a th:href="@{/sales/performance}" class="link-all">Full Report →</a>
-			</div>
-			<section class="perf-grid">
-				<div class="perf-card">
-					<p class="perf-label">Leads Converted</p>
-					<p class="perf-value" th:text="${leadsConverted ?: 0}">0</p>
-					<div class="perf-bar">
-						<div th:style="|width:${conversionRate ?: 0}%|"></div>
-					</div>
-					<p class="perf-rate" th:text="${conversionRate ?: 0} + '% conversion'">0% conversion</p>
-				</div>
-				<div class="perf-card">
-					<p class="perf-label">Calls Made</p>
-					<p class="perf-value" th:text="${callsMade ?: 0}">0</p>
-					<div class="perf-bar perf-bar--blue">
-						<div th:style="|width:${callsMade > 0 ? (callsMade * 100 / (callsTarget ?: 1)) : 0}%|"></div>
-					</div>
-					<p class="perf-rate" th:text="${callsTarget ?: 0} + ' target'">0 target</p>
-				</div>
-				<div class="perf-card">
-					<p class="perf-label">Meetings Done</p>
-					<p class="perf-value" th:text="${meetingsDone ?: 0}">0</p>
-					<div class="perf-bar perf-bar--green">
-						<div th:style="|width:${meetingsDone > 0 ? (meetingsDone * 100 / (meetingsTarget ?: 1)) : 0}%|">
-						</div>
-					</div>
-					<p class="perf-rate" th:text="${meetingsTarget ?: 0} + ' target'">0 target</p>
-				</div>
-				<div class="perf-card">
-					<p class="perf-label">Revenue Target</p>
-					<p class="perf-value"
-						th:text="'₹' + ${#numbers.formatDecimal(myRevenue ?: 0, 1, 'COMMA', 0, 'POINT')}">₹0</p>
-					<div class="perf-bar perf-bar--orange">
-						<div th:style="|width:${revenueTarget > 0 ? (myRevenue * 100 / revenueTarget) : 0}%|"></div>
-					</div>
-					<p class="perf-rate"
-						th:text="'₹' + ${#numbers.formatDecimal(revenueTarget ?: 0, 1, 'COMMA', 0, 'POINT')} + ' target'">
-						₹0 target</p>
-				</div>
-			</section>
-
-			<!-- ── AREA CHART ───────────────────────────────────────── -->
-			<div class="section-header" style="margin-top:0">
-				<h2 class="section-title"><i class="fas fa-wave-square"></i> Revenue Trend</h2>
-			</div>
-			<section class="chart-card chart-card--area">
-				<div class="area-legend">
-					<span class="legend-dot legend-dot--orange"></span><span>Revenue</span>
-					<span class="legend-dot legend-dot--dark" style="margin-left:1.2rem"></span><span>Target</span>
-				</div>
-				<div class="area-chart-wrap">
-					<svg class="area-svg" viewBox="0 0 500 160" preserveAspectRatio="none">
-						<defs>
-							<linearGradient id="gradOrange" x1="0" y1="0" x2="0" y2="1">
-								<stop offset="0%" stop-color="#f5a623" stop-opacity="0.85" />
-								<stop offset="100%" stop-color="#f5a623" stop-opacity="0.05" />
-							</linearGradient>
-							<linearGradient id="gradDark" x1="0" y1="0" x2="0" y2="1">
-								<stop offset="0%" stop-color="#1a2e4a" stop-opacity="0.9" />
-								<stop offset="100%" stop-color="#1a2e4a" stop-opacity="0.05" />
-							</linearGradient>
-						</defs>
-						<path
-							d="M0,120 C40,110 60,50 100,60 C140,70 160,90 200,70 C240,50 260,30 300,40 C340,50 360,80 400,60 C440,40 470,80 500,70 L500,160 L0,160 Z"
-							fill="url(#gradOrange)" class="area-path area-path--orange" />
-						<path
-							d="M0,140 C40,130 60,90 100,100 C140,110 160,120 200,100 C240,80 260,70 300,80 C340,90 360,110 400,90 C440,70 470,100 500,90 L500,160 L0,160 Z"
-							fill="url(#gradDark)" class="area-path area-path--dark" />
-					</svg>
-				</div>
-			</section>
-
-		</main>
-	</div>
-
-	<script th:src="@{/dashboard-sales-executive.js}"></script>
+</section>
 </body>
-
 </html>

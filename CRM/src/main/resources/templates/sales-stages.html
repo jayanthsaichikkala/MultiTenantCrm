@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{fragments/sales-layout :: layout('Deal Stages', 'stages', ~{::section})}">
+<head></head>
+<body>
+<section>
+
+  <div class="section-header" style="margin-bottom:1.4rem">
+    <h2 class="section-title"><i class="fas fa-layer-group"></i> Deal Stages</h2>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px">
+    <div th:each="stage, s : ${pipelineStages}"
+      style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:1.4rem;box-shadow:var(--shadow-sm);text-align:center;transition:transform .2s,box-shadow .2s"
+      onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='var(--shadow-md)'"
+      onmouseout="this.style.transform='';this.style.boxShadow='var(--shadow-sm)'">
+      <div style="width:48px;height:48px;border-radius:50%;margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;font-size:1.2rem"
+        th:style="${stage == 'Closed Won'} ? 'background:rgba(52,211,153,.15);color:var(--green)' : (${stage == 'Closed Lost'} ? 'background:rgba(252,129,129,.15);color:var(--red)' : 'background:rgba(245,166,35,.12);color:var(--orange)')">
+        <i class="fas fa-circle-dot" th:if="${stage == 'Prospecting'}"></i>
+        <i class="fas fa-filter" th:if="${stage == 'Qualification'}"></i>
+        <i class="fas fa-file-alt" th:if="${stage == 'Proposal'}"></i>
+        <i class="fas fa-comments-dollar" th:if="${stage == 'Negotiation'}"></i>
+        <i class="fas fa-check-circle" th:if="${stage == 'Closed Won'}"></i>
+        <i class="fas fa-times-circle" th:if="${stage == 'Closed Lost'}"></i>
+      </div>
+      <p style="font-size:.88rem;font-weight:700;color:var(--text);margin-bottom:.3rem" th:text="${stage}">Stage</p>
+      <p style="font-size:.7rem;color:var(--muted)">Stage <span th:text="${s.count}">1</span></p>
+    </div>
+  </div>
+
+  <div style="margin-top:1.6rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:1.4rem;box-shadow:var(--shadow-sm)">
+    <h3 style="font-size:.88rem;font-weight:700;color:var(--text);margin-bottom:1rem;display:flex;align-items:center;gap:8px">
+      <i class="fas fa-info-circle" style="color:var(--orange)"></i> Stage Guide
+    </h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
+      <div style="font-size:.78rem;color:var(--text-sm);padding:.6rem;background:var(--page-bg);border-radius:var(--radius-sm)">
+        <strong>Prospecting</strong> — Identifying potential customers
+      </div>
+      <div style="font-size:.78rem;color:var(--text-sm);padding:.6rem;background:var(--page-bg);border-radius:var(--radius-sm)">
+        <strong>Qualification</strong> — Assessing fit and budget
+      </div>
+      <div style="font-size:.78rem;color:var(--text-sm);padding:.6rem;background:var(--page-bg);border-radius:var(--radius-sm)">
+        <strong>Proposal</strong> — Sending offer/quote
+      </div>
+      <div style="font-size:.78rem;color:var(--text-sm);padding:.6rem;background:var(--page-bg);border-radius:var(--radius-sm)">
+        <strong>Negotiation</strong> — Discussing terms
+      </div>
+      <div style="font-size:.78rem;color:var(--green);padding:.6rem;background:rgba(52,211,153,.08);border-radius:var(--radius-sm)">
+        <strong>Closed Won</strong> — Deal successfully closed ✓
+      </div>
+      <div style="font-size:.78rem;color:var(--red);padding:.6rem;background:rgba(252,129,129,.08);border-radius:var(--radius-sm)">
+        <strong>Closed Lost</strong> — Deal did not proceed ✗
+      </div>
+    </div>
+  </div>
+
+</section>
+</body>
+</html>

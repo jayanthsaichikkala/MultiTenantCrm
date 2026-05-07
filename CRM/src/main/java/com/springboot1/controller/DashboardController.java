@@ -18,7 +18,7 @@ public class DashboardController {
 
 	@GetMapping("/dashboard/user")
 	public String userDashboard() {
-		return "dashboard-user";
+		return "redirect:/user/home";
 	}
 
 	@GetMapping("/dashboard/manager")
@@ -28,7 +28,7 @@ public class DashboardController {
 
 	@GetMapping("/dashboard/sales-executive")
 	public String salesExecutiveDashboard() {
-		return "dashboard-sales-executive";
+		return "redirect:/sales/dashboard";
 	}
 
 	// ── Dedicated Tenant Management page (Super Admin only) ──────────────

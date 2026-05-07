@@ -36,11 +36,14 @@ public class SecurityConfig {
 				.requestMatchers("/super-admin/tenants/**").hasRole("SUPER_ADMIN")
 
 				// ── Role-based page access ───────────────────────────────────
-				.requestMatchers("/dashboard/super-admin").hasRole("SUPER_ADMIN").requestMatchers("/dashboard/admin")
-				.hasAnyRole("SUPER_ADMIN", "ADMIN").requestMatchers("/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
+				.requestMatchers("/dashboard/super-admin").hasRole("SUPER_ADMIN")
+				.requestMatchers("/dashboard/admin").hasAnyRole("SUPER_ADMIN", "ADMIN")
+				.requestMatchers("/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
 				.requestMatchers("/api/manager/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "MANAGER")
 				.requestMatchers("/dashboard/manager").hasAnyRole("SUPER_ADMIN", "ADMIN", "MANAGER")
+				.requestMatchers("/sales/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "MANAGER", "SALES_EXECUTIVE")
 				.requestMatchers("/dashboard/sales-executive").hasAnyRole("SUPER_ADMIN", "ADMIN", "MANAGER", "SALES_EXECUTIVE")
+				.requestMatchers("/user/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "MANAGER", "USER", "SALES_EXECUTIVE")
 				.requestMatchers("/dashboard/user").hasAnyRole("SUPER_ADMIN", "ADMIN", "MANAGER", "USER", "SALES_EXECUTIVE")
 
 				// ── Everything else requires login ───────────────────────────

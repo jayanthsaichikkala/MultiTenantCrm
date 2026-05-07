@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{fragments/sales-layout :: layout('My Performance', 'performance', ~{::section})}">
+<head></head>
+<body>
+<section>
+
+  <div class="section-header" style="margin-bottom:1.4rem">
+    <h2 class="section-title"><i class="fas fa-chart-line"></i> My Performance</h2>
+  </div>
+
+  <!-- KPI grid -->
+  <section class="perf-grid" style="margin-bottom:1.4rem">
+    <div class="perf-card">
+      <p class="perf-label">Leads Converted</p>
+      <p class="perf-value" th:text="${leadsConverted ?: 0}">0</p>
+      <div class="perf-bar"><div th:style="|width:${conversionRate ?: 0}%|"></div></div>
+      <p class="perf-rate" th:text="${conversionRate ?: 0} + '% conversion rate'">0%</p>
+    </div>
+    <div class="perf-card">
+      <p class="perf-label">Calls Made</p>
+      <p class="perf-value" th:text="${callsMade ?: 0}">0</p>
+      <div class="perf-bar perf-bar--blue"><div th:style="|width:${callsMade > 0 ? (callsMade * 100 / (callsTarget ?: 1)) : 0}%|"></div></div>
+      <p class="perf-rate" th:text="${callsTarget ?: 0} + ' target'">0 target</p>
+    </div>
+    <div class="perf-card">
+      <p class="perf-label">Meetings Done</p>
+      <p class="perf-value" th:text="${meetingsDone ?: 0}">0</p>
+      <div class="perf-bar perf-bar--green"><div th:style="|width:${meetingsDone > 0 ? (meetingsDone * 100 / (meetingsTarget ?: 1)) : 0}%|"></div></div>
+      <p class="perf-rate" th:text="${meetingsTarget ?: 0} + ' target'">0 target</p>
+    </div>
+    <div class="perf-card">
+      <p class="perf-label">Revenue Target</p>
+      <p class="perf-value" th:text="'₹' + ${#numbers.formatDecimal(myRevenue ?: 0, 1, 'COMMA', 0, 'POINT')}">₹0</p>
+      <div class="perf-bar perf-bar--orange"><div th:style="|width:${revenueTarget > 0 ? (myRevenue * 100 / revenueTarget) : 0}%|"></div></div>
+      <p class="perf-rate" th:text="'₹' + ${#numbers.formatDecimal(revenueTarget ?: 0, 1, 'COMMA', 0, 'POINT')} + ' target'">₹0 target</p>
+    </div>
+  </section>
+
+  <!-- Lead status breakdown -->
+  <div class="section-header" style="margin-bottom:.8rem">
+    <h2 class="section-title"><i class="fas fa-chart-pie"></i> Lead Status Breakdown</h2>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.4rem">
+    <div class="stat-card" style="flex:1;min-width:130px;padding:1rem">
+      <div class="stat-header"><span class="stat-label">Total Leads</span><div class="stat-icon stat-icon--orange"><i class="fas fa-list"></i></div></div>
+      <div class="stat-value stat-value--dark" th:text="${totalLeads ?: 0}">0</div>
+    </div>
+    <div class="stat-card" style="flex:1;min-width:130px;padding:1rem">
+      <div class="stat-header"><span class="stat-label">Pending</span><div class="stat-icon stat-icon--blue"><i class="fas fa-clock"></i></div></div>
+      <div class="stat-value stat-value--dark" th:text="${pendingLeads ?: 0}">0</div>
+    </div>
+    <div class="stat-card" style="flex:1;min-width:130px;padding:1rem">
+      <div class="stat-header"><span class="stat-label">Approved</span><div class="stat-icon stat-icon--green"><i class="fas fa-check-circle"></i></div></div>
+      <div class="stat-value stat-value--dark" th:text="${approvedLeads ?: 0}">0</div>
+    </div>
+    <div class="stat-card" style="flex:1;min-width:130px;padding:1rem">
+      <div class="stat-header"><span class="stat-label">Rejected</span><div class="stat-icon" style="background:rgba(252,129,129,.13);color:var(--red)"><i class="fas fa-times-circle"></i></div></div>
+      <div class="stat-value stat-value--dark" th:text="${rejectedLeads ?: 0}">0</div>
+    </div>
+    <div class="stat-card stat-card--dark" style="flex:1;min-width:130px;padding:1rem">
+      <div class="stat-header"><span class="stat-label">Revenue</span><div class="stat-icon stat-icon--orange"><i class="fas fa-rupee-sign"></i></div></div>
+      <div class="stat-value" th:text="'₹' + ${#numbers.formatDecimal(myRevenue ?: 0, 1, 'COMMA', 0, 'POINT')}">₹0</div>
+    </div>
+  </div>
+
+  <!-- Revenue trend area chart -->
+  <div class="section-header" style="margin-bottom:.8rem">
+    <h2 class="section-title"><i class="fas fa-wave-square"></i> Revenue Trend</h2>
+  </div>
+  <section class="chart-card chart-card--area">
+    <div class="area-legend">
+      <span class="legend-dot legend-dot--orange"></span><span>Revenue</span>
+      <span class="legend-dot legend-dot--dark" style="margin-left:1.2rem"></span><span>Target</span>
+    </div>
+    <div class="area-chart-wrap">
+      <svg class="area-svg" viewBox="0 0 500 160" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="gradOrange" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#f5a623" stop-opacity="0.85"/>
+            <stop offset="100%" stop-color="#f5a623" stop-opacity="0.05"/>
+          </linearGradient>
+          <linearGradient id="gradDark" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#1a2e4a" stop-opacity="0.9"/>
+            <stop offset="100%" stop-color="#1a2e4a" stop-opacity="0.05"/>
+          </linearGradient>
+        </defs>
+        <path d="M0,120 C40,110 60,50 100,60 C140,70 160,90 200,70 C240,50 260,30 300,40 C340,50 360,80 400,60 C440,40 470,80 500,70 L500,160 L0,160 Z"
+          fill="url(#gradOrange)" class="area-path area-path--orange"/>
+        <path d="M0,140 C40,130 60,90 100,100 C140,110 160,120 200,100 C240,80 260,70 300,80 C340,90 360,110 400,90 C440,70 470,100 500,90 L500,160 L0,160 Z"
+          fill="url(#gradDark)" class="area-path area-path--dark"/>
+      </svg>
+    </div>
+  </section>
+
+</section>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{fragments/sales-layout :: layout('My Leads', 'my-leads', ~{::section})}">
+<head></head>
+<body>
+<section>
+
+  <div class="section-header" style="margin-bottom:1.2rem">
+    <h2 class="section-title"><i class="fas fa-users"></i> My Leads</h2>
+    <a th:href="@{/sales/leads/add}" class="top-btn" style="font-size:.8rem;padding:8px 16px">
+      <i class="fas fa-plus"></i> Add Lead
+    </a>
+  </div>
+
+  <!-- Summary badges -->
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.4rem">
+    <div class="stat-card" style="flex:1;min-width:130px;padding:1rem">
+      <div class="stat-header"><span class="stat-label">Total</span><div class="stat-icon stat-icon--orange"><i class="fas fa-list"></i></div></div>
+      <div class="stat-value stat-value--dark" th:text="${totalLeads ?: 0}">0</div>
+    </div>
+    <div class="stat-card" style="flex:1;min-width:130px;padding:1rem">
+      <div class="stat-header"><span class="stat-label">Pending</span><div class="stat-icon stat-icon--blue"><i class="fas fa-clock"></i></div></div>
+      <div class="stat-value stat-value--dark" th:text="${pendingLeads ?: 0}">0</div>
+    </div>
+    <div class="stat-card" style="flex:1;min-width:130px;padding:1rem">
+      <div class="stat-header"><span class="stat-label">Approved</span><div class="stat-icon stat-icon--green"><i class="fas fa-check"></i></div></div>
+      <div class="stat-value stat-value--dark" th:text="${approvedLeads ?: 0}">0</div>
+    </div>
+    <div class="stat-card" style="flex:1;min-width:130px;padding:1rem">
+      <div class="stat-header"><span class="stat-label">Rejected</span><div class="stat-icon" style="background:rgba(252,129,129,.13);color:var(--red)"><i class="fas fa-times"></i></div></div>
+      <div class="stat-value stat-value--dark" th:text="${rejectedLeads ?: 0}">0</div>
+    </div>
+  </div>
+
+  <section class="table-card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Customer</th><th>Company</th><th>Phone</th>
+            <th>Deal Value (₹)</th><th>Source</th><th>Status</th><th>Created</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="lead, s : ${myLeads}">
+            <td th:text="${s.count}">1</td>
+            <td class="td-name" th:text="${lead.customerName}">—</td>
+            <td th:text="${lead.company ?: '—'}">—</td>
+            <td th:text="${lead.phone ?: '—'}">—</td>
+            <td th:text="${#numbers.formatDecimal(lead.dealValue, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+            <td th:text="${lead.source?.name()}">—</td>
+            <td>
+              <span class="badge"
+                th:classappend="${lead.status?.name() == 'APPROVED'} ? ' badge--green' : (${lead.status?.name() == 'REJECTED'} ? ' badge--red' : ' badge--orange')"
+                th:text="${lead.status?.getDisplayName()}">Pending</span>
+            </td>
+            <td th:text="${#temporals.format(lead.createdAt, 'dd MMM yyyy')}">—</td>
+            <td class="td-actions">
+              <a th:href="@{/sales/leads/{id}(id=${lead.id})}" class="act-link act-view">View</a>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(myLeads)}">
+            <td colspan="9" class="td-empty">No leads assigned to you yet.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</section>
+</body>
+</html>
