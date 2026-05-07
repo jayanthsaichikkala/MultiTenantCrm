@@ -27,12 +27,18 @@ public class UserService {
 		this.passwordEncoder = passwordEncoder;
 	}
 
-	// ── List all users with MANAGER or SALES_EXECUTIVE role ──────────────────
+	// ── List all staff users for a specific tenant ───────────────────────────
 	public List<User> getAllStaffUsers() {
 		List<User> managers = userRepo.findByRoleAndStatus(Role.MANAGER, TenantStatus.ACTIVE);
 		List<User> salesExecs = userRepo.findByRoleAndStatus(Role.SALES_EXECUTIVE, TenantStatus.ACTIVE);
 		managers.addAll(salesExecs);
 		return managers;
+	}
+
+	public List<User> getStaffUsersByTenant(String tenantId) {
+		return userRepo.findByTenantId(tenantId).stream()
+				.filter(u -> u.getRole() == Role.MANAGER || u.getRole() == Role.SALES_EXECUTIVE)
+				.collect(java.util.stream.Collectors.toList());
 	}
 
 	public List<User> getUsersByRole(Role role) {
@@ -52,11 +58,9 @@ public class UserService {
 	}
 
 	// ── Create a new MANAGER or SALES_EXECUTIVE user ──────────────────────────
-	// This creates:
-	//   1. A User record (for login)
-	//   2. An Employee record (for CRM operations)
+	// Inherits tenantId from the creating admin so all users share the same tenant.
 	public User createStaffUser(String fullName, String username, String email, String password,
-			String phone, String department, Role role) {
+			String phone, String address, String companyName, String tenantId, Role role) {
 
 		// Validate uniqueness
 		if (userRepo.existsByUsername(username)) {
@@ -74,13 +78,16 @@ public class UserService {
 			throw new IllegalArgumentException("Admin can only create MANAGER or SALES_EXECUTIVE users.");
 		}
 
-		// 1. Create User record
+		// 1. Create User record — inherit tenantId from admin
 		User user = new User();
 		user.setUsername(username);
 		user.setEmail(email);
 		user.setPassword(passwordEncoder.encode(password));
 		user.setRole(role);
 		user.setPhone(phone);
+		user.setAddress(address);
+		user.setCompanyName(companyName);
+		user.setTenantId(tenantId);
 		user.setStatus(TenantStatus.ACTIVE);
 		User savedUser = userRepo.save(user);
 
@@ -89,7 +96,7 @@ public class UserService {
 		emp.setName(fullName);
 		emp.setEmail(email);
 		emp.setPhone(phone);
-		emp.setDepartment(department != null && !department.isBlank() ? department : "Sales");
+		emp.setDepartment(role == Role.MANAGER ? "Management" : "Sales");
 		emp.setRole(role == Role.MANAGER ? Employee.Role.MANAGER : Employee.Role.SALES_EXECUTIVE);
 		emp.setStatus(Employee.Status.ACTIVE);
 		emp.setUserId(savedUser.getId());

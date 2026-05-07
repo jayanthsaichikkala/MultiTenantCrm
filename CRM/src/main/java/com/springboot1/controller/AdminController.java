@@ -1,5 +1,7 @@
 package com.springboot1.controller;
 
+import java.security.Principal;
+
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,6 +14,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.springboot1.model.Role;
+import com.springboot1.model.User;
+import com.springboot1.repository.UserRepository;
 import com.springboot1.service.EmployeeService;
 import com.springboot1.service.LeadService;
 import com.springboot1.service.UserService;
@@ -23,11 +27,22 @@ public class AdminController {
 	private final EmployeeService empService;
 	private final LeadService leadService;
 	private final UserService userService;
+	private final UserRepository userRepository;
 
-	public AdminController(EmployeeService empService, LeadService leadService, UserService userService) {
+	public AdminController(EmployeeService empService, LeadService leadService,
+			UserService userService, UserRepository userRepository) {
 		this.empService = empService;
 		this.leadService = leadService;
 		this.userService = userService;
+		this.userRepository = userRepository;
+	}
+
+	// ── Helper: get the logged-in admin's tenantId ───────────────────────────
+	private String getAdminTenantId(Principal principal) {
+		if (principal == null) return null;
+		return userRepository.findByUsername(principal.getName())
+				.map(User::getTenantId)
+				.orElse(null);
 	}
 
 	// ════════════════════════════════════════════════════════════════════════
@@ -239,8 +254,13 @@ public class AdminController {
 	// ════════════════════════════════════════════════════════════════════════
 
 	@GetMapping("/users/add")
-	public String showAddUserPage(Model model) {
-		model.addAttribute("allUsers", userService.getAllStaffUsers());
+	public String showAddUserPage(Model model, Principal principal) {
+		String tenantId = getAdminTenantId(principal);
+		if (tenantId != null) {
+			model.addAttribute("allUsers", userService.getStaffUsersByTenant(tenantId));
+		} else {
+			model.addAttribute("allUsers", userService.getAllStaffUsers());
+		}
 		return "admin-add-user";
 	}
 
@@ -249,7 +269,9 @@ public class AdminController {
 	// ════════════════════════════════════════════════════════════════════════
 
 	@GetMapping("/users/new")
-	public String showNewUserForm(Model model) {
+	public String showNewUserForm(Model model, Principal principal) {
+		// Pass admin's tenantId to display as read-only info
+		model.addAttribute("adminTenantId", getAdminTenantId(principal));
 		return "admin-new-user";
 	}
 
@@ -260,12 +282,16 @@ public class AdminController {
 			@RequestParam String email,
 			@RequestParam String password,
 			@RequestParam String phone,
-			@RequestParam(required = false) String department,
+			@RequestParam(required = false) String address,
+			@RequestParam(required = false) String companyName,
 			@RequestParam String role,
+			Principal principal,
 			RedirectAttributes ra) {
 		try {
 			Role userRole = Role.valueOf(role);
-			userService.createStaffUser(fullName, username, email, password, phone, department, userRole);
+			String tenantId = getAdminTenantId(principal);
+			userService.createStaffUser(fullName, username, email, password, phone,
+					address, companyName, tenantId, userRole);
 			ra.addFlashAttribute("success",
 					userRole == Role.MANAGER
 							? "Manager '" + fullName + "' created successfully."
@@ -277,7 +303,8 @@ public class AdminController {
 			ra.addFlashAttribute("formUsername", username);
 			ra.addFlashAttribute("formEmail", email);
 			ra.addFlashAttribute("formPhone", phone);
-			ra.addFlashAttribute("formDepartment", department);
+			ra.addFlashAttribute("formAddress", address);
+			ra.addFlashAttribute("formCompanyName", companyName);
 			ra.addFlashAttribute("formRole", role);
 			return "redirect:/admin/users/new";
 		}
