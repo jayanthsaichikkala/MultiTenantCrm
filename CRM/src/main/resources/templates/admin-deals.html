@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+	th:replace="~{fragments/admin-layout :: layout('Deals', 'deals', ~{::section})}">
+
+<head></head>
+<body>
+
+<section>
+	<div class="page-header">
+		<div>
+			<h1>Deals</h1>
+			<p>Manage all active deals in the sales pipeline.</p>
+		</div>
+	</div>
+
+	<!-- Summary cards -->
+	<section class="kpi-grid" style="margin-bottom:28px">
+		<div class="kpi-card kpi-blue">
+			<div class="kpi-header">
+				<p class="kpi-label">Total Deals</p>
+				<span class="kpi-trend neutral">All</span>
+			</div>
+			<p class="kpi-value">0</p>
+			<div class="kpi-bar"><div style="width:0%"></div></div>
+		</div>
+		<div class="kpi-card kpi-green">
+			<div class="kpi-header">
+				<p class="kpi-label">Won</p>
+				<span class="kpi-trend up">↑ Closed</span>
+			</div>
+			<p class="kpi-value">0</p>
+			<div class="kpi-bar"><div style="width:0%"></div></div>
+		</div>
+		<div class="kpi-card kpi-red">
+			<div class="kpi-header">
+				<p class="kpi-label">Lost</p>
+				<span class="kpi-trend down">↓ Closed</span>
+			</div>
+			<p class="kpi-value">0</p>
+			<div class="kpi-bar"><div style="width:0%"></div></div>
+		</div>
+		<div class="kpi-card kpi-orange">
+			<div class="kpi-header">
+				<p class="kpi-label">In Progress</p>
+				<span class="kpi-trend neutral">Active</span>
+			</div>
+			<p class="kpi-value">0</p>
+			<div class="kpi-bar"><div style="width:0%"></div></div>
+		</div>
+	</section>
+
+	<section class="table-card">
+		<div class="table-header">
+			<span class="table-count">No deals yet</span>
+			<a th:href="@{/admin/leads}" class="btn-primary">View Leads</a>
+		</div>
+		<div class="table-wrap">
+			<table>
+				<thead>
+					<tr>
+						<th>#</th>
+						<th>Deal Name</th>
+						<th>Customer</th>
+						<th>Value (₹)</th>
+						<th>Stage</th>
+						<th>Assigned To</th>
+						<th>Status</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td colspan="7" class="table-empty">No deals found. Approve leads to create deals. 🎯</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</section>
+</section>
+
+</body>
+</html>

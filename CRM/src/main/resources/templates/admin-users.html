@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+	th:replace="~{fragments/admin-layout :: layout('Manage Users', 'manage-users', ~{::section})}">
+
+<head></head>
+<body>
+
+<section>
+	<div class="page-header">
+		<div>
+			<h1>Manage Users</h1>
+			<p>View and manage all Managers and Sales Executives in the system.</p>
+		</div>
+		<div class="page-header-actions">
+			<a th:href="@{/admin/users/add}" class="btn-primary">+ Add User</a>
+		</div>
+	</div>
+
+	<div th:if="${success}" class="toast toast-success" th:text="${success}"></div>
+	<div th:if="${error}" class="toast toast-error" th:text="${error}"></div>
+
+	<!-- Managers -->
+	<h2 class="section-title"><span class="section-title-icon">👔</span> Managers</h2>
+	<section class="table-card" style="margin-bottom:28px">
+		<div class="table-wrap">
+			<table>
+				<thead>
+					<tr>
+						<th>#</th>
+						<th>Username</th>
+						<th>Email</th>
+						<th>Role</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr th:each="u, i : ${managers}">
+						<td th:text="${i.count}">1</td>
+						<td class="td-bold" th:text="${u.username}">—</td>
+						<td th:text="${u.email}">—</td>
+						<td><span class="badge badge-approved">Manager</span></td>
+					</tr>
+					<tr th:if="${#lists.isEmpty(managers)}">
+						<td colspan="4" class="table-empty">No managers found.</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</section>
+
+	<!-- Sales Executives -->
+	<h2 class="section-title"><span class="section-title-icon">💼</span> Sales Executives</h2>
+	<section class="table-card">
+		<div class="table-wrap">
+			<table>
+				<thead>
+					<tr>
+						<th>#</th>
+						<th>Username</th>
+						<th>Email</th>
+						<th>Role</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr th:each="u, i : ${salesExecs}">
+						<td th:text="${i.count}">1</td>
+						<td class="td-bold" th:text="${u.username}">—</td>
+						<td th:text="${u.email}">—</td>
+						<td><span class="badge badge-pending">Sales Executive</span></td>
+					</tr>
+					<tr th:if="${#lists.isEmpty(salesExecs)}">
+						<td colspan="4" class="table-empty">No sales executives found.</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</section>
+</section>
+
+</body>
+</html>

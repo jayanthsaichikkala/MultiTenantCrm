@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+	th:replace="~{fragments/admin-layout :: layout('Sales Reports', 'sales-reports', ~{::section})}">
+
+<head></head>
+<body>
+
+<section>
+	<div class="page-header">
+		<div>
+			<h1>Sales Reports</h1>
+			<p>Analyze sales performance and trends.</p>
+		</div>
+	</div>
+
+	<section class="kpi-grid" style="margin-bottom:28px">
+		<div class="kpi-card kpi-blue">
+			<div class="kpi-header">
+				<p class="kpi-label">Total Leads</p>
+				<span class="kpi-trend neutral">All Time</span>
+			</div>
+			<p class="kpi-value" th:text="${totalLeads ?: 0}">0</p>
+			<div class="kpi-bar"><div th:style="|width:100%|"></div></div>
+		</div>
+		<div class="kpi-card kpi-green">
+			<div class="kpi-header">
+				<p class="kpi-label">Approved Leads</p>
+				<span class="kpi-trend up">↑ Won</span>
+			</div>
+			<p class="kpi-value" th:text="${approvedLeads ?: 0}">0</p>
+			<div class="kpi-bar"><div th:style="|width:${totalLeads > 0 ? (approvedLeads * 100 / totalLeads) : 0}%|"></div></div>
+		</div>
+		<div class="kpi-card kpi-orange">
+			<div class="kpi-header">
+				<p class="kpi-label">Pending Leads</p>
+				<span class="kpi-trend down">⏳ Review</span>
+			</div>
+			<p class="kpi-value" th:text="${pendingLeads ?: 0}">0</p>
+			<div class="kpi-bar"><div th:style="|width:${totalLeads > 0 ? (pendingLeads * 100 / totalLeads) : 0}%|"></div></div>
+		</div>
+		<div class="kpi-card kpi-red">
+			<div class="kpi-header">
+				<p class="kpi-label">Deal Value (₹)</p>
+				<span class="kpi-trend up">↑ Revenue</span>
+			</div>
+			<p class="kpi-value kpi-value-sm"
+				th:text="${approvedValue != null ? #numbers.formatDecimal(approvedValue, 1, 'COMMA', 2, 'POINT') : '0.00'}">0.00</p>
+		</div>
+	</section>
+
+	<div class="form-card">
+		<p style="color:var(--muted);font-size:.9rem;text-align:center;padding:40px 0;">
+			Detailed sales charts and export functionality coming soon. 📊
+		</p>
+	</div>
+</section>
+
+</body>
+</html>

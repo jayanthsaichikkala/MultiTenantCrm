@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+	th:replace="~{fragments/admin-layout :: layout('Employees', 'manage-users', ~{::section})}">
+
+<head></head>
+<body>
+
+<section>
+	<div class="page-header">
+		<div>
+			<h1>Employees</h1>
+			<p>Manage all employees in the system.</p>
+		</div>
+		<div class="page-header-actions">
+			<a th:href="@{/admin/users/add}" class="btn-primary">+ Add Employee</a>
+		</div>
+	</div>
+
+	<div th:if="${success}" class="toast toast-success" th:text="${success}"></div>
+	<div th:if="${error}" class="toast toast-error" th:text="${error}"></div>
+
+	<!-- Summary -->
+	<section class="kpi-grid" style="margin-bottom:28px">
+		<div class="kpi-card kpi-purple">
+			<div class="kpi-header">
+				<p class="kpi-label">Managers</p>
+				<span class="kpi-trend neutral">Role</span>
+			</div>
+			<p class="kpi-value" th:text="${totalManagers}">0</p>
+			<div class="kpi-bar"><div style="width:100%"></div></div>
+		</div>
+		<div class="kpi-card kpi-cyan">
+			<div class="kpi-header">
+				<p class="kpi-label">Sales Executives</p>
+				<span class="kpi-trend neutral">Role</span>
+			</div>
+			<p class="kpi-value" th:text="${totalSalesExecs}">0</p>
+			<div class="kpi-bar"><div style="width:100%"></div></div>
+		</div>
+		<div class="kpi-card kpi-green">
+			<div class="kpi-header">
+				<p class="kpi-label">Active</p>
+				<span class="kpi-trend up">↑ Online</span>
+			</div>
+			<p class="kpi-value" th:text="${totalActive}">0</p>
+			<div class="kpi-bar"><div style="width:100%"></div></div>
+		</div>
+	</section>
+
+	<!-- Filter bar -->
+	<div style="display:flex;gap:8px;margin-bottom:16px">
+		<a th:href="@{/admin/employees}"
+			th:class="${filterRole == 'ALL'} ? 'btn-primary' : 'btn-secondary'">All</a>
+		<a th:href="@{/admin/employees(role='MANAGER')}"
+			th:class="${filterRole == 'MANAGER'} ? 'btn-primary' : 'btn-secondary'">Managers</a>
+		<a th:href="@{/admin/employees(role='SALES_EXECUTIVE')}"
+			th:class="${filterRole == 'SALES_EXECUTIVE'} ? 'btn-primary' : 'btn-secondary'">Sales Executives</a>
+	</div>
+
+	<section class="table-card">
+		<div class="table-wrap">
+			<table>
+				<thead>
+					<tr>
+						<th>#</th>
+						<th>Name</th>
+						<th>Email</th>
+						<th>Phone</th>
+						<th>Department</th>
+						<th>Role</th>
+						<th>Status</th>
+						<th>Actions</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr th:each="emp, i : ${employees}">
+						<td th:text="${i.count}">1</td>
+						<td class="td-bold" th:text="${emp.name}">—</td>
+						<td th:text="${emp.email ?: '—'}">—</td>
+						<td th:text="${emp.phone ?: '—'}">—</td>
+						<td th:text="${emp.department ?: '—'}">—</td>
+						<td>
+							<span class="badge"
+								th:class="${emp.role?.name() == 'MANAGER'} ? 'badge badge-approved' : 'badge badge-pending'"
+								th:text="${emp.role?.name()}">—</span>
+						</td>
+						<td>
+							<span class="badge"
+								th:class="${emp.status?.name() == 'ACTIVE'} ? 'badge badge-approved' : 'badge badge-rejected'"
+								th:text="${emp.status?.name()}">—</span>
+						</td>
+						<td class="td-actions">
+							<form th:action="@{/admin/employees/{id}/toggle-status(id=${emp.id})}" method="post" style="display:inline">
+								<input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+								<button type="submit" class="action-link action-assign">Toggle</button>
+							</form>
+							<form th:action="@{/admin/employees/{id}/delete(id=${emp.id})}" method="post" style="display:inline"
+								onsubmit="return confirm('Delete this employee?')">
+								<input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+								<button type="submit" class="action-link" style="background:#FEF2F2;color:#991B1B">Delete</button>
+							</form>
+						</td>
+					</tr>
+					<tr th:if="${#lists.isEmpty(employees)}">
+						<td colspan="8" class="table-empty">No employees found.</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</section>
+</section>
+
+</body>
+</html>
