@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{fragments/user-layout :: layout('Settings', 'settings', ~{::section})}">
+<section>
+
+  <h2 style="font-size:1.2rem;font-weight:700;color:var(--text);margin-bottom:1.4rem;display:flex;align-items:center;gap:8px">
+    <i class="fas fa-cog" style="color:#667EEA"></i> Settings
+  </h2>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;align-items:start">
+
+    <!-- Account Settings -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.4rem;box-shadow:var(--shadow)">
+      <h3 style="font-size:.88rem;font-weight:700;color:var(--text);margin-bottom:1.2rem;padding-bottom:.8rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px">
+        <i class="fas fa-user" style="color:#667EEA"></i> Account Settings
+      </h3>
+      <form th:action="@{/user/settings/save}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+        <div style="margin-bottom:.9rem">
+          <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Full Name</label>
+          <input type="text" name="fullName" th:value="${#authentication?.name ?: ''}" placeholder="Your full name"
+            style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;outline:none;background:var(--surface);color:var(--text)">
+        </div>
+        <div style="margin-bottom:.9rem">
+          <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Email</label>
+          <input type="email" name="email" placeholder="your@email.com"
+            style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;outline:none;background:var(--surface);color:var(--text)">
+        </div>
+        <div style="margin-bottom:1.2rem">
+          <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Phone</label>
+          <input type="tel" name="phone" placeholder="+91 00000 00000"
+            style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;outline:none;background:var(--surface);color:var(--text)">
+        </div>
+        <button type="submit" style="width:100%;padding:10px;background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer">
+          <i class="fas fa-save"></i> Save Account Settings
+        </button>
+      </form>
+    </div>
+
+    <!-- Notification & Security Settings -->
+    <div style="display:flex;flex-direction:column;gap:1.2rem">
+
+      <!-- Notifications -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.4rem;box-shadow:var(--shadow)">
+        <h3 style="font-size:.88rem;font-weight:700;color:var(--text);margin-bottom:1rem;display:flex;align-items:center;gap:7px">
+          <i class="fas fa-bell" style="color:#F59E0B"></i> Notification Preferences
+        </h3>
+        <div th:each="pref,i : ${ {'Email notifications','Deal status updates','Meeting reminders','Support ticket replies'} }"
+          style="display:flex;align-items:center;justify-content:space-between;padding:.65rem 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:.82rem;color:var(--text)" th:text="${pref}">Preference</span>
+          <label style="position:relative;display:inline-block;width:40px;height:22px;cursor:pointer">
+            <input type="checkbox" checked style="opacity:0;width:0;height:0">
+            <span style="position:absolute;inset:0;background:linear-gradient(135deg,#667EEA,#764BA2);border-radius:99px;transition:.3s"></span>
+            <span style="position:absolute;left:3px;top:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:.3s"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Security -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.4rem;box-shadow:var(--shadow)">
+        <h3 style="font-size:.88rem;font-weight:700;color:var(--text);margin-bottom:1rem;display:flex;align-items:center;gap:7px">
+          <i class="fas fa-shield-alt" style="color:#22c55e"></i> Security
+        </h3>
+        <div style="margin-bottom:.9rem">
+          <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Current Password</label>
+          <input type="password" placeholder="Enter current password"
+            style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;outline:none">
+        </div>
+        <div style="margin-bottom:.9rem">
+          <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">New Password</label>
+          <input type="password" placeholder="Enter new password"
+            style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;outline:none">
+        </div>
+        <button style="width:100%;padding:9px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;color:var(--text)">
+          <i class="fas fa-key"></i> Change Password
+        </button>
+      </div>
+    </div>
+  </div>
+
+</section>

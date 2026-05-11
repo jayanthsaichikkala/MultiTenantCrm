@@ -4,7 +4,8 @@
 <!--
   User Layout Fragment
   Usage: th:replace="~{fragments/user-layout :: layout('Page Title', 'active-nav-key', ~{::section})}"
-  Nav keys: home, files, messages, notifications, location, graph
+  Nav keys: home, profile, requests, deals, activity,
+            meetings, notifications, support, documents, settings
 -->
 
 <th:block th:fragment="layout(pageTitle, activeNav, content)">
@@ -15,9 +16,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title th:text="${pageTitle} + ' – CRM Portal'">User Dashboard</title>
   <link rel="icon" type="image/svg+xml"
-    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232B2D31'/%3E%3Ctext x='16' y='23' font-family='Arial' font-size='20' font-weight='bold' text-anchor='middle' fill='white'%3EU%3C/text%3E%3C/svg%3E" />
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23667EEA'/%3E%3Ctext x='16' y='23' font-family='Arial' font-size='18' font-weight='bold' text-anchor='middle' fill='white'%3EU%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" th:href="@{/dashboard-user.css}">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -27,41 +28,82 @@
   <!-- ===================== SIDEBAR ===================== -->
   <aside class="sidebar" id="sidebar">
 
-    <div class="sidebar-profile">
-      <div class="avatar-ring">
-        <div class="avatar"><i class="fas fa-user"></i></div>
+    <!-- Profile -->
+    <div class="sidebar-profile" style="flex-shrink:0;">
+      <div style="width:52px;height:52px;border-radius:13px;background:linear-gradient(135deg,#667EEA,#764BA2);display:flex;align-items:center;justify-content:center;margin:0 auto .8rem;font-size:1.3rem;font-weight:700;color:#fff;">
+        <span th:text="${#authentication?.name?.substring(0,1)?.toUpperCase() ?: 'U'}">U</span>
       </div>
-      <h2 class="user-name" th:text="${#authentication?.name ?: 'User'}">USER</h2>
-      <p class="user-email">user@company.com</p>
+      <h2 class="user-name" th:text="${#authentication?.name ?: 'User'}">User</h2>
+      <p class="user-email">Customer</p>
     </div>
 
-    <nav class="sidebar-nav">
-      <a th:href="@{/user/home}"          th:class="${activeNav=='home'}          ? 'nav-item active' : 'nav-item'">
-        <i class="fas fa-home"></i><span>Home</span>
+    <!-- Nav — scrollable middle section -->
+    <nav class="sidebar-nav" style="flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;padding:6px 0;">
+
+      <a th:href="@{/user/home}"
+         th:class="${activeNav=='home'} ? 'nav-item active' : 'nav-item'">
+        <i class="fas fa-th-large"></i><span>Dashboard</span>
       </a>
-      <a th:href="@{/user/files}"         th:class="${activeNav=='files'}         ? 'nav-item active' : 'nav-item'">
-        <i class="fas fa-folder"></i><span>Files</span>
+
+      <a th:href="@{/user/profile}"
+         th:class="${activeNav=='profile'} ? 'nav-item active' : 'nav-item'">
+        <i class="fas fa-user-circle"></i><span>My Profile</span>
       </a>
-      <a th:href="@{/user/messages}"      th:class="${activeNav=='messages'}      ? 'nav-item active' : 'nav-item'">
-        <i class="fas fa-envelope"></i><span>Messages</span>
+
+      <a th:href="@{/user/requests}"
+         th:class="${activeNav=='requests'} ? 'nav-item active' : 'nav-item'">
+        <i class="fas fa-clipboard-list"></i><span>My Requests</span>
+        <span class="nav-badge" th:if="${requestCount > 0}" th:text="${requestCount}">0</span>
       </a>
-      <a th:href="@{/user/notifications}" th:class="${activeNav=='notifications'} ? 'nav-item active' : 'nav-item'">
+
+      <a th:href="@{/user/deals}"
+         th:class="${activeNav=='deals'} ? 'nav-item active' : 'nav-item'">
+        <i class="fas fa-handshake"></i><span>My Deals</span>
+        <span class="nav-badge" th:if="${dealCount > 0}" th:text="${dealCount}">0</span>
+      </a>
+
+      <a th:href="@{/user/activity}"
+         th:class="${activeNav=='activity'} ? 'nav-item active' : 'nav-item'">
+        <i class="fas fa-history"></i><span>Activity History</span>
+      </a>
+
+      <a th:href="@{/user/meetings}"
+         th:class="${activeNav=='meetings'} ? 'nav-item active' : 'nav-item'">
+        <i class="fas fa-calendar-check"></i><span>Meetings</span>
+      </a>
+
+      <a th:href="@{/user/notifications}"
+         th:class="${activeNav=='notifications'} ? 'nav-item active' : 'nav-item'">
         <i class="fas fa-bell"></i><span>Notifications</span>
+        <span class="nav-badge" th:if="${notifCount > 0}" th:text="${notifCount}">0</span>
       </a>
-      <a th:href="@{/user/location}"      th:class="${activeNav=='location'}      ? 'nav-item active' : 'nav-item'">
-        <i class="fas fa-map-marker-alt"></i><span>Location</span>
+
+      <a th:href="@{/user/support}"
+         th:class="${activeNav=='support'} ? 'nav-item active' : 'nav-item'">
+        <i class="fas fa-headset"></i><span>Support Tickets</span>
       </a>
-      <a th:href="@{/user/graph}"         th:class="${activeNav=='graph'}         ? 'nav-item active' : 'nav-item'">
-        <i class="fas fa-chart-pie"></i><span>Graph</span>
+
+      <a th:href="@{/user/documents}"
+         th:class="${activeNav=='documents'} ? 'nav-item active' : 'nav-item'">
+        <i class="fas fa-file-alt"></i><span>Documents</span>
       </a>
+
+      <a th:href="@{/user/settings}"
+         th:class="${activeNav=='settings'} ? 'nav-item active' : 'nav-item'">
+        <i class="fas fa-cog"></i><span>Settings</span>
+      </a>
+
     </nav>
 
-    <form th:action="@{/logout}" method="post" class="logout-form">
-      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-      <button type="submit" class="logout-btn">
-        <i class="fas fa-sign-out-alt"></i><span>Logout</span>
-      </button>
-    </form>
+    <!-- Logout — always pinned at bottom -->
+    <div style="flex-shrink:0;padding:10px 12px;border-top:1px solid rgba(255,255,255,0.08);">
+      <form th:action="@{/logout}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+        <button type="submit" class="logout-btn" style="width:100%;">
+          <i class="fas fa-sign-out-alt"></i><span>Logout</span>
+        </button>
+      </form>
+    </div>
 
   </aside>
 
@@ -69,14 +111,31 @@
   <main class="main-content">
 
     <header class="top-bar">
-      <h1 class="page-title" th:text="${pageTitle}">Dashboard</h1>
       <button class="menu-toggle" id="menuToggle" aria-label="Toggle sidebar">
         <span></span><span></span><span></span>
       </button>
+      <h1 class="page-title" th:text="${pageTitle}">Dashboard</h1>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
+        <a th:href="@{/user/notifications}" style="position:relative;width:36px;height:36px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--muted);text-decoration:none">
+          <i class="fas fa-bell" style="font-size:.85rem"></i>
+          <span th:if="${notifCount > 0}" style="position:absolute;top:6px;right:6px;width:8px;height:8px;background:#EF4444;border-radius:50%;border:2px solid var(--surface)"></span>
+        </a>
+        <a th:href="@{/user/profile}" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text)">
+          <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#667EEA,#764BA2);display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;color:#fff">
+            <span th:text="${#authentication?.name?.substring(0,1)?.toUpperCase() ?: 'U'}">U</span>
+          </div>
+          <span style="font-size:.82rem;font-weight:600" th:text="${#authentication?.name ?: 'User'}">User</span>
+        </a>
+      </div>
     </header>
 
-    <div th:if="${success}" style="padding:12px 16px;background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;font-size:.85rem;color:#065f46" th:text="${success}"></div>
-    <div th:if="${error}"   style="padding:12px 16px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;font-size:.85rem;color:#991b1b" th:text="${error}"></div>
+    <!-- Flash messages -->
+    <div th:if="${success}" style="margin:0 0 1rem;padding:12px 16px;background:#F0FDF4;border:1px solid #86EFAC;border-radius:8px;font-size:.85rem;color:#166534;display:flex;align-items:center;gap:8px">
+      <i class="fas fa-check-circle"></i><span th:text="${success}"></span>
+    </div>
+    <div th:if="${error}" style="margin:0 0 1rem;padding:12px 16px;background:#FEF2F2;border:1px solid #FCA5A5;border-radius:8px;font-size:.85rem;color:#991B1B;display:flex;align-items:center;gap:8px">
+      <i class="fas fa-exclamation-circle"></i><span th:text="${error}"></span>
+    </div>
 
     <th:block th:replace="${content}" />
 
@@ -84,7 +143,6 @@
 </div>
 
 <script>
-  // Mobile sidebar toggle
   const menuToggle = document.getElementById('menuToggle');
   const sidebar    = document.getElementById('sidebar');
   if (menuToggle) {

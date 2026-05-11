@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{fragments/user-layout :: layout('My Profile', 'profile', ~{::section})}">
+<section>
+
+  <h2 style="font-size:1.2rem;font-weight:700;color:var(--text);margin-bottom:1.4rem;display:flex;align-items:center;gap:8px">
+    <i class="fas fa-user-circle" style="color:#667EEA"></i> My Profile
+  </h2>
+
+  <div style="display:grid;grid-template-columns:260px 1fr;gap:1.4rem;align-items:start">
+
+    <!-- Profile card -->
+    <div style="background:linear-gradient(135deg,#667EEA,#764BA2);border-radius:14px;padding:2rem;text-align:center;color:#fff">
+      <div style="width:72px;height:72px;border-radius:18px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.8rem;font-weight:700">
+        <span th:text="${#authentication?.name?.substring(0,1)?.toUpperCase() ?: 'U'}">U</span>
+      </div>
+      <h3 style="font-size:1rem;font-weight:700;margin-bottom:.25rem" th:text="${#authentication?.name ?: 'User'}">User</h3>
+      <p style="font-size:.75rem;opacity:.8;margin-bottom:1rem">Customer</p>
+      <span style="display:inline-block;padding:3px 12px;border-radius:99px;background:rgba(255,255,255,.2);font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase">Active</span>
+      <div style="margin-top:1.4rem;padding-top:1.2rem;border-top:1px solid rgba(255,255,255,.2)">
+        <div style="display:flex;justify-content:space-between;margin-bottom:.6rem">
+          <span style="font-size:.72rem;opacity:.7">Total Requests</span>
+          <span style="font-size:.72rem;font-weight:700" th:text="${totalLeads ?: 0}">0</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:.6rem">
+          <span style="font-size:.72rem;opacity:.7">Active Deals</span>
+          <span style="font-size:.72rem;font-weight:700" th:text="${approvedLeads ?: 0}">0</span>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="font-size:.72rem;opacity:.7">Pending</span>
+          <span style="font-size:.72rem;font-weight:700" th:text="${pendingLeads ?: 0}">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit form -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.6rem;box-shadow:var(--shadow)">
+      <h3 style="font-size:.9rem;font-weight:700;color:var(--text);margin-bottom:1.2rem;padding-bottom:.8rem;border-bottom:1px solid var(--border)">
+        Account Information
+      </h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.2rem">
+        <div>
+          <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Full Name</label>
+          <input type="text" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;outline:none;background:var(--surface);color:var(--text)"
+            th:value="${#authentication?.name ?: ''}" placeholder="Your full name">
+        </div>
+        <div>
+          <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Username</label>
+          <input type="text" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;outline:none;background:var(--bg);color:var(--muted)"
+            th:value="${#authentication?.name ?: ''}" readonly>
+        </div>
+        <div>
+          <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Email</label>
+          <input type="email" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;outline:none;background:var(--surface);color:var(--text)" placeholder="your@email.com">
+        </div>
+        <div>
+          <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Phone</label>
+          <input type="tel" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;outline:none;background:var(--surface);color:var(--text)" placeholder="+91 00000 00000">
+        </div>
+        <div>
+          <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Company</label>
+          <input type="text" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;outline:none;background:var(--surface);color:var(--text)" placeholder="Your company">
+        </div>
+        <div>
+          <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Role</label>
+          <input type="text" value="Customer" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;outline:none;background:var(--bg);color:var(--muted)" readonly>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;padding-top:1rem;border-top:1px solid var(--border)">
+        <button style="padding:9px 22px;background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;border:none;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer">
+          <i class="fas fa-save"></i> Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+
+</section>

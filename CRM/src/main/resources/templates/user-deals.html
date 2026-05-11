@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{fragments/user-layout :: layout('My Deals', 'deals', ~{::section})}">
+<section>
+
+  <h2 style="font-size:1.2rem;font-weight:700;color:var(--text);margin-bottom:1.4rem;display:flex;align-items:center;gap:8px">
+    <i class="fas fa-handshake" style="color:#22c55e"></i> My Deals
+  </h2>
+
+  <!-- Summary -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.4rem">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.2rem;box-shadow:var(--shadow);border-left:4px solid #667EEA">
+      <p style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.4rem">Active Deals</p>
+      <p style="font-size:1.6rem;font-weight:700;color:var(--text)" th:text="${approvedLeads ?: 0}">0</p>
+      <p style="font-size:.72rem;color:#22c55e;margin-top:.2rem"><i class="fas fa-check-circle"></i> Approved</p>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.2rem;box-shadow:var(--shadow);border-left:4px solid #22c55e">
+      <p style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.4rem">Total Value</p>
+      <p style="font-size:1.6rem;font-weight:700;color:var(--text)" th:text="${approvedValue != null ? '₹' + #numbers.formatDecimal(approvedValue,1,'COMMA',0,'POINT') : '₹0'}">₹0</p>
+      <p style="font-size:.72rem;color:var(--muted);margin-top:.2rem">Deal value</p>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.2rem;box-shadow:var(--shadow);border-left:4px solid #F59E0B">
+      <p style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.4rem">Pending</p>
+      <p style="font-size:1.6rem;font-weight:700;color:var(--text)" th:text="${pendingLeads ?: 0}">0</p>
+      <p style="font-size:.72rem;color:#F59E0B;margin-top:.2rem"><i class="fas fa-clock"></i> Awaiting approval</p>
+    </div>
+  </div>
+
+  <!-- Deals Table -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)">
+    <div style="padding:1rem 1.3rem;border-bottom:1px solid var(--border)">
+      <h3 style="font-size:.88rem;font-weight:700;color:var(--text)">Active Deals</h3>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="background:var(--bg)">
+            <th style="padding:.7rem 1rem;font-size:.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;text-align:left">Deal Name</th>
+            <th style="padding:.7rem 1rem;font-size:.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;text-align:left">Company</th>
+            <th style="padding:.7rem 1rem;font-size:.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;text-align:left">Value (₹)</th>
+            <th style="padding:.7rem 1rem;font-size:.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;text-align:left">Source</th>
+            <th style="padding:.7rem 1rem;font-size:.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;text-align:left">Approved On</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="lead : ${approvedList}" style="border-bottom:1px solid var(--border)">
+            <td style="padding:.75rem 1rem;font-size:.82rem;font-weight:600;color:var(--text)" th:text="${lead.customerName ?: '—'}">—</td>
+            <td style="padding:.75rem 1rem;font-size:.8rem;color:var(--muted)" th:text="${lead.company ?: '—'}">—</td>
+            <td style="padding:.75rem 1rem;font-size:.82rem;font-weight:600;color:#22c55e" th:text="${lead.dealValue != null ? '₹' + #numbers.formatDecimal(lead.dealValue,1,'COMMA',0,'POINT') : '—'}">—</td>
+            <td style="padding:.75rem 1rem;font-size:.78rem;color:var(--muted)" th:text="${lead.source?.name() ?: '—'}">—</td>
+            <td style="padding:.75rem 1rem;font-size:.78rem;color:var(--muted)" th:text="${lead.approvedAt != null ? #temporals.format(lead.approvedAt,'dd MMM yyyy') : '—'}">—</td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(approvedList)}">
+            <td colspan="5" style="padding:2.5rem;text-align:center;color:var(--muted);font-size:.85rem">
+              <i class="fas fa-handshake" style="font-size:1.5rem;display:block;margin-bottom:.5rem;opacity:.3"></i>
+              No active deals yet.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</section>

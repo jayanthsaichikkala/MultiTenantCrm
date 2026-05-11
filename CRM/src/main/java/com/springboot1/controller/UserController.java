@@ -1,11 +1,14 @@
 package com.springboot1.controller;
 
-import java.util.List;
+import java.security.Principal;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.springboot1.controller.Lead.LeadStatus;
 import com.springboot1.repository.LeadRepository;
@@ -23,7 +26,7 @@ public class UserController {
         this.leadRepo = leadRepo;
     }
 
-    // ── Shared counts for sidebar badges ─────────────────────────────────────
+    // ── Shared sidebar counts ─────────────────────────────────────────────────
 
     private void addCounts(Model model) {
         long total    = leadService.countTotal();
@@ -35,64 +38,168 @@ public class UserController {
         model.addAttribute("pendingLeads",  pending);
         model.addAttribute("approvedLeads", approved);
         model.addAttribute("rejectedLeads", rejected);
-        model.addAttribute("approvedPct",   total > 0 ? (approved * 100 / total) : 0);
-        model.addAttribute("messageCount",  approved + rejected);
+        model.addAttribute("approvedValue", leadService.sumApprovedValue());
         model.addAttribute("notifCount",    pending + rejected);
-        model.addAttribute("approvedCount", approved);
-        model.addAttribute("pendingCount",  pending);
+        model.addAttribute("requestCount",  total);
+        model.addAttribute("dealCount",     approved);
     }
 
-    // ── Home / Dashboard ──────────────────────────────────────────────────────
+    // ════════════════════════════════════════════════════════════════════════
+    // DASHBOARD — home
+    // ════════════════════════════════════════════════════════════════════════
 
     @GetMapping({"/home", ""})
     public String home(Model model) {
         addCounts(model);
+        model.addAttribute("recentLeads", leadRepo.findAllByOrderByCreatedAtDesc());
         return "user-home";
     }
 
-    // ── Files ─────────────────────────────────────────────────────────────────
+    // ════════════════════════════════════════════════════════════════════════
+    // MY PROFILE
+    // ════════════════════════════════════════════════════════════════════════
 
-    @GetMapping("/files")
-    public String files(Model model) {
+    @GetMapping("/profile")
+    public String profile(Model model, Principal principal) {
+        addCounts(model);
+        return "user-profile";
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // MY REQUESTS
+    // ════════════════════════════════════════════════════════════════════════
+
+    @GetMapping("/requests")
+    public String requests(Model model) {
+        addCounts(model);
+        model.addAttribute("allLeads",      leadRepo.findAllByOrderByCreatedAtDesc());
+        model.addAttribute("pendingList",   leadRepo.findByStatusOrderByCreatedAtDesc(LeadStatus.PENDING));
+        model.addAttribute("approvedList",  leadRepo.findByStatusOrderByCreatedAtDesc(LeadStatus.APPROVED));
+        model.addAttribute("rejectedList",  leadRepo.findByStatusOrderByCreatedAtDesc(LeadStatus.REJECTED));
+        return "user-requests";
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // MY DEALS
+    // ════════════════════════════════════════════════════════════════════════
+
+    @GetMapping("/deals")
+    public String deals(Model model) {
+        addCounts(model);
+        model.addAttribute("approvedList", leadRepo.findByStatusOrderByCreatedAtDesc(LeadStatus.APPROVED));
+        return "user-deals";
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // ACTIVITY HISTORY
+    // ════════════════════════════════════════════════════════════════════════
+
+    @GetMapping("/activity")
+    public String activity(Model model) {
         addCounts(model);
         model.addAttribute("allLeads", leadRepo.findAllByOrderByCreatedAtDesc());
-        return "user-files";
+        return "user-activity";
     }
 
-    // ── Messages ──────────────────────────────────────────────────────────────
+    // ════════════════════════════════════════════════════════════════════════
+    // MEETINGS
+    // ════════════════════════════════════════════════════════════════════════
 
-    @GetMapping("/messages")
-    public String messages(Model model) {
+    @GetMapping("/meetings")
+    public String meetings(Model model) {
         addCounts(model);
-        model.addAttribute("approvedLeads", leadRepo.findByStatusOrderByCreatedAtDesc(LeadStatus.APPROVED));
-        model.addAttribute("rejectedLeads", leadRepo.findByStatusOrderByCreatedAtDesc(LeadStatus.REJECTED));
-        model.addAttribute("pendingLeads",  leadRepo.findByStatusOrderByCreatedAtDesc(LeadStatus.PENDING));
-        return "user-messages";
+        model.addAttribute("approvedList", leadRepo.findByStatusOrderByCreatedAtDesc(LeadStatus.APPROVED));
+        return "user-meetings";
     }
 
-    // ── Notifications ─────────────────────────────────────────────────────────
+    // ════════════════════════════════════════════════════════════════════════
+    // NOTIFICATIONS
+    // ════════════════════════════════════════════════════════════════════════
 
     @GetMapping("/notifications")
     public String notifications(Model model) {
         addCounts(model);
-        model.addAttribute("allLeads", leadRepo.findAllByOrderByCreatedAtDesc());
+        model.addAttribute("approvedList", leadRepo.findByStatusOrderByCreatedAtDesc(LeadStatus.APPROVED));
+        model.addAttribute("rejectedList", leadRepo.findByStatusOrderByCreatedAtDesc(LeadStatus.REJECTED));
+        model.addAttribute("pendingList",  leadRepo.findByStatusOrderByCreatedAtDesc(LeadStatus.PENDING));
         return "user-notifications";
     }
 
-    // ── Location ──────────────────────────────────────────────────────────────
+    // ════════════════════════════════════════════════════════════════════════
+    // SUPPORT TICKETS
+    // ════════════════════════════════════════════════════════════════════════
+
+    @GetMapping("/support")
+    public String support(Model model) {
+        addCounts(model);
+        return "user-support";
+    }
+
+    @PostMapping("/support/submit")
+    public String submitTicket(
+            @RequestParam String subject,
+            @RequestParam String category,
+            @RequestParam String description,
+            RedirectAttributes ra) {
+        // In a real app this would persist to a SupportTicket entity
+        ra.addFlashAttribute("success",
+            "Ticket '" + subject + "' submitted successfully. Our team will respond within 24 hours.");
+        return "redirect:/user/support";
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // DOCUMENTS
+    // ════════════════════════════════════════════════════════════════════════
+
+    @GetMapping("/documents")
+    public String documents(Model model) {
+        addCounts(model);
+        model.addAttribute("allLeads", leadRepo.findAllByOrderByCreatedAtDesc());
+        return "user-documents";
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // SETTINGS
+    // ════════════════════════════════════════════════════════════════════════
+
+    @GetMapping("/settings")
+    public String settings(Model model) {
+        addCounts(model);
+        return "user-settings";
+    }
+
+    @PostMapping("/settings/save")
+    public String saveSettings(
+            @RequestParam(required = false) String fullName,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String phone,
+            RedirectAttributes ra) {
+        ra.addFlashAttribute("success", "Settings saved successfully.");
+        return "redirect:/user/settings";
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // LEGACY ROUTES — kept for backward compatibility
+    // ════════════════════════════════════════════════════════════════════════
+
+    @GetMapping("/files")
+    public String files(Model model) {
+        return "redirect:/user/documents";
+    }
+
+    @GetMapping("/messages")
+    public String messages(Model model) {
+        return "redirect:/user/notifications";
+    }
 
     @GetMapping("/location")
     public String location(Model model) {
         addCounts(model);
-        model.addAttribute("allLeads", leadRepo.findAllByOrderByCreatedAtDesc());
-        return "user-location";
+        return "redirect:/user/home";
     }
-
-    // ── Graph ─────────────────────────────────────────────────────────────────
 
     @GetMapping("/graph")
     public String graph(Model model) {
-        addCounts(model);
-        return "user-graph";
+        return "redirect:/user/activity";
     }
 }

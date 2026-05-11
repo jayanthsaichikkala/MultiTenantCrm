@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{fragments/user-layout :: layout('My Requests', 'requests', ~{::section})}">
+<section>
+
+  <h2 style="font-size:1.2rem;font-weight:700;color:var(--text);margin-bottom:1.4rem;display:flex;align-items:center;gap:8px">
+    <i class="fas fa-clipboard-list" style="color:#667EEA"></i> My Requests
+  </h2>
+
+  <!-- Summary -->
+  <section class="stats-grid" style="margin-bottom:1.4rem">
+    <div class="stat-card stat-card--dark">
+      <div class="stat-header"><span class="stat-label">Total</span><div class="stat-icon stat-icon--dollar"><i class="fas fa-list"></i></div></div>
+      <div class="stat-value" th:text="${totalLeads ?: 0}">0</div>
+      <p class="stat-sub">All requests</p>
+    </div>
+    <div class="stat-card">
+      <div class="stat-header"><span class="stat-label">Approved</span><div class="stat-icon stat-icon--share"><i class="fas fa-check-circle"></i></div></div>
+      <div class="stat-value stat-value--dark" th:text="${approvedLeads ?: 0}">0</div>
+      <p class="stat-sub" style="color:#22c55e">Approved</p>
+    </div>
+    <div class="stat-card">
+      <div class="stat-header"><span class="stat-label">Pending</span><div class="stat-icon stat-icon--like"><i class="fas fa-clock"></i></div></div>
+      <div class="stat-value stat-value--dark" th:text="${pendingLeads ?: 0}">0</div>
+      <p class="stat-sub" style="color:#F59E0B">In review</p>
+    </div>
+    <div class="stat-card">
+      <div class="stat-header"><span class="stat-label">Rejected</span><div class="stat-icon stat-icon--star"><i class="fas fa-times-circle"></i></div></div>
+      <div class="stat-value stat-value--dark" th:text="${rejectedLeads ?: 0}">0</div>
+      <p class="stat-sub" style="color:#EF4444">Not approved</p>
+    </div>
+  </section>
+
+  <!-- Requests Table -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)">
+    <div style="padding:1rem 1.3rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <h3 style="font-size:.88rem;font-weight:700;color:var(--text)">All Requests</h3>
+      <span style="font-size:.75rem;color:var(--muted)" th:text="${totalLeads ?: 0} + ' total'">0 total</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="background:var(--bg)">
+            <th style="padding:.7rem 1rem;font-size:.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;text-align:left">#</th>
+            <th style="padding:.7rem 1rem;font-size:.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;text-align:left">Request Name</th>
+            <th style="padding:.7rem 1rem;font-size:.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;text-align:left">Company</th>
+            <th style="padding:.7rem 1rem;font-size:.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;text-align:left">Value (₹)</th>
+            <th style="padding:.7rem 1rem;font-size:.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;text-align:left">Status</th>
+            <th style="padding:.7rem 1rem;font-size:.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;text-align:left">Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="lead, s : ${allLeads}" style="border-bottom:1px solid var(--border)">
+            <td style="padding:.75rem 1rem;font-size:.78rem;color:var(--muted)" th:text="${s.count}">1</td>
+            <td style="padding:.75rem 1rem;font-size:.82rem;font-weight:600;color:var(--text)" th:text="${lead.customerName ?: '—'}">—</td>
+            <td style="padding:.75rem 1rem;font-size:.8rem;color:var(--muted)" th:text="${lead.company ?: '—'}">—</td>
+            <td style="padding:.75rem 1rem;font-size:.8rem;color:var(--text)" th:text="${lead.dealValue != null ? '₹' + #numbers.formatDecimal(lead.dealValue,1,'COMMA',0,'POINT') : '—'}">—</td>
+            <td style="padding:.75rem 1rem">
+              <span th:if="${lead.status?.name() == 'APPROVED'}" style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:99px;font-size:.68rem;font-weight:700;background:#D1FAE5;color:#065F46"><span style="width:5px;height:5px;border-radius:50%;background:#10B981;display:inline-block"></span>Approved</span>
+              <span th:if="${lead.status?.name() == 'PENDING'}"  style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:99px;font-size:.68rem;font-weight:700;background:#FEF3C7;color:#92400E"><span style="width:5px;height:5px;border-radius:50%;background:#F59E0B;display:inline-block"></span>Pending</span>
+              <span th:if="${lead.status?.name() == 'REJECTED'}" style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:99px;font-size:.68rem;font-weight:700;background:#FEE2E2;color:#991B1B"><span style="width:5px;height:5px;border-radius:50%;background:#EF4444;display:inline-block"></span>Rejected</span>
+            </td>
+            <td style="padding:.75rem 1rem;font-size:.78rem;color:var(--muted)" th:text="${#temporals.format(lead.createdAt,'dd MMM yyyy')}">—</td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(allLeads)}">
+            <td colspan="6" style="padding:2.5rem;text-align:center;color:var(--muted);font-size:.85rem">
+              <i class="fas fa-clipboard-list" style="font-size:1.5rem;display:block;margin-bottom:.5rem;opacity:.3"></i>
+              No requests found.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</section>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{fragments/user-layout :: layout('Support Tickets', 'support', ~{::section})}">
+<section>
+
+  <h2 style="font-size:1.2rem;font-weight:700;color:var(--text);margin-bottom:1.4rem;display:flex;align-items:center;gap:8px">
+    <i class="fas fa-headset" style="color:#F59E0B"></i> Support Tickets
+  </h2>
+
+  <div style="display:grid;grid-template-columns:1fr 380px;gap:1.4rem;align-items:start">
+
+    <!-- Ticket list -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.4rem;box-shadow:var(--shadow)">
+      <h3 style="font-size:.88rem;font-weight:700;color:var(--text);margin-bottom:1rem">My Tickets</h3>
+      <div style="text-align:center;padding:2.5rem;color:var(--muted)">
+        <i class="fas fa-ticket-alt" style="font-size:2rem;display:block;margin-bottom:.75rem;opacity:.3"></i>
+        <p style="font-size:.85rem;margin-bottom:.5rem">No support tickets yet.</p>
+        <p style="font-size:.75rem">Use the form to submit a new ticket and our team will respond within 24 hours.</p>
+      </div>
+    </div>
+
+    <!-- New ticket form -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.4rem;box-shadow:var(--shadow)">
+      <h3 style="font-size:.88rem;font-weight:700;color:var(--text);margin-bottom:1rem;display:flex;align-items:center;gap:7px">
+        <i class="fas fa-plus-circle" style="color:#667EEA"></i> New Ticket
+      </h3>
+      <form th:action="@{/user/support/submit}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+        <div style="margin-bottom:.9rem">
+          <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Subject <span style="color:#EF4444">*</span></label>
+          <input type="text" name="subject" required placeholder="Brief description of your issue"
+            style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;outline:none;background:var(--surface);color:var(--text)">
+        </div>
+        <div style="margin-bottom:.9rem">
+          <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Category</label>
+          <select name="category" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;outline:none;background:var(--surface);color:var(--text)">
+            <option value="BILLING">Billing</option>
+            <option value="TECHNICAL">Technical Issue</option>
+            <option value="DEAL">Deal Related</option>
+            <option value="ACCOUNT">Account</option>
+            <option value="OTHER" selected>Other</option>
+          </select>
+        </div>
+        <div style="margin-bottom:1.2rem">
+          <label style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:4px">Description <span style="color:#EF4444">*</span></label>
+          <textarea name="description" required rows="5" placeholder="Describe your issue in detail…"
+            style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;outline:none;background:var(--surface);color:var(--text);resize:vertical"></textarea>
+        </div>
+        <div style="background:#EEF2FF;border:1px solid #c7d2fe;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.78rem;color:#4338ca;display:flex;align-items:center;gap:8px">
+          <i class="fas fa-info-circle"></i> Our support team typically responds within 24 hours.
+        </div>
+        <button type="submit" style="width:100%;padding:10px;background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer">
+          <i class="fas fa-paper-plane"></i> Submit Ticket
+        </button>
+      </form>
+    </div>
+  </div>
+
+</section>
