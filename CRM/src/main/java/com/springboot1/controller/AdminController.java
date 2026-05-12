@@ -46,6 +46,15 @@ public class AdminController {
 				.map(User::getTenantId).orElse(null);
 	}
 
+	// ── Inject adminUser into every admin page automatically ─────────────────
+	@ModelAttribute
+	public void addAdminUser(Model model, Principal principal) {
+		if (principal != null) {
+			userRepository.findByUsername(principal.getName())
+					.ifPresent(u -> model.addAttribute("adminUser", u));
+		}
+	}
+
 	// ════════════════════════════════════════════════════════════════════════
 	// DASHBOARD
 	// ════════════════════════════════════════════════════════════════════════
@@ -482,5 +491,32 @@ public class AdminController {
 		model.addAttribute("approvedLeads",  leadService.countApprovedByTenant(t));
 		model.addAttribute("approvedValue",  leadService.sumApprovedValueByTenant(t));
 		return "admin-profile";
+	}
+
+	@PostMapping("/profile/update")
+	public String updateProfile(
+			@RequestParam String username,
+			@RequestParam String email,
+			@RequestParam String phone,
+			@RequestParam(required = false) String companyName,
+			@RequestParam(required = false) String address,
+			Principal principal,
+			RedirectAttributes ra) {
+		if (principal == null) return "redirect:/login";
+		try {
+			userRepository.findByUsername(principal.getName()).ifPresent(user -> {
+				// Only update allowed fields — role and tenantId are never changed here
+				user.setUsername(username);
+				user.setEmail(email);
+				user.setPhone(phone);
+				if (companyName != null) user.setCompanyName(companyName);
+				if (address != null) user.setAddress(address);
+				userRepository.save(user);
+			});
+			ra.addFlashAttribute("success", "Profile updated successfully.");
+		} catch (Exception e) {
+			ra.addFlashAttribute("error", "Failed to update profile: " + e.getMessage());
+		}
+		return "redirect:/admin/profile";
 	}
 }

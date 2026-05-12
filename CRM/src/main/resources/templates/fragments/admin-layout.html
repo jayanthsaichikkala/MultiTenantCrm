@@ -69,7 +69,7 @@
 				<span class="nav-icon">
 					<svg viewBox="0 0 20 20" fill="currentColor"><path d="M8 9a3 3 0 100-6 3 3 0 000 6zm-5 6a5 5 0 0110 0H3zm13-6a1 1 0 10-2 0v2h-2a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V9z"/></svg>
 				</span>
-				Add User
+				Users
 			</a>
 
 			<a th:href="@{/admin/users/roles}"
@@ -248,10 +248,11 @@
 				</a>
 
 				<div class="avatar-wrap">
-					<div class="avatar" style="background:linear-gradient(135deg,#667EEA,#764BA2);">A</div>
+					<div class="avatar" style="background:linear-gradient(135deg,#667EEA,#764BA2);"
+						th:text="${#authentication?.name != null ? #authentication.name.substring(0,1).toUpperCase() : 'A'}">A</div>
 					<div class="avatar-info">
 						<span th:text="${#authentication?.name ?: 'Admin'}">Admin</span>
-						<small>Administrator</small>
+						<small th:text="${adminUser?.role?.name() != null ? #strings.capitalize(#strings.toLowerCase(adminUser.role.name().replace('_',' '))) : 'Admin'}">Admin</small>
 					</div>
 				</div>
 			</div>

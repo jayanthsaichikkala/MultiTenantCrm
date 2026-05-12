@@ -33,48 +33,54 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ── KPI bar animation on load ──────────────────────────────────────────────
+    // Double-rAF ensures the browser has committed width:0 before animating.
     const animateBars = (selector, delay = 0) => {
         document.querySelectorAll(selector).forEach(bar => {
-            const target = bar.style.width;
+            const target = bar.style.width || '0%';
+            bar.style.transition = 'none';
             bar.style.width = '0';
             setTimeout(() => {
                 requestAnimationFrame(() => {
-                    bar.style.transition = 'width 1s cubic-bezier(.4,0,.2,1)';
-                    bar.style.width = target;
+                    requestAnimationFrame(() => {
+                        bar.style.transition = 'width 1s cubic-bezier(.4,0,.2,1)';
+                        bar.style.width = target;
+                    });
                 });
             }, delay);
         });
     };
 
-    animateBars('.kpi-bar > div', 100);
-    animateBars('.stage-bar > div', 300);
+    animateBars('.kpi-bar > div', 50);
+    animateBars('.stage-bar > div', 150);
 
     // ── KPI value count-up animation ──────────────────────────────────────────
-    document.querySelectorAll('.kpi-value').forEach(el => {
-        const raw = el.textContent.trim().replace(/,/g, '');
-        const num = parseFloat(raw);
-        if (isNaN(num) || num === 0) return;
+    requestAnimationFrame(() => {
+        document.querySelectorAll('.kpi-value').forEach(el => {
+            const raw = el.textContent.trim().replace(/,/g, '');
+            const num = parseFloat(raw);
+            if (isNaN(num) || num === 0) return;
 
-        const isDecimal = raw.includes('.');
-        const duration = 800;
-        const steps = 40;
-        const increment = num / steps;
-        let current = 0;
-        let step = 0;
+            const isDecimal = raw.includes('.');
+            const duration = 800;
+            const steps = 40;
+            const increment = num / steps;
+            let current = 0;
+            let step = 0;
 
-        el.textContent = isDecimal ? '0.00' : '0';
+            el.textContent = isDecimal ? '0.00' : '0';
 
-        const timer = setInterval(() => {
-            step++;
-            current += increment;
-            if (step >= steps) {
-                clearInterval(timer);
-                current = num;
-            }
-            el.textContent = isDecimal
-                ? current.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                : Math.floor(current).toLocaleString('en-IN');
-        }, duration / steps);
+            const timer = setInterval(() => {
+                step++;
+                current += increment;
+                if (step >= steps) {
+                    clearInterval(timer);
+                    current = num;
+                }
+                el.textContent = isDecimal
+                    ? current.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    : Math.floor(current).toLocaleString('en-IN');
+            }, duration / steps);
+        });
     });
 
     // ── Search box live filter for table rows ─────────────────────────────────

@@ -13,7 +13,7 @@ public class DashboardController {
 
 	@GetMapping("/dashboard/admin")
 	public String adminDashboard() {
-		return "dashboard-admin";
+		return "redirect:/admin/dashboard";
 	}
 
 	@GetMapping("/dashboard/user")

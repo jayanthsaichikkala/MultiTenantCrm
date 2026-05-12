@@ -80,7 +80,9 @@
 				<div class="form-group">
 					<label class="form-label">Phone <span class="required">*</span></label>
 					<input type="tel" name="phone" class="form-input"
-						placeholder="+91 98765 43210" required th:value="${formPhone}" />
+						placeholder="+91 98765 43210" required th:value="${formPhone}"
+						maxlength="12"
+						oninput="this.value=this.value.replace(/[^0-9+]/g,'').slice(0,12)" />
 				</div>
 
 				<!-- Role -->
