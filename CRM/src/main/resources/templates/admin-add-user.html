@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org"
 	th:replace="~{fragments/admin-layout :: layout('Add User', 'add-user', ~{::section})}">
 
@@ -30,9 +30,9 @@
 	<div th:if="${success}" class="toast toast-success" th:text="${success}"></div>
 	<div th:if="${error}" class="toast toast-error" th:text="${error}"></div>
 
-	<!-- ── Users Table ──────────────────────────────────────────────────── -->
+	<!-- -- Users Table ---------------------------------------------------- -->
 	<h2 class="section-title" style="margin-top:0">
-		<span class="section-title-icon">👥</span> All Users
+		<span class="section-title-icon">??</span> All Users
 		<span style="margin-left:8px;font-size:0.8rem;font-weight:500;color:var(--muted);background:var(--bg);padding:2px 10px;border-radius:99px;border:1px solid var(--border)"
 			th:text="${#lists.size(allUsers)} + ' total'">0 total</span>
 	</h2>
@@ -64,9 +64,9 @@
 				<tbody>
 					<tr th:each="u, i : ${allUsers}">
 						<td th:text="${i.count}">1</td>
-						<td class="td-bold" th:text="${u.username}">—</td>
-						<td th:text="${u.email}">—</td>
-						<td th:text="${u.phone ?: '—'}">—</td>
+						<td class="td-bold" th:text="${u.username}">�</td>
+						<td th:text="${u.email}">�</td>
+						<td th:text="${u.phone ?: '�'}">�</td>
 						<td>
 							<span th:if="${u.role?.name() == 'MANAGER'}" class="badge badge-approved">Manager</span>
 							<span th:if="${u.role?.name() == 'SALES_EXECUTIVE'}" class="badge badge-pending">Sales Executive</span>
@@ -75,12 +75,26 @@
 							<span th:if="${u.status?.name() == 'ACTIVE'}" class="badge badge-approved">Active</span>
 							<span th:unless="${u.status?.name() == 'ACTIVE'}" class="badge badge-rejected">Inactive</span>
 						</td>
-						<td th:text="${u.createdAt != null ? #temporals.format(u.createdAt, 'dd MMM yyyy') : '—'}">—</td>
+						<td th:text="${u.createdAt != null ? #temporals.format(u.createdAt, 'dd MMM yyyy') : '�'}">�</td>
 						<td class="td-actions">
-							<!--
-							  th:onsubmit is blocked in Thymeleaf 3.1+ for string expressions.
-							  Use data-username + a plain JS helper instead.
-							-->
+							<!-- Edit button � data-* attributes avoid Thymeleaf 3.1 onclick restriction -->
+							<button type="button" class="action-link action-assign"
+								th:data-id="${u.id}"
+								th:data-username="${u.username}"
+								th:data-email="${u.email}"
+								th:data-phone="${u.phone ?: ''}"
+								th:data-role="${u.role?.name()}"
+								th:data-status="${u.status?.name()}"
+								th:data-address="${u.address ?: ''}"
+								th:data-company="${u.companyName ?: ''}"
+								onclick="openEditModal(this)">
+								<svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13"
+									style="display:inline;vertical-align:middle;margin-right:2px">
+									<path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+								</svg>
+								Edit
+							</button>
+							<!-- Delete button -->
 							<form th:action="@{/admin/users/{id}/delete(id=${u.id})}" method="post"
 								style="display:inline"
 								th:data-username="${u.username}"
@@ -109,7 +123,100 @@
 				</tbody>
 			</table>
 		</div>
-	</section>
+	
+
+<!-- -- Edit User Modal ------------------------------------------------ -->
+<div id="editUserModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(3px)">
+	<div style="background:#fff;border-radius:14px;width:560px;max-width:95vw;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.15)">
+		<div style="display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.4rem;border-bottom:1px solid var(--border)">
+			<h3 style="font-size:.98rem;font-weight:700;color:var(--text)">Edit User</h3>
+			<button onclick="closeEditModal()" style="width:28px;height:28px;border-radius:6px;border:none;background:var(--bg);cursor:pointer;font-size:.85rem;color:var(--muted)">?</button>
+		</div>
+		<form id="editUserForm" method="post" style="padding:1.4rem">
+			<input type="hidden" id="editCsrf" name="_csrf" th:value="${_csrf.token}" />
+			<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+				<div style="grid-column:1/-1">
+					<label class="form-label">Username (read-only)</label>
+					<input type="text" id="editUsername" class="form-input" readonly
+						style="background:var(--bg);cursor:not-allowed;color:var(--muted)" />
+				</div>
+				<div>
+					<label class="form-label">Email <span class="required">*</span></label>
+					<input type="email" id="editEmail" name="email" class="form-input" required />
+				</div>
+				<div>
+					<label class="form-label">Phone <span class="required">*</span></label>
+					<input type="tel" id="editPhone" name="phone" class="form-input" required />
+				</div>
+				<div>
+					<label class="form-label">Role <span class="required">*</span></label>
+					<select id="editRole" name="role" class="form-select" required>
+						<option value="MANAGER">Manager</option>
+						<option value="SALES_EXECUTIVE">Sales Executive</option>
+					</select>
+				</div>
+				<div>
+					<label class="form-label">Status <span class="required">*</span></label>
+					<select id="editStatus" name="status" class="form-select" required>
+						<option value="ACTIVE">Active</option>
+						<option value="INACTIVE">Inactive</option>
+					</select>
+				</div>
+				<div>
+					<label class="form-label">Address</label>
+					<input type="text" id="editAddress" name="address" class="form-input" placeholder="Address" />
+				</div>
+				<div>
+					<label class="form-label">Company Name</label>
+					<input type="text" id="editCompany" name="companyName" class="form-input" placeholder="Company" />
+				</div>
+			</div>
+			<div style="display:flex;justify-content:flex-end;gap:.75rem;padding-top:1rem;border-top:1px solid var(--border)">
+				<button type="button" onclick="closeEditModal()" class="btn-secondary">Cancel</button>
+				<button type="submit" class="btn-primary">
+					<svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14" style="display:inline;vertical-align:middle;margin-right:4px">
+						<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+					</svg>
+					Save Changes
+				</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+<script>
+function openEditModal(btn) {
+	var d = btn.dataset;
+	document.getElementById('editUserForm').action = '/admin/users/' + d.id + '/update';
+	document.getElementById('editUsername').value = d.username || '';
+	document.getElementById('editEmail').value    = d.email    || '';
+	document.getElementById('editPhone').value    = d.phone    || '';
+	document.getElementById('editRole').value     = d.role     || '';
+	document.getElementById('editStatus').value   = d.status   || 'ACTIVE';
+	document.getElementById('editAddress').value  = d.address  || '';
+	document.getElementById('editCompany').value  = d.company  || '';
+	document.getElementById('editUserModal').style.display = 'flex';
+}
+function closeEditModal() {
+	document.getElementById('editUserModal').style.display = 'none';
+}
+// Close on backdrop click
+document.getElementById('editUserModal').addEventListener('click', function(e) {
+	if (e.target === this) closeEditModal();
+});
+
+function filterUserTable(q) {
+	q = q.toLowerCase();
+	var rows = document.querySelectorAll('#usersTable tbody tr:not(#emptyRow):not(#noResultsRow)');
+	var visible = 0;
+	rows.forEach(function(r) {
+		var match = r.textContent.toLowerCase().includes(q);
+		r.style.display = match ? '' : 'none';
+		if (match) visible++;
+	});
+	document.getElementById('noResultsRow').style.display = (visible === 0 && q) ? '' : 'none';
+}
+</script>
 
 </section>
 

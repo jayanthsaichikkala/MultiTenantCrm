@@ -100,11 +100,26 @@
 						placeholder="e.g. 123 Main St, Chennai" th:value="${formAddress}" />
 				</div>
 
-				<!-- Company Name -->
+				<!-- Status -->
 				<div class="form-group">
-					<label class="form-label">Company Name</label>
+					<label class="form-label">Status <span class="required">*</span></label>
+					<select name="status" class="form-select" required>
+						<option value="ACTIVE"   th:selected="${formStatus == 'ACTIVE'   or formStatus == null}">Active</option>
+						<option value="INACTIVE" th:selected="${formStatus == 'INACTIVE'}">Inactive</option>
+					</select>
+				</div>
+
+				<!-- Company Name — auto-filled from admin's account -->
+				<div class="form-group">
+					<label class="form-label">Company Name
+						<span style="font-size:0.75rem;font-weight:400;color:var(--muted);margin-left:6px">
+							(auto-assigned from your account)
+						</span>
+					</label>
 					<input type="text" name="companyName" class="form-input"
-						placeholder="e.g. Acme Corp" th:value="${formCompanyName}" />
+						th:value="${adminCompanyName ?: formCompanyName}"
+						readonly
+						style="background:var(--bg);cursor:not-allowed;color:var(--muted)" />
 				</div>
 
 				<!-- Tenant ID — read-only, auto-assigned -->

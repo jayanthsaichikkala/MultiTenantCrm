@@ -34,6 +34,9 @@ public class Employee {
 	@Column(name = "user_id")
 	private Long userId;
 
+	@Column(name = "tenant_id", length = 30)
+	private String tenantId;
+
 	@Column(name = "created_at", updatable = false)
 	private LocalDateTime createdAt;
 
@@ -139,6 +142,14 @@ public class Employee {
 
 	public void setUserId(Long userId) {
 		this.userId = userId;
+	}
+
+	public String getTenantId() {
+		return tenantId;
+	}
+
+	public void setTenantId(String tenantId) {
+		this.tenantId = tenantId;
 	}
 
 	public LocalDateTime getCreatedAt() {

@@ -886,17 +886,19 @@ svg {
 }
 
 .link-sm:hover {
-	opacity: .75;
+    opacity: .75;
 }
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
+
+.activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .activity-item {
-	display: flex;
-	align-items: flex-start;
-	gap: 10px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
 }
 
 .activity-dot {
@@ -1286,5 +1288,5 @@ tbody tr:hover td {
 		grid-template-columns: 1fr;
 	}
 }
-/* Hide hamburger on desktop — only show on mobile */
+/* Hide hamburger on desktop ï¿½ only show on mobile */
 .menu-toggle { display: none; }

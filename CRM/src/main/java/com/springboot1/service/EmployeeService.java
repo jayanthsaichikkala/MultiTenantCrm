@@ -108,4 +108,38 @@ public class EmployeeService {
 	public long countTotal() {
 		return repo.count();
 	}
+
+	// ── Tenant-scoped stats ───────────────────────────────────────────────────
+
+	public long countManagersByTenant(String tenantId) {
+		return repo.countByTenantIdAndRole(tenantId, Employee.Role.MANAGER);
+	}
+
+	public long countSalesExecutivesByTenant(String tenantId) {
+		return repo.countByTenantIdAndRole(tenantId, Employee.Role.SALES_EXECUTIVE);
+	}
+
+	public long countActiveByTenant(String tenantId) {
+		return repo.countActiveByTenantId(tenantId);
+	}
+
+	public long countTotalByTenant(String tenantId) {
+		return repo.countByTenantId(tenantId);
+	}
+
+	public List<Employee> getAllEmployeesByTenant(String tenantId) {
+		return repo.findByTenantId(tenantId);
+	}
+
+	public List<Employee> getManagersByTenant(String tenantId) {
+		return repo.findByTenantIdAndRole(tenantId, Employee.Role.MANAGER);
+	}
+
+	public List<Employee> getSalesExecutivesByTenant(String tenantId) {
+		return repo.findByTenantIdAndRole(tenantId, Employee.Role.SALES_EXECUTIVE);
+	}
+
+	public List<Employee> getActiveSalesExecutivesByTenant(String tenantId) {
+		return repo.findByTenantIdAndRoleAndStatus(tenantId, Employee.Role.SALES_EXECUTIVE, Employee.Status.ACTIVE);
+	}
 }

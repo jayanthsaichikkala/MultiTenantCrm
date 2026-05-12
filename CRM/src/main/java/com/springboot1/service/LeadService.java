@@ -117,4 +117,34 @@ public class LeadService {
 	public BigDecimal sumApprovedValue() {
 		return leadRepo.sumApprovedDealValue();
 	}
+
+	// ── Tenant-scoped stats ───────────────────────────────────────────────────
+
+	public long countPendingByTenant(String tenantId) {
+		return leadRepo.countByTenantIdAndStatus(tenantId, LeadStatus.PENDING);
+	}
+
+	public long countApprovedByTenant(String tenantId) {
+		return leadRepo.countByTenantIdAndStatus(tenantId, LeadStatus.APPROVED);
+	}
+
+	public long countRejectedByTenant(String tenantId) {
+		return leadRepo.countByTenantIdAndStatus(tenantId, LeadStatus.REJECTED);
+	}
+
+	public long countTotalByTenant(String tenantId) {
+		return leadRepo.countByTenantId(tenantId);
+	}
+
+	public BigDecimal sumApprovedValueByTenant(String tenantId) {
+		return leadRepo.sumApprovedDealValueByTenantId(tenantId);
+	}
+
+	public List<Lead> getAllLeadsByTenant(String tenantId) {
+		return leadRepo.findByTenantId(tenantId);
+	}
+
+	public List<Lead> getPendingLeadsByTenant(String tenantId) {
+		return leadRepo.findByTenantIdAndStatus(tenantId, LeadStatus.PENDING);
+	}
 }

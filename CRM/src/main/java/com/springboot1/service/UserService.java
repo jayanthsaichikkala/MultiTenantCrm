@@ -45,6 +45,64 @@ public class UserService {
 		return userRepo.findByRoleAndStatus(role, TenantStatus.ACTIVE);
 	}
 
+	// ── Tenant-scoped counts (source of truth = users table) ─────────────────
+	public long countTotalStaffByTenant(String tenantId) {
+		return userRepo.findByTenantId(tenantId).stream()
+				.filter(u -> u.getRole() == Role.MANAGER || u.getRole() == Role.SALES_EXECUTIVE)
+				.count();
+	}
+
+	public long countManagersByTenant(String tenantId) {
+		return userRepo.findByTenantId(tenantId).stream()
+				.filter(u -> u.getRole() == Role.MANAGER)
+				.count();
+	}
+
+	public long countSalesExecsByTenant(String tenantId) {
+		return userRepo.findByTenantId(tenantId).stream()
+				.filter(u -> u.getRole() == Role.SALES_EXECUTIVE)
+				.count();
+	}
+
+	public long countActiveStaffByTenant(String tenantId) {
+		return userRepo.findByTenantId(tenantId).stream()
+				.filter(u -> (u.getRole() == Role.MANAGER || u.getRole() == Role.SALES_EXECUTIVE)
+						&& u.getStatus() == TenantStatus.ACTIVE)
+				.count();
+	}
+
+	// ── Update an existing staff user (no password change) ───────────────────
+	public User updateUser(Long userId, String email, String phone, String role,
+			String status, String address, String companyName) {
+		User user = userRepo.findById(userId)
+				.orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+		// Check email uniqueness if changed
+		if (!user.getEmail().equals(email) && userRepo.existsByEmail(email)) {
+			throw new IllegalArgumentException("Email '" + email + "' is already in use.");
+		}
+
+		user.setEmail(email);
+		user.setPhone(phone);
+		user.setRole(Role.valueOf(role));
+		user.setStatus(com.springboot1.model.TenantStatus.valueOf(status));
+		user.setAddress(address);
+		user.setCompanyName(companyName);
+
+		// Sync employee record if exists
+		empRepo.findByUserId(userId).ifPresent(emp -> {
+			emp.setEmail(email);
+			emp.setPhone(phone);
+			emp.setRole(Role.valueOf(role) == Role.MANAGER
+					? Employee.Role.MANAGER : Employee.Role.SALES_EXECUTIVE);
+			emp.setStatus(status.equals("ACTIVE")
+					? Employee.Status.ACTIVE : Employee.Status.INACTIVE);
+			empRepo.save(emp);
+		});
+
+		return userRepo.save(user);
+	}
+
 	// ── Delete a staff user and their linked employee record ─────────────────
 	public void deleteUser(Long userId) {
 		User user = userRepo.findById(userId)
@@ -57,28 +115,22 @@ public class UserService {
 		userRepo.delete(user);
 	}
 
-	// ── Create a new MANAGER or SALES_EXECUTIVE user ──────────────────────────
-	// Inherits tenantId from the creating admin so all users share the same tenant.
 	public User createStaffUser(String fullName, String username, String email, String password,
-			String phone, String address, String companyName, String tenantId, Role role) {
+			String phone, String address, String companyName, String tenantId, Role role, String status) {
 
-		// Validate uniqueness
-		if (userRepo.existsByUsername(username)) {
+		if (userRepo.existsByUsername(username))
 			throw new IllegalArgumentException("Username '" + username + "' is already taken.");
-		}
-		if (userRepo.existsByEmail(email)) {
+		if (userRepo.existsByEmail(email))
 			throw new IllegalArgumentException("Email '" + email + "' is already registered.");
-		}
-		if (empRepo.existsByEmail(email)) {
+		if (empRepo.existsByEmail(email))
 			throw new IllegalArgumentException("An employee with email '" + email + "' already exists.");
-		}
-
-		// Only allow MANAGER or SALES_EXECUTIVE to be created by admin
-		if (role != Role.MANAGER && role != Role.SALES_EXECUTIVE) {
+		if (role != Role.MANAGER && role != Role.SALES_EXECUTIVE)
 			throw new IllegalArgumentException("Admin can only create MANAGER or SALES_EXECUTIVE users.");
-		}
 
-		// 1. Create User record — inherit tenantId from admin
+		com.springboot1.model.TenantStatus userStatus = "INACTIVE".equals(status)
+				? com.springboot1.model.TenantStatus.INACTIVE
+				: com.springboot1.model.TenantStatus.ACTIVE;
+
 		User user = new User();
 		user.setUsername(username);
 		user.setEmail(email);
@@ -88,20 +140,27 @@ public class UserService {
 		user.setAddress(address);
 		user.setCompanyName(companyName);
 		user.setTenantId(tenantId);
-		user.setStatus(TenantStatus.ACTIVE);
+		user.setStatus(userStatus);
 		User savedUser = userRepo.save(user);
 
-		// 2. Create Employee record linked to the user
 		Employee emp = new Employee();
 		emp.setName(fullName);
 		emp.setEmail(email);
 		emp.setPhone(phone);
 		emp.setDepartment(role == Role.MANAGER ? "Management" : "Sales");
 		emp.setRole(role == Role.MANAGER ? Employee.Role.MANAGER : Employee.Role.SALES_EXECUTIVE);
-		emp.setStatus(Employee.Status.ACTIVE);
+		emp.setStatus(userStatus == com.springboot1.model.TenantStatus.ACTIVE
+				? Employee.Status.ACTIVE : Employee.Status.INACTIVE);
 		emp.setUserId(savedUser.getId());
+		emp.setTenantId(tenantId);
 		empRepo.save(emp);
 
 		return savedUser;
+	}
+
+	// Overload for backward compatibility
+	public User createStaffUser(String fullName, String username, String email, String password,
+			String phone, String address, String companyName, String tenantId, Role role) {
+		return createStaffUser(fullName, username, email, password, phone, address, companyName, tenantId, role, "ACTIVE");
 	}
 }

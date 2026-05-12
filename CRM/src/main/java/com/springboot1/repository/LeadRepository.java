@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.springboot1.controller.Lead;
@@ -34,4 +35,21 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
 
 	@Query("SELECT l FROM Lead l LEFT JOIN FETCH l.createdBy LEFT JOIN FETCH l.assignedTo WHERE l.status = :status ORDER BY l.createdAt DESC")
 	List<Lead> findByStatusWithRelations(LeadStatus status);
+
+	// ── Tenant-scoped queries (filter by employee.tenantId) ───────────────
+
+	@Query("SELECT l FROM Lead l WHERE l.createdBy.tenantId = :tenantId ORDER BY l.createdAt DESC")
+	List<Lead> findByTenantId(@Param("tenantId") String tenantId);
+
+	@Query("SELECT l FROM Lead l WHERE l.createdBy.tenantId = :tenantId AND l.status = :status ORDER BY l.createdAt DESC")
+	List<Lead> findByTenantIdAndStatus(@Param("tenantId") String tenantId, @Param("status") LeadStatus status);
+
+	@Query("SELECT COUNT(l) FROM Lead l WHERE l.createdBy.tenantId = :tenantId")
+	long countByTenantId(@Param("tenantId") String tenantId);
+
+	@Query("SELECT COUNT(l) FROM Lead l WHERE l.createdBy.tenantId = :tenantId AND l.status = :status")
+	long countByTenantIdAndStatus(@Param("tenantId") String tenantId, @Param("status") LeadStatus status);
+
+	@Query("SELECT COALESCE(SUM(l.dealValue), 0) FROM Lead l WHERE l.createdBy.tenantId = :tenantId AND (l.status = 'APPROVED' OR l.status = 'WON')")
+	BigDecimal sumApprovedDealValueByTenantId(@Param("tenantId") String tenantId);
 }
