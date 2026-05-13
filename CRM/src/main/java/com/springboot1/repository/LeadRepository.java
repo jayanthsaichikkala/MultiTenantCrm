@@ -36,20 +36,24 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
 	@Query("SELECT l FROM Lead l LEFT JOIN FETCH l.createdBy LEFT JOIN FETCH l.assignedTo WHERE l.status = :status ORDER BY l.createdAt DESC")
 	List<Lead> findByStatusWithRelations(LeadStatus status);
 
-	// ── Tenant-scoped queries (filter by employee.tenantId) ───────────────
+	// ── Tenant-scoped queries ─────────────────────────────────────────────
+	// Uses direct tenantId column (set on submit) for reliable tenant isolation.
+	// Returns EMPTY when tenantId is null — never leaks cross-tenant data.
 
-	@Query("SELECT l FROM Lead l WHERE l.createdBy.tenantId = :tenantId ORDER BY l.createdAt DESC")
+	@Query("SELECT l FROM Lead l LEFT JOIN FETCH l.createdBy LEFT JOIN FETCH l.assignedTo " +
+	       "WHERE l.tenantId = :tenantId ORDER BY l.createdAt DESC")
 	List<Lead> findByTenantId(@Param("tenantId") String tenantId);
 
-	@Query("SELECT l FROM Lead l WHERE l.createdBy.tenantId = :tenantId AND l.status = :status ORDER BY l.createdAt DESC")
+	@Query("SELECT l FROM Lead l LEFT JOIN FETCH l.createdBy LEFT JOIN FETCH l.assignedTo " +
+	       "WHERE l.tenantId = :tenantId AND l.status = :status ORDER BY l.createdAt DESC")
 	List<Lead> findByTenantIdAndStatus(@Param("tenantId") String tenantId, @Param("status") LeadStatus status);
 
-	@Query("SELECT COUNT(l) FROM Lead l WHERE l.createdBy.tenantId = :tenantId")
+	@Query("SELECT COUNT(l) FROM Lead l WHERE l.tenantId = :tenantId")
 	long countByTenantId(@Param("tenantId") String tenantId);
 
-	@Query("SELECT COUNT(l) FROM Lead l WHERE l.createdBy.tenantId = :tenantId AND l.status = :status")
+	@Query("SELECT COUNT(l) FROM Lead l WHERE l.tenantId = :tenantId AND l.status = :status")
 	long countByTenantIdAndStatus(@Param("tenantId") String tenantId, @Param("status") LeadStatus status);
 
-	@Query("SELECT COALESCE(SUM(l.dealValue), 0) FROM Lead l WHERE l.createdBy.tenantId = :tenantId AND (l.status = 'APPROVED' OR l.status = 'WON')")
+	@Query("SELECT COALESCE(SUM(l.dealValue), 0) FROM Lead l WHERE l.tenantId = :tenantId AND (l.status = 'APPROVED' OR l.status = 'WON')")
 	BigDecimal sumApprovedDealValueByTenantId(@Param("tenantId") String tenantId);
 }

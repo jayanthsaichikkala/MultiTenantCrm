@@ -41,12 +41,16 @@ public class Lead {
 	private String rejectionNote;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "created_by", nullable = false)
+	@JoinColumn(name = "created_by")
 	private Employee createdBy;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "assigned_to")
 	private Employee assignedTo;
+
+	// Direct tenant reference — set when createdBy employee is not available
+	@Column(name = "tenant_id", length = 30)
+	private String tenantId;
 
 	@Column(name = "approved_at")
 	private LocalDateTime approvedAt;
@@ -188,6 +192,14 @@ public class Lead {
 
 	public void setApprovedAt(LocalDateTime t) {
 		this.approvedAt = t;
+	}
+
+	public String getTenantId() {
+		return tenantId;
+	}
+
+	public void setTenantId(String tenantId) {
+		this.tenantId = tenantId;
 	}
 
 	public LocalDateTime getCreatedAt() {

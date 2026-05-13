@@ -112,34 +112,42 @@ public class EmployeeService {
 	// ── Tenant-scoped stats ───────────────────────────────────────────────────
 
 	public long countManagersByTenant(String tenantId) {
+		if (tenantId == null) return 0L;
 		return repo.countByTenantIdAndRole(tenantId, Employee.Role.MANAGER);
 	}
 
 	public long countSalesExecutivesByTenant(String tenantId) {
+		if (tenantId == null) return 0L;
 		return repo.countByTenantIdAndRole(tenantId, Employee.Role.SALES_EXECUTIVE);
 	}
 
 	public long countActiveByTenant(String tenantId) {
+		if (tenantId == null) return 0L;
 		return repo.countActiveByTenantId(tenantId);
 	}
 
 	public long countTotalByTenant(String tenantId) {
+		if (tenantId == null) return 0L;
 		return repo.countByTenantId(tenantId);
 	}
 
 	public List<Employee> getAllEmployeesByTenant(String tenantId) {
-		return repo.findByTenantId(tenantId);
+		if (tenantId == null) return java.util.Collections.emptyList();
+		return repo.findByTenantIdNullSafe(tenantId);
 	}
 
 	public List<Employee> getManagersByTenant(String tenantId) {
-		return repo.findByTenantIdAndRole(tenantId, Employee.Role.MANAGER);
+		if (tenantId == null) return java.util.Collections.emptyList();
+		return repo.findByTenantIdAndRoleNullSafe(tenantId, Employee.Role.MANAGER);
 	}
 
 	public List<Employee> getSalesExecutivesByTenant(String tenantId) {
-		return repo.findByTenantIdAndRole(tenantId, Employee.Role.SALES_EXECUTIVE);
+		if (tenantId == null) return java.util.Collections.emptyList();
+		return repo.findByTenantIdAndRoleNullSafe(tenantId, Employee.Role.SALES_EXECUTIVE);
 	}
 
 	public List<Employee> getActiveSalesExecutivesByTenant(String tenantId) {
-		return repo.findByTenantIdAndRoleAndStatus(tenantId, Employee.Role.SALES_EXECUTIVE, Employee.Status.ACTIVE);
+		if (tenantId == null) return java.util.Collections.emptyList();
+		return repo.findByTenantIdAndRoleAndStatusNullSafe(tenantId, Employee.Role.SALES_EXECUTIVE, Employee.Status.ACTIVE);
 	}
 }

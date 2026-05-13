@@ -26,6 +26,12 @@ public class LeadService {
 		this.empRepo = empRepo;
 	}
 
+	// ── Save (create or update) ───────────────────────────────────────────────
+
+	public Lead saveLead(Lead lead) {
+		return leadRepo.save(lead);
+	}
+
 	// ── Read ──────────────────────────────────────────────────────────────────
 
 	public List<Lead> getAllLeads() {
@@ -121,30 +127,37 @@ public class LeadService {
 	// ── Tenant-scoped stats ───────────────────────────────────────────────────
 
 	public long countPendingByTenant(String tenantId) {
+		if (tenantId == null) return 0L;
 		return leadRepo.countByTenantIdAndStatus(tenantId, LeadStatus.PENDING);
 	}
 
 	public long countApprovedByTenant(String tenantId) {
+		if (tenantId == null) return 0L;
 		return leadRepo.countByTenantIdAndStatus(tenantId, LeadStatus.APPROVED);
 	}
 
 	public long countRejectedByTenant(String tenantId) {
+		if (tenantId == null) return 0L;
 		return leadRepo.countByTenantIdAndStatus(tenantId, LeadStatus.REJECTED);
 	}
 
 	public long countTotalByTenant(String tenantId) {
+		if (tenantId == null) return 0L;
 		return leadRepo.countByTenantId(tenantId);
 	}
 
 	public BigDecimal sumApprovedValueByTenant(String tenantId) {
+		if (tenantId == null) return BigDecimal.ZERO;
 		return leadRepo.sumApprovedDealValueByTenantId(tenantId);
 	}
 
 	public List<Lead> getAllLeadsByTenant(String tenantId) {
+		if (tenantId == null) return java.util.Collections.emptyList();
 		return leadRepo.findByTenantId(tenantId);
 	}
 
 	public List<Lead> getPendingLeadsByTenant(String tenantId) {
+		if (tenantId == null) return java.util.Collections.emptyList();
 		return leadRepo.findByTenantIdAndStatus(tenantId, LeadStatus.PENDING);
 	}
 }

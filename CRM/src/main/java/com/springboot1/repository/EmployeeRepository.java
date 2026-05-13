@@ -51,4 +51,14 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
 	@Query("SELECT COUNT(e) FROM Employee e WHERE e.tenantId = :tenantId")
 	long countByTenantId(@Param("tenantId") String tenantId);
+
+	// Strict tenant-scoped list queries — return empty when tenantId is null
+	@Query("SELECT e FROM Employee e WHERE e.tenantId = :tenantId")
+	List<Employee> findByTenantIdNullSafe(@Param("tenantId") String tenantId);
+
+	@Query("SELECT e FROM Employee e WHERE e.tenantId = :tenantId AND e.role = :role")
+	List<Employee> findByTenantIdAndRoleNullSafe(@Param("tenantId") String tenantId, @Param("role") Employee.Role role);
+
+	@Query("SELECT e FROM Employee e WHERE e.tenantId = :tenantId AND e.role = :role AND e.status = :status")
+	List<Employee> findByTenantIdAndRoleAndStatusNullSafe(@Param("tenantId") String tenantId, @Param("role") Employee.Role role, @Param("status") Employee.Status status);
 }

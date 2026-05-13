@@ -105,38 +105,26 @@
 			<div class="notif-wrapper">
 				<button class="tb-btn" id="notifBtn" title="Notifications" style="position:relative">
 					<i class="fas fa-bell"></i>
-					<span class="tb-badge" id="notifBadge">3</span>
+					<span class="tb-badge" id="notifBadge" th:text="${pendingLeads ?: 0}"
+						th:style="${(pendingLeads ?: 0) == 0 ? 'display:none' : ''}">0</span>
 				</button>
 				<div class="notif-dropdown" id="notifDropdown">
 					<div class="notif-header">
 						<h4>Notifications</h4>
 						<span class="notif-mark-all" id="markAllRead">Mark all read</span>
 					</div>
-					<div class="notif-item unread">
-						<div class="notif-icon ni-emerald"><i class="fas fa-check-circle"></i></div>
-						<div class="notif-body">
-							<div class="notif-title">Lead Approved</div>
-							<div class="notif-desc">Admin approved your lead "TechCorp Solutions"</div>
-							<div class="notif-time">5 minutes ago</div>
-						</div>
-					</div>
-					<div class="notif-item unread">
+					<div class="notif-item unread" th:if="${(pendingLeads ?: 0) > 0}">
 						<div class="notif-icon ni-amber"><i class="fas fa-clock"></i></div>
 						<div class="notif-body">
-							<div class="notif-title">Lead Pending Review</div>
-							<div class="notif-desc">"DataVault Inc" is awaiting admin approval</div>
-							<div class="notif-time">1 hour ago</div>
+							<div class="notif-title">Leads Pending Review</div>
+							<div class="notif-desc" th:text="${pendingLeads} + ' lead(s) awaiting admin approval'">Awaiting admin approval</div>
+							<div class="notif-time">Now</div>
 						</div>
 					</div>
-					<div class="notif-item unread">
-						<div class="notif-icon ni-indigo"><i class="fas fa-handshake"></i></div>
-						<div class="notif-body">
-							<div class="notif-title">Deal Converted</div>
-							<div class="notif-desc">Lead "Nexus Retail" has been converted to a deal</div>
-							<div class="notif-time">3 hours ago</div>
-						</div>
+					<div class="notif-item" th:if="${(pendingLeads ?: 0) == 0}" style="padding:1rem;text-align:center;color:var(--muted);font-size:.8rem">
+						No new notifications
 					</div>
-					<div class="notif-footer"><a href="#">View all notifications</a></div>
+					<div class="notif-footer"><a th:href="@{/manager/notifications}">View all notifications</a></div>
 				</div>
 			</div>
 
@@ -146,15 +134,15 @@
 			<div class="user-chip" id="userChip">
 				<div class="user-avatar"><span class="user-dot"></span></div>
 				<div class="user-info">
-					<span class="user-name">Sarah Mitchell</span>
+					<span class="user-name" th:text="${managerUser?.username ?: 'Manager'}">Manager</span>
 					<span class="user-role">Manager</span>
 				</div>
 				<div class="user-dropdown" id="userDropdown">
 					<div class="user-drop-head">
 						<div class="udh-av"><div class="udh-dot"></div></div>
 						<div>
-							<div class="udh-name">Sarah Mitchell</div>
-							<div class="udh-email">sarah.m@crms.io</div>
+							<div class="udh-name" th:text="${managerUser?.username ?: 'Manager'}">Manager</div>
+							<div class="udh-email" th:text="${managerUser?.email ?: ''}"></div>
 						</div>
 					</div>
 					<div class="user-drop-item"><i class="fas fa-user"></i>My Profile</div>
@@ -321,54 +309,62 @@
 				</div>
 			</div>
 
+			<!-- Flash messages -->
+			<div th:if="${success}" class="alert-success" style="background:#d1fae5;border:1px solid #6ee7b7;border-radius:6px;padding:12px 16px;margin-bottom:1rem;font-size:.84rem;color:#065f46;display:flex;align-items:center;gap:8px">
+				<i class="fas fa-circle-check"></i> <span th:text="${success}"></span>
+			</div>
+			<div th:if="${error}" class="alert-error" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:12px 16px;margin-bottom:1rem;font-size:.84rem;color:#991b1b;display:flex;align-items:center;gap:8px">
+				<i class="fas fa-circle-xmark"></i> <span th:text="${error}"></span>
+			</div>
+
 			<!-- ── PENDING APPROVAL BANNER ── -->
-			<div class="approval-banner" id="approvalBanner">
+			<div class="approval-banner" id="approvalBanner" th:if="${(pendingLeads ?: 0) > 0}">
 				<div class="banner-left">
 					<div class="banner-icon"><i class="fas fa-hourglass-half"></i></div>
 					<div>
-						<div class="banner-title">3 Leads Awaiting Admin Approval</div>
-						<div class="banner-sub">TechCorp Solutions, DataVault Inc, and 1 more are pending review</div>
+						<div class="banner-title" th:text="${pendingLeads} + ' Lead(s) Awaiting Admin Approval'">Leads Awaiting Admin Approval</div>
+						<div class="banner-sub">Your submitted leads are pending review by the admin</div>
 					</div>
 				</div>
 				<div class="banner-right">
-					<button class="banner-btn" onclick="showToast('Redirecting to pending leads…','info')">View Pending</button>
+					<a th:href="@{/manager/leads/assigned}" class="banner-btn">View Pending</a>
 					<button class="banner-close" onclick="document.getElementById('approvalBanner').style.display='none'"><i class="fas fa-times"></i></button>
 				</div>
 			</div>
 
 			<!-- ── KPI CARDS ── -->
 			<section class="kpi-grid">
-				<div class="kpi-card" onclick="showToast('Total leads details','info')">
+				<div class="kpi-card">
 					<div class="kpi-body">
 						<p class="kpi-label">Total Leads</p>
-						<h2 class="kpi-value">48</h2>
-						<span class="kpi-change kpi-up"><i class="fas fa-arrow-trend-up"></i>+6 this month</span>
+						<h2 class="kpi-value" th:text="${totalLeads ?: 0}">0</h2>
+						<span class="kpi-change kpi-up"><i class="fas fa-funnel-dollar"></i> All leads</span>
 					</div>
 					<div class="kpi-icon kpi-icon-1"><i class="fas fa-funnel-dollar"></i></div>
 				</div>
-				<div class="kpi-card" onclick="showToast('Approved leads breakdown','info')">
+				<div class="kpi-card">
 					<div class="kpi-body">
 						<p class="kpi-label">Approved</p>
-						<h2 class="kpi-value">31</h2>
-						<span class="kpi-change kpi-up"><i class="fas fa-arrow-trend-up"></i>+12.5% vs last week</span>
+						<h2 class="kpi-value" th:text="${approvedLeads ?: 0}">0</h2>
+						<span class="kpi-change kpi-up"><i class="fas fa-circle-check"></i> Admin approved</span>
 					</div>
 					<div class="kpi-icon kpi-icon-2"><i class="fas fa-circle-check"></i></div>
 				</div>
-				<div class="kpi-card" onclick="showToast('Pending approval queue','info')">
+				<div class="kpi-card">
 					<div class="kpi-body">
 						<p class="kpi-label">Pending Approval</p>
-						<h2 class="kpi-value">3</h2>
-						<span class="kpi-change kpi-warn"><i class="fas fa-clock"></i>Awaiting admin</span>
+						<h2 class="kpi-value" th:text="${pendingLeads ?: 0}">0</h2>
+						<span class="kpi-change kpi-warn"><i class="fas fa-clock"></i> Awaiting admin</span>
 					</div>
 					<div class="kpi-icon kpi-icon-3"><i class="fas fa-hourglass-half"></i></div>
 				</div>
-				<div class="kpi-card" onclick="showToast('Deals converted this month','info')">
+				<div class="kpi-card">
 					<div class="kpi-body">
-						<p class="kpi-label">Deals Closed</p>
-						<h2 class="kpi-value">14</h2>
-						<span class="kpi-change kpi-up"><i class="fas fa-arrow-trend-up"></i>+3 this week</span>
+						<p class="kpi-label">Rejected</p>
+						<h2 class="kpi-value" th:text="${rejectedLeads ?: 0}">0</h2>
+						<span class="kpi-change kpi-down"><i class="fas fa-times-circle"></i> Needs revision</span>
 					</div>
-					<div class="kpi-icon kpi-icon-4"><i class="fas fa-handshake"></i></div>
+					<div class="kpi-icon kpi-icon-4"><i class="fas fa-times-circle"></i></div>
 				</div>
 			</section>
 
@@ -380,32 +376,66 @@
 					<div class="table-head">
 						<div style="display:flex;align-items:center;gap:0.75rem">
 							<h3 class="card-title"><i class="fas fa-funnel-dollar" style="color:var(--primary)"></i> My Leads</h3>
-							<div class="filter-tabs" id="leadFilter">
-								<button class="ftab active" onclick="filterLeads('all',this)">All</button>
-								<button class="ftab" onclick="filterLeads('approved',this)">Approved</button>
-								<button class="ftab" onclick="filterLeads('pending',this)">Pending</button>
-								<button class="ftab" onclick="filterLeads('rejected',this)">Rejected</button>
-							</div>
 						</div>
 						<button class="btn-add-lead-sm" onclick="openAddLeadModal()">
 							<i class="fas fa-plus"></i> Add Lead
 						</button>
 					</div>
 					<div class="table-wrap">
-						<table class="data-table" id="leadsTable">
+						<table class="data-table">
 							<thead>
 								<tr>
 									<th>Lead Name</th>
 									<th>Company</th>
 									<th>Contact</th>
-									<th>Value</th>
+									<th>Value (₹)</th>
 									<th>Status</th>
 									<th>Assigned To</th>
 									<th>Actions</th>
 								</tr>
 							</thead>
-							<tbody id="leadsTableBody">
-								<!-- Populated by JS -->
+							<tbody>
+								<tr th:if="${recentLeads == null or recentLeads.isEmpty()}">
+									<td colspan="7" style="text-align:center;padding:2rem;color:var(--muted);font-size:.82rem">No leads yet. Click "Add Lead" to submit your first lead.</td>
+								</tr>
+								<tr th:each="lead : ${recentLeads}">
+									<td>
+										<div class="cell-name" th:text="${lead.customerName}">—</div>
+										<div style="font-size:.67rem;color:var(--muted);margin-top:1px"
+											th:text="${lead.dealValue != null ? '₹' + lead.dealValue : ''}"></div>
+									</td>
+									<td th:text="${lead.company ?: '—'}">—</td>
+									<td>
+										<div style="font-size:.74rem" th:text="${lead.email ?: '—'}">—</div>
+										<div style="font-size:.67rem;color:var(--muted)" th:text="${lead.phone ?: ''}"></div>
+									</td>
+									<td style="font-weight:700;color:var(--text)"
+										th:text="${lead.dealValue != null ? '₹' + lead.dealValue : '—'}">—</td>
+									<td>
+										<span class="status-badge sb-approved" th:if="${lead.status?.name() == 'APPROVED'}">Approved</span>
+										<span class="status-badge sb-pending"  th:if="${lead.status?.name() == 'PENDING'}">Pending</span>
+										<span class="status-badge sb-rejected" th:if="${lead.status?.name() == 'REJECTED'}">Rejected</span>
+										<span class="status-badge"             th:if="${lead.status?.name() != 'APPROVED' and lead.status?.name() != 'PENDING' and lead.status?.name() != 'REJECTED'}"
+											th:text="${lead.status?.displayName ?: '—'}">—</span>
+									</td>
+									<td th:text="${lead.assignedTo?.name ?: 'Unassigned'}">—</td>
+									<td>
+										<div class="action-btns">
+											<!-- Edit only allowed for PENDING or REJECTED leads -->
+											<a th:if="${lead.status?.name() == 'PENDING' or lead.status?.name() == 'REJECTED'}"
+											   th:href="@{/manager/leads/assigned}"
+											   class="act-btn edit" title="Edit"
+											   th:onclick="'openEditLeadModal(' + ${lead.id} + ',\'' + ${lead.customerName} + '\',\'' + (${lead.company} ?: '') + '\',' + (${lead.dealValue} ?: 0) + ',\'' + (${lead.email} ?: '') + '\',\'' + (${lead.phone} ?: '') + '\',\'' + (${lead.notes} ?: '') + '\')'"
+											   onclick="return false;">
+												<i class="fas fa-pen"></i>
+											</a>
+											<span th:if="${lead.status?.name() != 'PENDING' and lead.status?.name() != 'REJECTED'}"
+												  class="act-btn edit" style="opacity:.4;cursor:not-allowed" title="Cannot edit approved leads">
+												<i class="fas fa-pen"></i>
+											</span>
+										</div>
+									</td>
+								</tr>
 							</tbody>
 						</table>
 					</div>
@@ -417,15 +447,44 @@
 						<h3 class="card-title"><i class="fas fa-sitemap" style="color:var(--secondary)"></i> Lead Pipeline</h3>
 					</div>
 					<div class="pipeline-stages" id="pipelineStages">
-						<!-- Populated by JS -->
-					</div>
-					<div style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--border)">
-						<div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-bottom:.5rem">
-							<span>Conversion Rate</span>
-							<span style="font-weight:700;color:var(--primary)">29.2%</span>
+						<div class="pipeline-stage">
+							<div class="ps-header">
+								<span class="ps-label" style="display:flex;align-items:center;gap:.38rem">
+									<span style="width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block"></span>
+									Approved
+								</span>
+								<span class="ps-count" th:text="${approvedLeads ?: 0}">0</span>
+							</div>
+							<div class="ps-bar-bg">
+								<div class="ps-bar-fill" style="background:#10b981"
+									th:style="'background:#10b981;width:' + (${totalLeads ?: 0} > 0 ? (${approvedLeads ?: 0} * 100 / ${totalLeads}) : 0) + '%'"></div>
+							</div>
 						</div>
-						<div class="pipe-progress-bg">
-							<div class="pipe-progress-fill" style="width:29.2%"></div>
+						<div class="pipeline-stage">
+							<div class="ps-header">
+								<span class="ps-label" style="display:flex;align-items:center;gap:.38rem">
+									<span style="width:7px;height:7px;border-radius:50%;background:#f59e0b;display:inline-block"></span>
+									Pending Approval
+								</span>
+								<span class="ps-count" th:text="${pendingLeads ?: 0}">0</span>
+							</div>
+							<div class="ps-bar-bg">
+								<div class="ps-bar-fill" style="background:#f59e0b"
+									th:style="'background:#f59e0b;width:' + (${totalLeads ?: 0} > 0 ? (${pendingLeads ?: 0} * 100 / ${totalLeads}) : 0) + '%'"></div>
+							</div>
+						</div>
+						<div class="pipeline-stage">
+							<div class="ps-header">
+								<span class="ps-label" style="display:flex;align-items:center;gap:.38rem">
+									<span style="width:7px;height:7px;border-radius:50%;background:#ef4444;display:inline-block"></span>
+									Rejected
+								</span>
+								<span class="ps-count" th:text="${rejectedLeads ?: 0}">0</span>
+							</div>
+							<div class="ps-bar-bg">
+								<div class="ps-bar-fill" style="background:#ef4444"
+									th:style="'background:#ef4444;width:' + (${totalLeads ?: 0} > 0 ? (${rejectedLeads ?: 0} * 100 / ${totalLeads}) : 0) + '%'"></div>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -438,7 +497,7 @@
 				<div class="card">
 					<div class="card-head">
 						<h3 class="card-title"><i class="fas fa-chart-pie" style="color:var(--primary)"></i> Lead Status</h3>
-						<span style="font-size:.73rem;color:var(--muted)">This month</span>
+						<span style="font-size:.73rem;color:var(--muted)">All time</span>
 					</div>
 					<div style="display:flex;justify-content:center;align-items:center;height:190px">
 						<div style="position:relative;width:160px;height:160px">
@@ -450,99 +509,118 @@
 									stroke-dasharray="0 364" style="transition:stroke-dasharray .9s .2s ease"/>
 								<circle id="seg3" cx="80" cy="80" r="58" fill="none" stroke="var(--peach)" stroke-width="24"
 									stroke-dasharray="0 364" style="transition:stroke-dasharray .9s .4s ease"/>
-								<circle id="seg4" cx="80" cy="80" r="58" fill="none" stroke="var(--bluegrey)" stroke-width="24"
-									stroke-dasharray="0 364" style="transition:stroke-dasharray .9s .6s ease"/>
 							</svg>
 							<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
-								<span style="font-size:1.5rem;font-weight:700;color:var(--text)">48</span>
+								<span style="font-size:1.5rem;font-weight:700;color:var(--text)" th:text="${totalLeads ?: 0}">0</span>
 								<span style="font-size:.65rem;color:var(--muted)">total leads</span>
 							</div>
 						</div>
 					</div>
 					<div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:1rem">
-						<div class="leg-item"><div class="leg-dot" style="background:var(--primary)"></div><span style="font-size:.73rem;color:var(--muted)">Approved: 31</span></div>
-						<div class="leg-item"><div class="leg-dot" style="background:var(--peach)"></div><span style="font-size:.73rem;color:var(--muted)">Pending: 3</span></div>
-						<div class="leg-item"><div class="leg-dot" style="background:var(--orange)"></div><span style="font-size:.73rem;color:var(--muted)">Rejected: 4</span></div>
-						<div class="leg-item"><div class="leg-dot" style="background:var(--bluegrey)"></div><span style="font-size:.73rem;color:var(--muted)">Deals: 14</span></div>
+						<div class="leg-item"><div class="leg-dot" style="background:var(--primary)"></div>
+							<span style="font-size:.73rem;color:var(--muted)">Approved: <th:block th:text="${approvedLeads ?: 0}">0</th:block></span></div>
+						<div class="leg-item"><div class="leg-dot" style="background:var(--peach)"></div>
+							<span style="font-size:.73rem;color:var(--muted)">Pending: <th:block th:text="${pendingLeads ?: 0}">0</th:block></span></div>
+						<div class="leg-item"><div class="leg-dot" style="background:var(--orange)"></div>
+							<span style="font-size:.73rem;color:var(--muted)">Rejected: <th:block th:text="${rejectedLeads ?: 0}">0</th:block></span></div>
 					</div>
 				</div>
 
-				<!-- Lead Trend -->
+				<!-- Lead Trend placeholder -->
 				<div class="card">
 					<div class="card-head">
 						<h3 class="card-title"><i class="fas fa-chart-area" style="color:var(--secondary)"></i> Lead Trend</h3>
-						<span style="font-size:.73rem;color:var(--muted)">Last 6 weeks</span>
+						<span style="font-size:.73rem;color:var(--muted)">Overview</span>
 					</div>
-					<div style="height:190px;position:relative;border-left:1px solid var(--border);border-bottom:1px solid var(--border);padding:8px 0 0 0;margin-bottom:1.5rem">
-						<svg viewBox="0 0 100 100" style="width:100%;height:100%;overflow:visible" preserveAspectRatio="none">
-							<defs>
-								<linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-									<stop offset="0%" stop-color="var(--primary)" stop-opacity="0.2"/>
-									<stop offset="100%" stop-color="var(--primary)" stop-opacity="0"/>
-								</linearGradient>
-							</defs>
-							<polygon points="0,100 0,75 20,60 40,45 60,55 80,30 100,20 100,100" fill="url(#areaGrad)"/>
-							<polyline points="0,75 20,60 40,45 60,55 80,30 100,20" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-							<circle cx="0" cy="75" r="3.5" fill="var(--primary)"/>
-							<circle cx="20" cy="60" r="3.5" fill="var(--primary)"/>
-							<circle cx="40" cy="45" r="3.5" fill="var(--primary)"/>
-							<circle cx="60" cy="55" r="3.5" fill="var(--primary)"/>
-							<circle cx="80" cy="30" r="3.5" fill="var(--primary)"/>
-							<circle cx="100" cy="20" r="3.5" fill="var(--primary)"/>
-						</svg>
-						<div style="position:absolute;bottom:-20px;left:0;width:100%;display:flex;justify-content:space-between;font-size:.6rem;color:var(--muted)">
-							<span>Wk9</span><span>Wk10</span><span>Wk11</span><span>Wk12</span><span>Wk13</span><span>Wk14</span>
-						</div>
+					<div style="height:190px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.82rem;flex-direction:column;gap:.5rem">
+						<i class="fas fa-chart-area" style="font-size:2rem;opacity:.3"></i>
+						<span>Trend chart coming soon</span>
 					</div>
-					<div style="display:flex;gap:1.5rem;margin-top:1.8rem">
-						<div><p style="font-size:.62rem;color:var(--muted);font-weight:600;text-transform:uppercase">Peak Week</p><p style="font-size:.9rem;font-weight:700;color:var(--text)">Wk14 · 12</p></div>
-						<div><p style="font-size:.62rem;color:var(--muted);font-weight:600;text-transform:uppercase">Avg / Week</p><p style="font-size:.9rem;font-weight:700;color:var(--text)">8.0</p></div>
-						<div><p style="font-size:.62rem;color:var(--muted);font-weight:600;text-transform:uppercase">Growth</p><p style="font-size:.9rem;font-weight:700;color:var(--primary)">+33%</p></div>
+					<div style="display:flex;gap:1.5rem;margin-top:1rem">
+						<div><p style="font-size:.62rem;color:var(--muted);font-weight:600;text-transform:uppercase">Total</p>
+							<p style="font-size:.9rem;font-weight:700;color:var(--text)" th:text="${totalLeads ?: 0}">0</p></div>
+						<div><p style="font-size:.62rem;color:var(--muted);font-weight:600;text-transform:uppercase">Approved</p>
+							<p style="font-size:.9rem;font-weight:700;color:var(--primary)" th:text="${approvedLeads ?: 0}">0</p></div>
+						<div><p style="font-size:.62rem;color:var(--muted);font-weight:600;text-transform:uppercase">Pending</p>
+							<p style="font-size:.9rem;font-weight:700;color:var(--text)" th:text="${pendingLeads ?: 0}">0</p></div>
 					</div>
 				</div>
 
 				<!-- Recent Activity -->
 				<div class="card">
 					<div class="card-head">
-						<h3 class="card-title"><i class="fas fa-bolt" style="color:var(--peach)"></i> Activity</h3>
+						<h3 class="card-title"><i class="fas fa-bolt" style="color:var(--peach)"></i> Recent Leads</h3>
 					</div>
-					<div class="activity-list" id="activityList">
-						<!-- Populated by JS -->
+					<div class="activity-list">
+						<div th:if="${recentLeads == null or recentLeads.isEmpty()}"
+							style="padding:1rem;text-align:center;color:var(--muted);font-size:.8rem">No leads yet.</div>
+						<div class="activity-item" th:each="lead,iter : ${recentLeads}" th:if="${iter.index < 5}">
+							<div class="act-dot"
+								th:style="${lead.status?.name() == 'APPROVED'} ? 'background:#10b981' : (${lead.status?.name() == 'REJECTED'} ? 'background:#ef4444' : 'background:#f59e0b')"></div>
+							<div class="act-content">
+								<div class="act-title" th:text="${lead.customerName}">—</div>
+								<div class="act-sub" th:text="${lead.status?.displayName ?: '—'}">—</div>
+							</div>
+							<span class="act-time" th:text="${lead.company ?: ''}"></span>
+						</div>
 					</div>
 				</div>
 			</section>
 
-			<!-- ── DEALS TABLE ── -->
-			<h3 class="section-label"><i class="fas fa-handshake" style="color:var(--primary)"></i> CONVERTED DEALS</h3>
+			<!-- ── APPROVED LEADS TABLE ── -->
+			<h3 class="section-label"><i class="fas fa-handshake" style="color:var(--primary)"></i> APPROVED LEADS</h3>
 			<section class="card card--table" style="padding:0;margin-top:1rem">
 				<div class="table-head">
-					<h3 class="card-title"><i class="fas fa-trophy" style="color:var(--peach)"></i> Active Deals</h3>
-					<span style="font-size:.74rem;color:var(--muted)">Leads converted to deals</span>
+					<h3 class="card-title"><i class="fas fa-circle-check" style="color:var(--primary)"></i> Approved Leads</h3>
+					<span style="font-size:.74rem;color:var(--muted)">Leads approved by admin</span>
 				</div>
 				<div class="table-wrap">
 					<table class="data-table">
 						<thead>
 							<tr>
-								<th>Deal Name</th>
+								<th>Lead Name</th>
 								<th>Company</th>
-								<th>Value</th>
-								<th>Stage</th>
-								<th>Sales Exec</th>
-								<th>Close Date</th>
-								<th>Probability</th>
+								<th>Value (₹)</th>
+								<th>Assigned To</th>
+								<th>Approved On</th>
 							</tr>
 						</thead>
-						<tbody id="dealsTableBody">
-							<!-- Populated by JS -->
+						<tbody>
+							<tr th:if="${recentLeads == null or recentLeads.isEmpty()}">
+								<td colspan="5" style="text-align:center;padding:2rem;color:var(--muted);font-size:.82rem">No approved leads yet.</td>
+							</tr>
+							<tr th:each="lead : ${recentLeads}" th:if="${lead.status?.name() == 'APPROVED'}">
+								<td><div class="cell-name" th:text="${lead.customerName}">—</div></td>
+								<td th:text="${lead.company ?: '—'}">—</td>
+								<td style="font-weight:700;color:var(--text)"
+									th:text="${lead.dealValue != null ? '₹' + lead.dealValue : '—'}">—</td>
+								<td th:text="${lead.assignedTo?.name ?: 'Unassigned'}">—</td>
+								<td style="font-size:.75rem;color:var(--muted)"
+									th:text="${lead.approvedAt != null ? #temporals.format(lead.approvedAt, 'dd MMM yyyy') : '—'}">—</td>
+							</tr>
 						</tbody>
 					</table>
 				</div>
 			</section>
 
-			<!-- ── MY TEAM ── -->
-			<h3 class="section-label"><i class="fas fa-users" style="color:var(--secondary)"></i> MY TEAM</h3>
-			<section class="team-grid" id="teamGrid">
-				<!-- Populated by JS -->
+			<!-- ── SALES TEAM ── -->
+			<h3 class="section-label"><i class="fas fa-users" style="color:var(--secondary)"></i> SALES TEAM</h3>
+			<section class="team-grid">
+				<div th:if="${salesExecs == null or salesExecs.isEmpty()}"
+					style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--muted);font-size:.82rem">
+					No sales executives assigned to your team yet.
+				</div>
+				<div class="team-card" th:each="exec : ${salesExecs}">
+					<div style="position:relative">
+						<div class="team-av" style="background:linear-gradient(135deg,#0d9488,#0891b2)"
+							th:text="${#strings.length(exec.name) >= 2 ? #strings.substring(exec.name,0,1) + #strings.substring(exec.name,#strings.indexOf(exec.name,' ')+1,#strings.indexOf(exec.name,' ')+2) : exec.name}">SE</div>
+					</div>
+					<div class="team-name" th:text="${exec.name}">—</div>
+					<div class="team-role">Sales Executive</div>
+					<div class="team-leads"><i class="fas fa-circle" th:style="${exec.status?.name() == 'ACTIVE'} ? 'color:#10b981' : 'color:#9ca3af'"></i>
+						<span th:text="${exec.status?.name() == 'ACTIVE'} ? 'Active' : 'Inactive'">Active</span>
+					</div>
+				</div>
 			</section>
 
 			<footer class="dash-footer">
@@ -566,111 +644,153 @@
 
 	<!-- ═══════════════════ MODALS ═══════════════════ -->
 
-	<!-- Add / Edit Lead Modal -->
+	<!-- Add Lead Modal (posts to server) -->
 	<div class="modal-overlay hidden" id="leadModal">
 		<div class="modal">
 			<div class="modal-head">
-				<h3 id="leadModalTitle">Add New Lead</h3>
+				<h3>Add New Lead</h3>
 				<button class="modal-close" onclick="closeModal('leadModal')"><i class="fas fa-times"></i></button>
 			</div>
-			<div class="modal-body">
-				<div class="form-row">
-					<label class="form-label">Lead Name *</label>
-					<input type="text" class="form-input" id="leadName" placeholder="e.g. John Smith — Enterprise Deal">
-				</div>
-				<div class="form-grid">
+			<form th:action="@{/manager/leads/submit}" method="post" id="addLeadForm">
+				<input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+				<div class="modal-body">
 					<div class="form-row">
-						<label class="form-label">Company *</label>
-						<input type="text" class="form-input" id="leadCompany" placeholder="Company name">
+						<label class="form-label">Lead Name *</label>
+						<input type="text" class="form-input" name="customerName" required placeholder="e.g. John Smith — Enterprise Deal">
+					</div>
+					<div class="form-grid">
+						<div class="form-row">
+							<label class="form-label">Company *</label>
+							<input type="text" class="form-input" name="company" required placeholder="Company name">
+						</div>
+						<div class="form-row">
+							<label class="form-label">Deal Value (₹) *</label>
+							<input type="number" class="form-input" name="dealValue" min="0" step="0.01" placeholder="0" required>
+						</div>
+					</div>
+					<div class="form-grid">
+						<div class="form-row">
+							<label class="form-label">Contact Email</label>
+							<input type="email" class="form-input" name="email" placeholder="contact@company.com">
+						</div>
+						<div class="form-row">
+							<label class="form-label">Phone</label>
+							<input type="text" class="form-input" name="phone" placeholder="+91 00000 00000">
+						</div>
+					</div>
+					<div class="form-grid">
+						<div class="form-row">
+							<label class="form-label">Assign Sales Executive</label>
+							<select class="form-input" name="assignToId">
+								<option value="">-- Select --</option>
+								<option th:each="exec : ${salesExecs}"
+										th:value="${exec.id}"
+										th:text="${exec.name}">Sales Exec</option>
+							</select>
+						</div>
+						<div class="form-row">
+							<label class="form-label">Source</label>
+							<select class="form-input" name="source">
+								<option value="WEBSITE">Website</option>
+								<option value="REFERRAL">Referral</option>
+								<option value="SOCIAL">Social Media</option>
+								<option value="COLD_CALL">Cold Call</option>
+								<option value="EMAIL">Email</option>
+								<option value="OTHER" selected>Other</option>
+							</select>
+						</div>
 					</div>
 					<div class="form-row">
-						<label class="form-label">Deal Value (₹) *</label>
-						<input type="number" class="form-input" id="leadValue" placeholder="0">
+						<label class="form-label">Notes</label>
+						<textarea class="form-input" name="notes" rows="3" placeholder="Additional notes about this lead…" style="resize:vertical"></textarea>
+					</div>
+					<div class="modal-info-note">
+						<i class="fas fa-info-circle"></i>
+						After submission, this lead will be sent to Admin for approval.
 					</div>
 				</div>
-				<div class="form-grid">
-					<div class="form-row">
-						<label class="form-label">Contact Email</label>
-						<input type="email" class="form-input" id="leadEmail" placeholder="contact@company.com">
-					</div>
-					<div class="form-row">
-						<label class="form-label">Phone</label>
-						<input type="text" class="form-input" id="leadPhone" placeholder="+91 00000 00000">
-					</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-ghost" onclick="closeModal('leadModal')">Cancel</button>
+					<button type="submit" class="btn btn-primary">
+						<i class="fas fa-paper-plane"></i> Submit for Approval
+					</button>
 				</div>
-				<div class="form-grid">
-					<div class="form-row">
-						<label class="form-label">Assign Sales Executive</label>
-						<select class="form-input" id="leadAssignee">
-							<option value="">-- Select --</option>
-							<option>Rahul Sharma</option>
-							<option>Priya Patel</option>
-							<option>Arjun Menon</option>
-							<option>Kavya Reddy</option>
-						</select>
-					</div>
-					<div class="form-row">
-						<label class="form-label">Priority</label>
-						<select class="form-input" id="leadPriority">
-							<option value="high">High</option>
-							<option value="medium" selected>Medium</option>
-							<option value="low">Low</option>
-						</select>
-					</div>
-				</div>
-				<div class="form-row">
-					<label class="form-label">Notes</label>
-					<textarea class="form-input" id="leadNotes" rows="3" placeholder="Additional notes about this lead…" style="resize:vertical"></textarea>
-				</div>
-				<div class="modal-info-note">
-					<i class="fas fa-info-circle"></i>
-					After submission, this lead will be sent to Admin for approval.
-				</div>
-			</div>
-			<div class="modal-footer">
-				<button class="btn btn-ghost" onclick="closeModal('leadModal')">Cancel</button>
-				<button class="btn btn-primary" onclick="saveLead()">
-					<i class="fas fa-paper-plane"></i> Submit for Approval
-				</button>
-			</div>
+			</form>
 		</div>
 	</div>
 
-	<!-- View Lead Detail Modal -->
-	<div class="modal-overlay hidden" id="leadDetailModal">
-		<div class="modal" style="width:480px">
+	<!-- Edit Lead Modal (posts to server) -->
+	<div class="modal-overlay hidden" id="editLeadModal">
+		<div class="modal">
 			<div class="modal-head">
-				<h3 id="detailTitle">Lead Details</h3>
-				<button class="modal-close" onclick="closeModal('leadDetailModal')"><i class="fas fa-times"></i></button>
+				<h3>Edit Lead</h3>
+				<button class="modal-close" onclick="closeModal('editLeadModal')"><i class="fas fa-times"></i></button>
 			</div>
-			<div class="modal-body" id="leadDetailBody">
-			</div>
-			<div class="modal-footer">
-				<button class="btn btn-ghost" onclick="closeModal('leadDetailModal')">Close</button>
-				<button class="btn btn-primary" id="editFromDetailBtn">
-					<i class="fas fa-pen"></i> Edit Lead
-				</button>
-			</div>
-		</div>
-	</div>
-
-	<!-- Delete Confirm Modal -->
-	<div class="modal-overlay hidden" id="deleteModal">
-		<div class="modal" style="width:360px">
-			<div class="modal-head">
-				<h3>Delete Lead</h3>
-				<button class="modal-close" onclick="closeModal('deleteModal')"><i class="fas fa-times"></i></button>
-			</div>
-			<div class="modal-body">
-				<div style="display:flex;align-items:center;gap:1rem;padding:1rem;background:#fff5f5;border-radius:var(--r-sm);border:1px solid #fecaca;margin-bottom:.5rem">
-					<div style="width:40px;height:40px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fas fa-trash" style="color:var(--rose)"></i></div>
-					<p style="font-size:.82rem;color:var(--text-2);line-height:1.6">Are you sure you want to delete lead <strong id="deleteLeadName">"..."</strong>? This action cannot be undone.</p>
+			<form id="editLeadForm" method="post">
+				<input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+				<div class="modal-body">
+					<div class="form-row">
+						<label class="form-label">Lead Name *</label>
+						<input type="text" class="form-input" id="editCustomerName" name="customerName" required>
+					</div>
+					<div class="form-grid">
+						<div class="form-row">
+							<label class="form-label">Company</label>
+							<input type="text" class="form-input" id="editCompany" name="company">
+						</div>
+						<div class="form-row">
+							<label class="form-label">Deal Value (₹)</label>
+							<input type="number" class="form-input" id="editDealValue" name="dealValue" min="0" step="0.01">
+						</div>
+					</div>
+					<div class="form-grid">
+						<div class="form-row">
+							<label class="form-label">Contact Email</label>
+							<input type="email" class="form-input" id="editEmail" name="email">
+						</div>
+						<div class="form-row">
+							<label class="form-label">Phone</label>
+							<input type="text" class="form-input" id="editPhone" name="phone">
+						</div>
+					</div>
+					<div class="form-grid">
+						<div class="form-row">
+							<label class="form-label">Assign Sales Executive</label>
+							<select class="form-input" name="assignToId">
+								<option value="">-- Select --</option>
+								<option th:each="exec : ${salesExecs}"
+										th:value="${exec.id}"
+										th:text="${exec.name}">Sales Exec</option>
+							</select>
+						</div>
+						<div class="form-row">
+							<label class="form-label">Source</label>
+							<select class="form-input" name="source">
+								<option value="WEBSITE">Website</option>
+								<option value="REFERRAL">Referral</option>
+								<option value="SOCIAL">Social Media</option>
+								<option value="COLD_CALL">Cold Call</option>
+								<option value="EMAIL">Email</option>
+								<option value="OTHER" selected>Other</option>
+							</select>
+						</div>
+					</div>
+					<div class="form-row">
+						<label class="form-label">Notes</label>
+						<textarea class="form-input" id="editNotes" name="notes" rows="3" style="resize:vertical"></textarea>
+					</div>
+					<div class="modal-info-note">
+						<i class="fas fa-info-circle"></i>
+						Saving will re-submit this lead for admin approval.
+					</div>
 				</div>
-			</div>
-			<div class="modal-footer">
-				<button class="btn btn-ghost" onclick="closeModal('deleteModal')">Cancel</button>
-				<button class="btn btn-danger" id="confirmDeleteBtn">Delete Lead</button>
-			</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-ghost" onclick="closeModal('editLeadModal')">Cancel</button>
+					<button type="submit" class="btn btn-primary">
+						<i class="fas fa-paper-plane"></i> Re-submit for Approval
+					</button>
+				</div>
+			</form>
 		</div>
 	</div>
 
