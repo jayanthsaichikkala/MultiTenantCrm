@@ -238,7 +238,7 @@ body{
 
 .topbar h1{
 
-    font-size:38px;
+    font-size:25px;
     font-weight:700;
 
     color:#163647;
@@ -312,7 +312,7 @@ body{
 
     display:grid;
 
-    grid-template-columns:repeat(4,1fr);
+    grid-template-columns:repeat(4,minmax(180px,1fr));
 
     gap:22px;
 
@@ -856,5 +856,166 @@ table{
     .dashboard-grid{
 
         grid-template-columns:1fr;
+    }
+}
+/* =========================
+   FULL PAGE FIX
+========================= */
+
+html,
+body{
+    height:100%;
+    overflow:hidden;
+}
+
+/* MAIN WRAPPER */
+
+.main-wrapper{
+
+    height:100vh;
+
+    overflow:hidden;
+
+    padding:20px 20px 20px 0;
+}
+
+/* PAGE CONTENT */
+
+.page-content{
+
+    height:calc(100vh - 110px);
+
+    overflow:hidden;
+}
+
+/* TOPBAR */
+
+.topbar{
+
+    margin-bottom:20px;
+}
+
+/* STATS */
+
+.stats-row{
+
+    margin-bottom:20px;
+}
+
+/* DASHBOARD GRID */
+
+.dashboard-grid{
+
+    height:calc(100vh - 260px);
+
+    display:grid;
+
+    grid-template-columns:2fr 1fr;
+
+    gap:20px;
+
+    align-items:start;
+}
+
+/* CARD */
+
+.card{
+
+    height:100%;
+
+    display:flex;
+
+    flex-direction:column;
+}
+
+/* CARD BODY */
+
+.card-body{
+
+    flex:1;
+
+    overflow:auto;
+}
+
+/* FORM */
+
+.form-grid{
+
+    gap:18px;
+}
+
+/* INPUTS */
+
+.input-wrap input{
+
+    height:52px;
+}
+
+/* TABLE */
+
+.table-wrap{
+
+    overflow-y:auto;
+}
+
+/* SIDEBAR */
+
+.sidebar{
+
+    height:calc(100vh - 40px);
+}
+
+/* PROFILE BOX */
+
+.profile-box{
+
+    margin-bottom:22px;
+}
+
+/* MENU SPACING */
+
+.sidebar-menu li{
+
+    margin-bottom:8px;
+}
+
+/* SEARCH */
+
+.search-box{
+
+    width:320px;
+}
+
+/* RECENT ADMINS CARD */
+
+.dashboard-grid > div:last-child .card{
+
+    min-height:100%;
+}
+
+/* RESPONSIVE */
+
+@media(max-width:1200px){
+
+    html,
+    body{
+        overflow:auto;
+    }
+
+    .dashboard-grid{
+
+        grid-template-columns:1fr;
+
+        height:auto;
+    }
+
+    .main-wrapper{
+
+        height:auto;
+    }
+
+    .page-content{
+
+        height:auto;
     }
 }
