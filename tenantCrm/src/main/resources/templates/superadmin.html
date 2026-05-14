@@ -2,224 +2,484 @@
 <html xmlns:th="http://www.thymeleaf.org">
 
 <head>
-	<title>Super Admin</title>
-	<link rel="stylesheet" th:href="@{/superadmin.css}">
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Super Admin Dashboard</title>
+
+    <link rel="stylesheet" th:href="@{/superadmin.css}">
+
 </head>
 
 <body>
 
-	<!-- ─── Navbar ─── -->
-	<nav class="navbar">
-		<div class="navbar-brand">
-			<div class="logo-icon">🛡️</div>
-			<h1>Super Admin<span>Panel</span></h1>
-		</div>
-		<div class="navbar-right">
-			<span class="badge-role">Super Admin</span>
-			<div class="avatar">S</div>
-		</div>
-	</nav>
+    <!-- =========================
+         SIDEBAR
+    ========================== -->
 
-	<!-- ─── Page Content ─── -->
-	<div class="page-wrapper">
+    <div class="sidebar">
 
-		<!-- Page Header -->
-		<div class="page-header">
-			<h2>Manage Administrators</h2>
-			<p>Create and manage admin accounts from this panel.</p>
-		</div>
+        <!-- LOGO -->
 
-		<!-- Stats Row -->
-		<div class="stats-row">
-			<div class="stat-card">
-				<div class="stat-icon purple">👥</div>
-				<div class="stat-info">
-					<h4 th:text="${totalAdmins != null ? totalAdmins : '0'}">0</h4>
-					<p>Total Admins</p>
-				</div>
-			</div>
-			<div class="stat-card">
-				<div class="stat-icon green">✅</div>
-				<div class="stat-info">
-					<h4 th:text="${activeAdmins != null ? activeAdmins : '0'}">0</h4>
-					<p>Active Admins</p>
-				</div>
-			</div>
-			<div class="stat-card">
-				<div class="stat-icon blue">📅</div>
-				<div class="stat-info">
-					<h4 th:text="${todayAdmins != null ? todayAdmins : '0'}">0</h4>
-					<p>Added Today</p>
-				</div>
-			</div>
-		</div>
+        <div class="sidebar-logo">
 
-		<!-- ─── Add Admin Card ─── -->
-		<div class="card">
-			<div class="card-header">
-				<div class="card-icon">➕</div>
-				<div>
-					<h3>Add New Admin</h3>
-					<p>Fill in the details to create an admin account</p>
-				</div>
-			</div>
+            <div class="logo-icon">
+                🛡️
+            </div>
 
-			<div class="card-body">
+            <h2>SuperAdmin</h2>
 
-				<!-- Success / Error Messages -->
-				<div class="toast success" th:if="${successMessage}" th:text="${successMessage}">
-					✅ Admin added successfully!
-				</div>
-				<div class="toast error" th:if="${errorMessage}" th:text="${errorMessage}">
-					❌ Something went wrong. Please try again.
-				</div>
+        </div>
 
-				<!-- Add Admin Form -->
-				<form th:action="@{/superadmin/add-admin}" method="post">
+        <!-- PROFILE -->
 
-					<div class="form-grid">
+        <div class="profile-box">
 
-						<!-- Email -->
-						<div class="form-group">
-							<label for="email">Email Address</label>
-							<div class="input-wrap">
-								<span class="input-icon">📧</span>
-								<input type="email" id="email" name="email" placeholder="admin@example.com" required>
-							</div>
-						</div>
+            <div class="profile-avatar">
+                S
+            </div>
 
-						<!-- Username -->
-						<div class="form-group">
-							<label for="username">Username</label>
-							<div class="input-wrap">
-								<span class="input-icon">👤</span>
-								<input type="text" id="username" name="username" placeholder="Enter username" required>
-							</div>
-						</div>
+            <h3>Super Admin</h3>
 
-						<!-- Password -->
-						<div class="form-group">
-							<label for="password">Password</label>
-							<div class="input-wrap">
-								<span class="input-icon">🔒</span>
-								<input type="password" id="password" name="password"
-									placeholder="Create a strong password" required
-									oninput="updateStrength(this.value)">
-							</div>
-							<div class="strength-bar">
-								<div class="strength-fill" id="strengthFill"></div>
-							</div>
-						</div>
+            <p>superadmin@gmail.com</p>
 
-						<!-- Confirm Password -->
-						<div class="form-group">
-							<label for="confirmPassword">Confirm Password</label>
-							<div class="input-wrap">
-								<span class="input-icon">🔑</span>
-								<input type="password" id="confirmPassword" name="confirmPassword"
-									placeholder="Re-enter password" required>
-							</div>
-						</div>
+        </div>
 
-					</div><!-- /form-grid -->
+        <!-- MENU -->
 
-					<div class="form-actions" style="margin-top: 22px;">
-						<button type="reset" class="btn btn-ghost">Clear</button>
-						<button type="submit" class="btn btn-primary">
-							<span>➕</span> Add Admin
-						</button>
-					</div>
+        <ul class="sidebar-menu">
 
-				</form>
+            <li class="active">
+                <a href="#">
+                    📊 Dashboard
+                </a>
+            </li>
 
-			</div><!-- /card-body -->
-		</div><!-- /card -->
+            <li>
+                <a href="#">
+                    👨‍💼 Admins
+                </a>
+            </li>
 
+            <li>
+                <a href="#">
+                    ➕ Add Admin
+                </a>
+            </li>
 
-		<!-- ─── Admin List Card ─── -->
-		<div class="card">
-			<div class="card-header">
-				<div class="card-icon">📋</div>
-				<div>
-					<h3>All Admins</h3>
-					<p>List of all registered administrators</p>
-				</div>
-			</div>
+            <li>
+                <a href="#">
+                    👁️ Views
+                </a>
+            </li>
 
-			<div class="card-body" style="padding: 0;">
-				<div class="table-wrap">
-					<table>
-						<thead>
-							<tr>
-								<th>#</th>
-								<th>Admin</th>
-								<th>Email</th>
-								<th>Status</th>
-								<th>Created</th>
-								<th>Action</th>
-							</tr>
-						</thead>
-						<tbody>
+            <li>
+                <a href="#">
+                    👤 Profile
+                </a>
+            </li>
 
-							<!-- Loop over admins from backend -->
-							<tr th:each="admin, stat : ${admins}">
-								<td th:text="${stat.index + 1}">1</td>
-								<td>
-									<div class="admin-avatar-cell">
-										<div class="admin-mini-avatar"
-											th:text="${#strings.toUpperCase(#strings.substring(admin.username, 0, 1))}">
-											A</div>
-										<span th:text="${admin.username}">Admin Name</span>
-									</div>
-								</td>
-								<td th:text="${admin.email}">admin@example.com</td>
-								<td><span class="status-pill">Active</span></td>
-								<td th:text="${admin.createdAt != null ? admin.createdAt : '—'}">—</td>
-								<td>
-									<form th:action="@{/superadmin/delete-admin/{id}(id=${admin.id})}" method="post"
-										style="display:inline;" onsubmit="return confirm('Remove this admin?')">
-										<button type="submit" class="btn-icon" title="Remove Admin">🗑️</button>
-									</form>
-								</td>
-							</tr>
+        </ul>
 
-							<!-- Empty state when no admins -->
-							<tr th:if="${admins == null or #lists.isEmpty(admins)}">
-								<td colspan="6">
-									<div class="empty-state">
-										<div class="empty-icon">👥</div>
-										<p>No admins added yet. Use the form above to add one.</p>
-									</div>
-								</td>
-							</tr>
+        <!-- LOGOUT -->
 
-						</tbody>
-					</table>
-				</div>
-			</div><!-- /card-body -->
-		</div><!-- /card -->
+        <button class="logout-btn">
+            🚪 Logout
+        </button>
 
-	</div><!-- /page-wrapper -->
+    </div>
 
+    <!-- =========================
+         MAIN WRAPPER
+    ========================== -->
 
-	<!-- ─── Password Strength Script ─── -->
-	<script>
-		function updateStrength(val) {
-			const fill = document.getElementById('strengthFill');
-			let score = 0;
-			if (val.length >= 6) score++;
-			if (val.length >= 10) score++;
-			if (/[A-Z]/.test(val)) score++;
-			if (/[0-9]/.test(val)) score++;
-			if (/[^A-Za-z0-9]/.test(val)) score++;
+    <div class="main-wrapper">
 
-			const pct = (score / 5) * 100;
-			fill.style.width = pct + '%';
-			fill.style.background =
-				score <= 1 ? '#ef4444' :
-					score <= 3 ? '#f59e0b' : '#10b981';
-		}
-	</script>
+        <!-- =========================
+             TOPBAR
+        ========================== -->
+
+        <div class="topbar">
+
+            <h1>Inventory Management</h1>
+
+            <div class="topbar-right">
+
+                <div class="search-box">
+
+                    <input type="text" placeholder="Search">
+
+                </div>
+
+                <div class="user-badge">
+                    S
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- =========================
+             PAGE CONTENT
+        ========================== -->
+
+        <div class="page-content">
+
+            <!-- =========================
+                 STATS ROW
+            ========================== -->
+
+            <div class="stats-row">
+
+                <!-- CARD -->
+
+                <div class="stat-card">
+
+                    <div class="stat-icon green">
+                        👥
+                    </div>
+
+                    <div class="stat-info">
+
+                        <h3 th:text="${totalAdmins != null ? totalAdmins : '25'}">
+                            25
+                        </h3>
+
+                        <p>Total Admins</p>
+
+                    </div>
+
+                </div>
+
+                <!-- CARD -->
+
+                <div class="stat-card">
+
+                    <div class="stat-icon blue">
+                        ✅
+                    </div>
+
+                    <div class="stat-info">
+
+                        <h3 th:text="${activeAdmins != null ? activeAdmins : '18'}">
+                            18
+                        </h3>
+
+                        <p>Active Admins</p>
+
+                    </div>
+
+                </div>
+
+                <!-- CARD -->
+
+                <div class="stat-card">
+
+                    <div class="stat-icon orange">
+                        📅
+                    </div>
+
+                    <div class="stat-info">
+
+                        <h3 th:text="${todayAdmins != null ? todayAdmins : '5'}">
+                            5
+                        </h3>
+
+                        <p>Added Today</p>
+
+                    </div>
+
+                </div>
+
+                <!-- CARD -->
+
+                <div class="stat-card">
+
+                    <div class="stat-icon purple">
+                        👁️
+                    </div>
+
+                    <div class="stat-info">
+
+                        <h3>120</h3>
+
+                        <p>Total Views</p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- =========================
+                 DASHBOARD GRID
+            ========================== -->
+
+            <div class="dashboard-grid">
+
+                <!-- =========================
+                     LEFT SECTION
+                ========================== -->
+
+                <div>
+
+                    <!-- ADD ADMIN CARD -->
+
+                    <div class="card">
+
+                        <div class="card-header">
+
+                            <div>
+
+                                <h2>Add New Admin</h2>
+
+                                <p>Create administrator account</p>
+
+                            </div>
+
+                        </div>
+
+                        <div class="card-body">
+
+                            <!-- SUCCESS MESSAGE -->
+
+                            <div class="toast success"
+                                 th:if="${successMessage}"
+                                 th:text="${successMessage}">
+
+                                Admin added successfully
+
+                            </div>
+
+                            <!-- ERROR MESSAGE -->
+
+                            <div class="toast error"
+                                 th:if="${errorMessage}"
+                                 th:text="${errorMessage}">
+
+                                Something went wrong
+
+                            </div>
+
+                            <!-- FORM -->
+
+                            <form th:action="@{/superadmin/add-admin}"
+                                  method="post">
+
+                                <div class="form-grid">
+
+                                    <!-- EMAIL -->
+
+                                    <div class="form-group">
+
+                                        <label>Email Address</label>
+
+                                        <div class="input-wrap">
+
+                                            <input type="email"
+                                                   name="email"
+                                                   placeholder="admin@example.com"
+                                                   required>
+
+                                        </div>
+
+                                    </div>
+
+                                    <!-- USERNAME -->
+
+                                    <div class="form-group">
+
+                                        <label>Username</label>
+
+                                        <div class="input-wrap">
+
+                                            <input type="text"
+                                                   name="username"
+                                                   placeholder="Enter username"
+                                                   required>
+
+                                        </div>
+
+                                    </div>
+
+                                    <!-- PASSWORD -->
+
+                                    <div class="form-group">
+
+                                        <label>Password</label>
+
+                                        <div class="input-wrap">
+
+                                            <input type="password"
+                                                   name="password"
+                                                   placeholder="Create password"
+                                                   required>
+
+                                        </div>
+
+                                    </div>
+
+                                    <!-- CONFIRM PASSWORD -->
+
+                                    <div class="form-group">
+
+                                        <label>Confirm Password</label>
+
+                                        <div class="input-wrap">
+
+                                            <input type="password"
+                                                   name="confirmPassword"
+                                                   placeholder="Confirm password"
+                                                   required>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                                <!-- BUTTONS -->
+
+                                <div class="form-actions">
+
+                                    <button type="reset"
+                                            class="btn btn-clear">
+
+                                        Clear
+
+                                    </button>
+
+                                    <button type="submit"
+                                            class="btn btn-primary">
+
+                                        Add Admin
+
+                                    </button>
+
+                                </div>
+
+                            </form>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- =========================
+                     RIGHT SECTION
+                ========================== -->
+
+                <div>
+
+                    <!-- RECENT ADMINS -->
+
+                    <div class="card">
+
+                        <div class="card-header">
+
+                            <div>
+
+                                <h2>Recent Admins</h2>
+
+                                <p>Latest administrator activity</p>
+
+                            </div>
+
+                        </div>
+
+                        <div class="card-body">
+
+                            <div class="table-wrap">
+
+                                <table>
+
+                                    <thead>
+
+                                        <tr>
+
+                                            <th>Admin</th>
+
+                                            <th>Status</th>
+
+                                        </tr>
+
+                                    </thead>
+
+                                    <tbody>
+
+                                        <!-- LOOP -->
+
+                                        <tr th:each="admin : ${admins}">
+
+                                            <td>
+
+                                                <div class="admin-cell">
+
+                                                    <div class="admin-avatar"
+                                                         th:text="${#strings.substring(admin.username,0,1)}">
+
+                                                        A
+
+                                                    </div>
+
+                                                    <span th:text="${admin.username}">
+                                                        Admin
+                                                    </span>
+
+                                                </div>
+
+                                            </td>
+
+                                            <td>
+
+                                                <span class="status">
+                                                    Active
+                                                </span>
+
+                                            </td>
+
+                                        </tr>
+
+                                        <!-- EMPTY -->
+
+                                        <tr th:if="${admins == null or #lists.isEmpty(admins)}">
+
+                                            <td colspan="2">
+
+                                                <div class="empty-state">
+
+                                                    <h3>No Admins</h3>
+
+                                                    <p>
+                                                        No admins available
+                                                    </p>
+
+                                                </div>
+
+                                            </td>
+
+                                        </tr>
+
+                                    </tbody>
+
+                                </table>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
 
 </body>
 
