@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+	<title>Super Admin</title>
+	<link rel="stylesheet" th:href="@{/superadmin.css}">
+</head>
+
+<body>
+
+	<!-- ─── Navbar ─── -->
+	<nav class="navbar">
+		<div class="navbar-brand">
+			<div class="logo-icon">🛡️</div>
+			<h1>Super Admin<span>Panel</span></h1>
+		</div>
+		<div class="navbar-right">
+			<span class="badge-role">Super Admin</span>
+			<div class="avatar">S</div>
+		</div>
+	</nav>
+
+	<!-- ─── Page Content ─── -->
+	<div class="page-wrapper">
+
+		<!-- Page Header -->
+		<div class="page-header">
+			<h2>Manage Administrators</h2>
+			<p>Create and manage admin accounts from this panel.</p>
+		</div>
+
+		<!-- Stats Row -->
+		<div class="stats-row">
+			<div class="stat-card">
+				<div class="stat-icon purple">👥</div>
+				<div class="stat-info">
+					<h4 th:text="${totalAdmins != null ? totalAdmins : '0'}">0</h4>
+					<p>Total Admins</p>
+				</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-icon green">✅</div>
+				<div class="stat-info">
+					<h4 th:text="${activeAdmins != null ? activeAdmins : '0'}">0</h4>
+					<p>Active Admins</p>
+				</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-icon blue">📅</div>
+				<div class="stat-info">
+					<h4 th:text="${todayAdmins != null ? todayAdmins : '0'}">0</h4>
+					<p>Added Today</p>
+				</div>
+			</div>
+		</div>
+
+		<!-- ─── Add Admin Card ─── -->
+		<div class="card">
+			<div class="card-header">
+				<div class="card-icon">➕</div>
+				<div>
+					<h3>Add New Admin</h3>
+					<p>Fill in the details to create an admin account</p>
+				</div>
+			</div>
+
+			<div class="card-body">
+
+				<!-- Success / Error Messages -->
+				<div class="toast success" th:if="${successMessage}" th:text="${successMessage}">
+					✅ Admin added successfully!
+				</div>
+				<div class="toast error" th:if="${errorMessage}" th:text="${errorMessage}">
+					❌ Something went wrong. Please try again.
+				</div>
+
+				<!-- Add Admin Form -->
+				<form th:action="@{/superadmin/add-admin}" method="post">
+
+					<div class="form-grid">
+
+						<!-- Email -->
+						<div class="form-group">
+							<label for="email">Email Address</label>
+							<div class="input-wrap">
+								<span class="input-icon">📧</span>
+								<input type="email" id="email" name="email" placeholder="admin@example.com" required>
+							</div>
+						</div>
+
+						<!-- Username -->
+						<div class="form-group">
+							<label for="username">Username</label>
+							<div class="input-wrap">
+								<span class="input-icon">👤</span>
+								<input type="text" id="username" name="username" placeholder="Enter username" required>
+							</div>
+						</div>
+
+						<!-- Password -->
+						<div class="form-group">
+							<label for="password">Password</label>
+							<div class="input-wrap">
+								<span class="input-icon">🔒</span>
+								<input type="password" id="password" name="password"
+									placeholder="Create a strong password" required
+									oninput="updateStrength(this.value)">
+							</div>
+							<div class="strength-bar">
+								<div class="strength-fill" id="strengthFill"></div>
+							</div>
+						</div>
+
+						<!-- Confirm Password -->
+						<div class="form-group">
+							<label for="confirmPassword">Confirm Password</label>
+							<div class="input-wrap">
+								<span class="input-icon">🔑</span>
+								<input type="password" id="confirmPassword" name="confirmPassword"
+									placeholder="Re-enter password" required>
+							</div>
+						</div>
+
+					</div><!-- /form-grid -->
+
+					<div class="form-actions" style="margin-top: 22px;">
+						<button type="reset" class="btn btn-ghost">Clear</button>
+						<button type="submit" class="btn btn-primary">
+							<span>➕</span> Add Admin
+						</button>
+					</div>
+
+				</form>
+
+			</div><!-- /card-body -->
+		</div><!-- /card -->
+
+
+		<!-- ─── Admin List Card ─── -->
+		<div class="card">
+			<div class="card-header">
+				<div class="card-icon">📋</div>
+				<div>
+					<h3>All Admins</h3>
+					<p>List of all registered administrators</p>
+				</div>
+			</div>
+
+			<div class="card-body" style="padding: 0;">
+				<div class="table-wrap">
+					<table>
+						<thead>
+							<tr>
+								<th>#</th>
+								<th>Admin</th>
+								<th>Email</th>
+								<th>Status</th>
+								<th>Created</th>
+								<th>Action</th>
+							</tr>
+						</thead>
+						<tbody>
+
+							<!-- Loop over admins from backend -->
+							<tr th:each="admin, stat : ${admins}">
+								<td th:text="${stat.index + 1}">1</td>
+								<td>
+									<div class="admin-avatar-cell">
+										<div class="admin-mini-avatar"
+											th:text="${#strings.toUpperCase(#strings.substring(admin.username, 0, 1))}">
+											A</div>
+										<span th:text="${admin.username}">Admin Name</span>
+									</div>
+								</td>
+								<td th:text="${admin.email}">admin@example.com</td>
+								<td><span class="status-pill">Active</span></td>
+								<td th:text="${admin.createdAt != null ? admin.createdAt : '—'}">—</td>
+								<td>
+									<form th:action="@{/superadmin/delete-admin/{id}(id=${admin.id})}" method="post"
+										style="display:inline;" onsubmit="return confirm('Remove this admin?')">
+										<button type="submit" class="btn-icon" title="Remove Admin">🗑️</button>
+									</form>
+								</td>
+							</tr>
+
+							<!-- Empty state when no admins -->
+							<tr th:if="${admins == null or #lists.isEmpty(admins)}">
+								<td colspan="6">
+									<div class="empty-state">
+										<div class="empty-icon">👥</div>
+										<p>No admins added yet. Use the form above to add one.</p>
+									</div>
+								</td>
+							</tr>
+
+						</tbody>
+					</table>
+				</div>
+			</div><!-- /card-body -->
+		</div><!-- /card -->
+
+	</div><!-- /page-wrapper -->
+
+
+	<!-- ─── Password Strength Script ─── -->
+	<script>
+		function updateStrength(val) {
+			const fill = document.getElementById('strengthFill');
+			let score = 0;
+			if (val.length >= 6) score++;
+			if (val.length >= 10) score++;
+			if (/[A-Z]/.test(val)) score++;
+			if (/[0-9]/.test(val)) score++;
+			if (/[^A-Za-z0-9]/.test(val)) score++;
+
+			const pct = (score / 5) * 100;
+			fill.style.width = pct + '%';
+			fill.style.background =
+				score <= 1 ? '#ef4444' :
+					score <= 3 ? '#f59e0b' : '#10b981';
+		}
+	</script>
+
+</body>
+
+</html>
