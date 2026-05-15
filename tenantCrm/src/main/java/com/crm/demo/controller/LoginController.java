@@ -21,29 +21,37 @@ public class LoginController {
 		return "login";
 	}
 
-	// LOGIN PROCESS
+	// ─── LOGIN PROCESS ───────────────────────────────────────────────────────────
 	@PostMapping("/login")
-	public String loginUser(@RequestParam String username,
-			                @RequestParam String password,
-			                Model model) {
+	public String loginUser(@RequestParam String username, @RequestParam String password, Model model) {
 
-		// CHECK USERNAME OR EMAIL
+		// Find user by username OR email
 		User user = userRepository.findByUsernameOrEmail(username, username);
 
+		// ✅ FIX: Check credentials ONCE, then branch by ROLE
 		if (user != null && user.getPassword().equals(password)) {
 
-			return "superadmin";
+			String role = user.getRole(); // e.g. "SUPERADMIN" or "ADMIN"
+
+			if ("SUPERADMIN".equalsIgnoreCase(role)) {
+				return "superadmin"; // → templates/superadmin.html
+			} else if ("ADMIN".equalsIgnoreCase(role)) {
+				return "admin"; // → templates/admin.html (your dashboard.html)
+			} else {
+				// Any other role — redirect to a default page or show error
+				model.addAttribute("error", "You do not have permission to access this panel.");
+				return "login";
+			}
 		}
 
+		// Wrong username/password
 		model.addAttribute("error", "Invalid Username or Password");
-
 		return "login";
 	}
 
-	// LOGOUT
+	// ─── LOGOUT ──────────────────────────────────────────────────────────────────
 	@GetMapping("/logout")
 	public String logout() {
-
 		return "redirect:/login";
 	}
 }
