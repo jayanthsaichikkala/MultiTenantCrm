@@ -2,6 +2,8 @@
 <html xmlns:th="http://www.thymeleaf.org">
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
     <link rel="stylesheet" th:href="@{/login.css}">
 </head>
@@ -10,26 +12,40 @@
 
     <div class="login-container">
 
-        <h2>Login</h2>
-        <p class="subtitle">Login in to your account to continue</p>
+        <!-- BRAND ICON -->
+        <div class="brand-icon">
+            <span>🛡️</span>
+        </div>
+
+        <h2>Welcome Back</h2>
+        <p class="subtitle">Sign in to your account to continue</p>
+
+        <!-- ERROR MESSAGE -->
+        <div class="error-msg" th:if="${error}" th:text="${error}"></div>
 
         <form th:action="@{/login}" method="post">
 
-            <label>Email</label>
-            <input type="text" name="username" placeholder="you@example.com">
+            <label for="username">Email</label>
+            <input type="text"
+                   id="username"
+                   name="username"
+                   placeholder="you@example.com"
+                   autocomplete="email"
+                   required>
 
-            <label>Password</label>
-            <input type="password" name="password" placeholder="••••••••">
+            <label for="password">Password</label>
+            <input type="password"
+                   id="password"
+                   name="password"
+                   placeholder="••••••••"
+                   autocomplete="current-password"
+                   required>
 
             <button type="submit">Sign In</button>
 
+            <a href="#" class="forgot-link">Forgot password?</a>
+
         </form>
-
-        <p th:text="${error}" style="color:red;"></p>
-
-        <div class="login-footer">
-            Don't have an account? <a href="#">Sign up</a>
-        </div>
 
     </div>
 

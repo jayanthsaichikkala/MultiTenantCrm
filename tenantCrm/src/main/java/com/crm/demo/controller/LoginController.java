@@ -33,7 +33,7 @@ public class LoginController {
 
 			String role = user.getRole(); // e.g. "SUPERADMIN" or "ADMIN"
 
-			if ("SUPERADMIN".equalsIgnoreCase(role)) {
+			if ("SUPER_ADMIN".equalsIgnoreCase(role)) {
 				return "superadmin"; // → templates/superadmin.html
 			} else if ("ADMIN".equalsIgnoreCase(role)) {
 				return "admin"; // → templates/admin.html (your dashboard.html)
