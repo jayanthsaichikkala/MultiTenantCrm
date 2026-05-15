@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+	<title>HR Dashboard | LifeCare CRM</title>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap"
+		rel="stylesheet">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+	<link rel="stylesheet" th:href="@{/hr.css}" href="/hr.css">
+</head>
+
+<body>
+
+	<div class="app-container">
+		<!-- SIDEBAR -->
+		<aside class="sidebar" id="sidebar">
+			<div class="sidebar-header">
+				<div class="sidebar-logo">
+					<i class="fas fa-chart-line"></i>
+					<span>HRMatrix</span>
+				</div>
+				<button class="close-sidebar-mobile" id="closeSidebarBtn"><i class="fas fa-times"></i></button>
+			</div>
+			<nav class="sidebar-nav">
+				<ul>
+					<li class="nav-item active"><a href="#" class="nav-link"><i
+								class="fas fa-tachometer-alt"></i><span>Dashboards</span></a></li>
+					<li class="nav-item"><a href="#" class="nav-link"><i
+								class="fas fa-users"></i><span>Employees</span></a></li>
+					<li class="nav-item"><a href="#" class="nav-link"><i
+								class="fas fa-user-plus"></i><span>Recruitment</span></a></li>
+					<li class="nav-item"><a href="#" class="nav-link"><i
+								class="fas fa-file-alt"></i><span>Resumes</span></a></li>
+					<li class="nav-item"><a href="#" class="nav-link"><i
+								class="fas fa-calendar-check"></i><span>Attendance</span></a></li>
+					<li class="nav-item"><a href="#" class="nav-link"><i
+								class="fas fa-envelope-open-text"></i><span>Leave Request</span></a></li>
+					<li class="nav-item"><a href="#" class="nav-link"><i
+								class="fas fa-cog"></i><span>Settings</span></a></li>
+					<li class="nav-item logout-item"><a href="#" class="nav-link"><i
+								class="fas fa-sign-out-alt"></i><span>Log out</span></a></li>
+				</ul>
+			</nav>
+		</aside>
+
+		<div class="mobile-overlay" id="mobileOverlay"></div>
+
+		<!-- MAIN CONTENT -->
+		<main class="main-content">
+			<!-- Top Bar -->
+			<header class="top-bar">
+				<div class="top-bar-left">
+					<button class="hamburger-menu" id="hamburgerBtn"><i class="fas fa-bars"></i></button>
+					<div class="logo-area">
+						<i class="fas fa-hand-holding-heart logo-icon"></i>
+						<h2>LifeCare <span>HR CRM</span></h2>
+					</div>
+				</div>
+				<div class="top-bar-right">
+					<div class="notification-bell">
+						<i class="fas fa-bell"></i>
+						<span class="badge" th:text="${notificationCount}">0</span>
+						<div class="notification-dropdown">
+							<div class="notif-header"><span>Notifications</span><a href="#">Mark all read</a></div>
+							<ul>
+								<!-- Dynamic list from backend -->
+								<li th:each="notif : ${notifications}" th:text="${notif.message}">Sample notification
+								</li>
+							</ul>
+						</div>
+					</div>
+					<div class="admin-profile">
+						<img th:src="@{${adminAvatar}}"
+							src="https://ui-avatars.com/api/?background=0D6EFD&color=fff&name=User" alt="admin">
+						<div class="admin-info">
+							<span class="admin-name" th:text="${adminName}">Admin Name</span>
+							<span class="admin-role" th:text="${adminRole}">Role</span>
+						</div>
+						<i class="fas fa-chevron-down"></i>
+					</div>
+				</div>
+			</header>
+
+			<!-- Welcome Section -->
+			<div class="welcome-section">
+				<div class="welcome-text">
+					<h1 th:text="'Hello, ' + ${adminName}">Hello, User</h1>
+					<p>Welcome to the HR Management Dashboard.</p>
+				</div>
+			</div>
+
+			<!-- Stats Cards (empty values – bind with backend) -->
+			<div class="stats-grid">
+				<div class="stat-card">
+					<div class="stat-icon blue-bg"><i class="fas fa-user-friends"></i></div>
+					<div class="stat-details">
+						<h3>Total Employees</h3>
+						<div class="stat-value" th:text="${totalEmployees}">---</div>
+						<div class="stat-trend positive" th:text="${employeesTrend}">+0%</div>
+						<span class="stat-period">vs last month</span>
+					</div>
+				</div>
+				<div class="stat-card">
+					<div class="stat-icon green-bg"><i class="fas fa-user-plus"></i></div>
+					<div class="stat-details">
+						<h3>New Hires</h3>
+						<div class="stat-value" th:text="${newHires}">---</div>
+						<div class="stat-trend positive" th:text="${hiresTrend}">+0%</div>
+						<span class="stat-period">this quarter</span>
+					</div>
+				</div>
+				<div class="stat-card">
+					<div class="stat-icon orange-bg"><i class="fas fa-calendar-week"></i></div>
+					<div class="stat-details">
+						<h3>On Leave Today</h3>
+						<div class="stat-value" th:text="${onLeaveToday}">---</div>
+						<div class="stat-trend neutral" th:text="${leaveTrend}">0 pending</div>
+						<span class="stat-period">attendance</span>
+					</div>
+				</div>
+				<div class="stat-card">
+					<div class="stat-icon purple-bg"><i class="fas fa-chalkboard-user"></i></div>
+					<div class="stat-details">
+						<h3>Open Positions</h3>
+						<div class="stat-value" th:text="${openPositions}">---</div>
+						<div class="stat-trend positive" th:text="${positionsTrend}">+0</div>
+						<span class="stat-period">recruitment</span>
+					</div>
+				</div>
+			</div>
+
+			<!-- Two Column Layout -->
+			<div class="dashboard-row">
+				<!-- Left Column -->
+				<div class="col-left">
+					<div class="card chart-card">
+						<div class="card-header">
+							<h3><i class="fas fa-chart-bar"></i> Monthly Hires Overview</h3>
+							<span class="badge-light">2025 trend</span>
+						</div>
+						<div class="chart-container">
+							<canvas id="hiresChart" width="400" height="200"></canvas>
+						</div>
+						<div class="chart-meta">
+							<span><i class="fas fa-calendar-alt"></i> Jan - Jun</span>
+							<span><i class="fas fa-percent"></i> <span th:text="${hiresGrowth}">0%</span> growth</span>
+						</div>
+					</div>
+
+					<div class="card recent-resumes">
+						<div class="card-header">
+							<h3><i class="fas fa-file-alt"></i> Recent Resumes & Applicants</h3>
+							<a href="#" class="link-more">View all <i class="fas fa-arrow-right"></i></a>
+						</div>
+						<div class="table-responsive">
+							<table class="simple-table">
+								<thead>
+									<tr>
+										<th>Applicant</th>
+										<th>Position</th>
+										<th>Status</th>
+										<th>Resume</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr th:each="app : ${recentApplicants}">
+										<td th:text="${app.name}">Name</td>
+										<td th:text="${app.position}">Position</td>
+										<td><span class="status-badge" th:text="${app.status}">Status</span></td>
+										<td><i class="fas fa-download"></i></td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+
+				<!-- Right Column -->
+				<div class="col-right">
+					<div class="card schedule-card">
+						<div class="card-header">
+							<h3><i class="fas fa-clock"></i> Upcoming Schedule</h3>
+							<i class="fas fa-ellipsis-h"></i>
+						</div>
+						<div class="schedule-list">
+							<div th:each="event : ${upcomingEvents}" class="schedule-item">
+								<div class="time-badge" th:text="${event.time}">10:00 AM</div>
+								<div class="schedule-info">
+									<strong th:text="${event.title}">Event title</strong>
+									<p th:text="${event.details}">Details</p>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="card leave-card">
+						<div class="card-header">
+							<h3><i class="fas fa-envelope-open-text"></i> Leave Requests Pending</h3>
+							<a href="#" class="link-more">Manage</a>
+						</div>
+						<div class="leave-request-list">
+							<div th:each="req : ${leaveRequests}" class="leave-item">
+								<div class="leave-avatar"><i class="fas fa-user-circle"></i></div>
+								<div class="leave-details">
+									<span class="emp-name" th:text="${req.employeeName}">Name</span>
+									<span class="leave-type" th:text="${req.type}">Leave type</span>
+								</div>
+								<div class="leave-actions">
+									<button class="btn-icon approve"><i class="fas fa-check"></i></button>
+									<button class="btn-icon reject"><i class="fas fa-times"></i></button>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="card attendance-summary">
+						<div class="card-header">
+							<h3><i class="fas fa-calendar-check"></i> Attendance Overview</h3>
+							<span th:text="${attendanceMonth}">Month</span>
+						</div>
+						<div class="attendance-stats">
+							<div><span>Present</span> <strong th:text="${presentPercent}">0%</strong></div>
+							<div><span>Absent</span> <strong th:text="${absentPercent}">0%</strong></div>
+							<div><span>WFH</span> <strong th:text="${wfhPercent}">0%</strong></div>
+						</div>
+						<div class="progress-bar">
+							<div class="progress-fill" th:style="'width:' + ${presentPercent}"></div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Employees Table (full width) -->
+			<div class="card full-width-table">
+				<div class="card-header">
+					<h3><i class="fas fa-users"></i> Employee Management</h3>
+					<div class="search-mini">
+						<i class="fas fa-search"></i>
+						<input type="text" placeholder="Search employees...">
+					</div>
+				</div>
+				<div class="table-responsive">
+					<table class="employee-table">
+						<thead>
+							<tr>
+								<th>ID</th>
+								<th>Full Name</th>
+								<th>Department</th>
+								<th>Status</th>
+								<th>Type</th>
+								<th>Details</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr th:each="emp : ${employees}">
+								<td th:text="${emp.id}">#ID</td>
+								<td th:text="${emp.name}">Name</td>
+								<td th:text="${emp.department}">Dept</td>
+								<td><span class="status-badge" th:text="${emp.status}">Status</span></td>
+								<td th:text="${emp.type}">Type</td>
+								<td><a href="#" class="detail-link">View</a></td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<footer class="dashboard-footer">
+				<p>© 2025 LifeCare HR CRM — Ready for backend integration.</p>
+			</footer>
+		</main>
+	</div>
+
+	<!-- JavaScript for Sidebar & Chart (empty data to be replaced) -->
+	<script>
+		// Sidebar toggle logic
+		const hamburger = document.getElementById('hamburgerBtn');
+		const sidebar = document.getElementById('sidebar');
+		const overlay = document.getElementById('mobileOverlay');
+		const closeSidebar = document.getElementById('closeSidebarBtn');
+		function openSidebar() {sidebar.classList.add('mobile-open'); if (overlay) overlay.classList.add('active'); document.body.style.overflow = 'hidden';}
+		function closeSidebarFunc() {sidebar.classList.remove('mobile-open'); if (overlay) overlay.classList.remove('active'); document.body.style.overflow = '';}
+		if (hamburger) hamburger.addEventListener('click', openSidebar);
+		if (closeSidebar) closeSidebar.addEventListener('click', closeSidebarFunc);
+		if (overlay) overlay.addEventListener('click', closeSidebarFunc);
+		window.addEventListener('resize', function () {if (window.innerWidth > 768 && sidebar.classList.contains('mobile-open')) {closeSidebarFunc();} });
+
+		// Chart initialization (you can replace dataset via backend by exposing data in JS or using th:inline)
+		const ctx = document.getElementById('hiresChart')?.getContext('2d');
+		if (ctx) {
+			new Chart(ctx, {
+				type: 'bar',
+				data: {
+					labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+					datasets: [{
+						label: 'New Hires',
+						data: [0, 0, 0, 0, 0, 0],  // will be replaced by backend
+						backgroundColor: '#4f46e5',
+						borderRadius: 8
+					}]
+				},
+				options: {
+					responsive: true,
+					maintainAspectRatio: true,
+					plugins: {legend: {position: 'top'}},
+					scales: {y: {beginAtZero: true}}
+				}
+			});
+		}
+
+		// Example: you can update chart data dynamically via backend model
+		// e.g., using th:inline="javascript" to inject monthlyData array.
+	</script>
+</body>
+
+</html>
