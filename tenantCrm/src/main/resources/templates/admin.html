@@ -2,830 +2,413 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 
 <head>
-	<meta charset="UTF-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title th:text="${pageTitle} ?: 'CRM — Admin Dashboard'">CRM — Admin Dashboard</title>
-
-	<!-- Separate CSS -->
-	<link rel="stylesheet" th:href="@{/admin.css}" href="admin.css" />
-
-	<!-- Boxicons for icons (CDN) -->
-	<link rel="stylesheet" href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${pageTitle} ?: 'CRM — Admin Dashboard'">CRM — Admin Dashboard</title>
+    <link rel="stylesheet" th:href="@{/admin.css}" href="admin.css" />
+    <link rel="stylesheet" href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" />
 </head>
 
 <body>
 
-	<!-- ═══════════════════════════════════════════════
-     LAYOUT SHELL
-═══════════════════════════════════════════════ -->
-	<div class="crm-shell">
-
-		<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-       SIDEBAR
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-		<aside class="sidebar">
-
-			<!-- Logo -->
-			<div class="sidebar-logo">
-				<div class="logo-mark">C</div>
-				<span class="logo-text">CRM</span>
-			</div>
-
-			<!-- Navigation -->
-			<nav class="sidebar-nav">
-
-				<p class="nav-label">Menu</p>
-
-				<a th:href="@{/dashboard}" href="#" th:classappend="${activePage == 'dashboard'} ? 'active' : ''"
-					class="nav-item active">
-					<i class="bx bxs-dashboard nav-icon"></i>
-					<span>Dashboard</span>
-				</a>
-
-				<a th:href="@{/employees}" href="#" th:classappend="${activePage == 'employees'} ? 'active' : ''"
-					class="nav-item">
-					<i class="bx bxs-group nav-icon"></i>
-					<span>Employees</span>
-					<span class="nav-badge" th:text="${employeeCount} ?: '24'">24</span>
-				</a>
-
-				<a th:href="@{/projects}" href="#" th:classappend="${activePage == 'projects'} ? 'active' : ''"
-					class="nav-item">
-					<i class="bx bxs-briefcase nav-icon"></i>
-					<span>Projects</span>
-					<span class="nav-badge" th:text="${projectCount} ?: '8'">8</span>
-				</a>
-
-				<a th:href="@{/tasks}" href="#" th:classappend="${activePage == 'tasks'} ? 'active' : ''"
-					class="nav-item">
-					<i class="bx bxs-check-square nav-icon"></i>
-					<span>Tasks</span>
-					<span class="nav-badge" th:text="${pendingTasks} ?: '12'">12</span>
-				</a>
-
-				<a th:href="@{/reports}" href="#" th:classappend="${activePage == 'reports'} ? 'active' : ''"
-					class="nav-item">
-					<i class="bx bxs-report nav-icon"></i>
-					<span>Reports</span>
-				</a>
-
-				<p class="nav-label">System</p>
-
-				<a th:href="@{/settings}" href="#" th:classappend="${activePage == 'settings'} ? 'active' : ''"
-					class="nav-item">
-					<i class="bx bxs-cog nav-icon"></i>
-					<span>Settings</span>
-				</a>
-
-			</nav>
-
-			<!-- Logout at bottom -->
-			<div class="sidebar-bottom">
-				<a th:href="@{/logout}" href="#" class="nav-item logout">
-					<i class="bx bx-log-out nav-icon"></i>
-					<span>Logout</span>
-				</a>
-			</div>
-
-		</aside><!-- /sidebar -->
-
-		<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-       TOP BAR
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-		<header class="topbar">
-
-			<!-- Left: heading -->
-			<div class="topbar-left">
-				<h1 class="topbar-heading">
-					<span>Admin</span> Panel
-				</h1>
-			</div>
-
-			<!-- Centre: search -->
-			<div class="topbar-search">
-				<i class="bx bx-search search-icon"></i>
-				<input type="text" th:placeholder="'Search employees, projects…'"
-					placeholder="Search employees, projects…" />
-			</div>
-
-			<!-- Right: notifications + avatar -->
-			<div class="topbar-right">
-
-				<!-- Message icon -->
-				<button class="icon-btn" title="Messages">
-					<i class="bx bx-envelope"></i>
-					<span class="badge" th:text="${messageCount} ?: '3'">3</span>
-				</button>
-
-				<!-- Notification bell -->
-				<button class="icon-btn" title="Notifications">
-					<i class="bx bx-bell"></i>
-					<span class="badge" th:text="${notificationCount} ?: '7'">7</span>
-				</button>
-
-				<!-- Admin avatar -->
-				<div class="admin-avatar">
-					<div class="avatar-img" th:text="${#strings.substring(adminName, 0, 1)} ?: 'A'">A</div>
-					<div>
-						<div class="avatar-name" th:text="${adminName} ?: 'Admin User'">Admin User</div>
-						<div class="avatar-role" th:text="${adminRole} ?: 'Super Admin'">Super Admin</div>
-					</div>
-					<i class="bx bx-chevron-down" style="color:var(--text-muted);font-size:16px;"></i>
-				</div>
-
-			</div>
-
-		</header><!-- /topbar -->
-
-		<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-       MAIN CONTENT
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-		<main class="main-content">
-
-			<!DOCTYPE html>
-			<html lang="en" xmlns:th="http://www.thymeleaf.org">
-
-			<head>
-				<meta charset="UTF-8" />
-				<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-				<title th:text="${pageTitle}">CRM — Admin Dashboard</title>
-
-				<!-- Separate CSS -->
-				<link rel="stylesheet" th:href="@{/admin.css}" href="admin.css" />
-
-				<!-- Boxicons -->
-				<link rel="stylesheet" href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" />
-			</head>
-
-			<body>
-
-				<div class="crm-shell">
-
-					<!-- ══════════════════════════════════════════
-			       SIDEBAR
-			  ══════════════════════════════════════════ -->
-					<aside class="sidebar">
-
-						<div class="sidebar-logo">
-							<div class="logo-mark">C</div>
-							<span class="logo-text">CRM<span>Pro</span></span>
-						</div>
-
-						<nav class="sidebar-nav">
-							<p class="nav-label">Menu</p>
-
-							<a th:href="@{/dashboard}" th:classappend="${activePage == 'dashboard'} ? ' active' : ''"
-								class="nav-item">
-								<i class="bx bxs-dashboard nav-icon"></i>
-								<span>Dashboard</span>
-							</a>
-
-							<a th:href="@{/employees}" th:classappend="${activePage == 'employees'} ? ' active' : ''"
-								class="nav-item">
-								<i class="bx bxs-group nav-icon"></i>
-								<span>Employees</span>
-								<span class="nav-badge" th:text="${employeeCount}"></span>
-							</a>
-
-							<a th:href="@{/projects}" th:classappend="${activePage == 'projects'} ? ' active' : ''"
-								class="nav-item">
-								<i class="bx bxs-briefcase nav-icon"></i>
-								<span>Projects</span>
-								<span class="nav-badge" th:text="${projectCount}"></span>
-							</a>
-
-							<a th:href="@{/tasks}" th:classappend="${activePage == 'tasks'} ? ' active' : ''"
-								class="nav-item">
-								<i class="bx bxs-check-square nav-icon"></i>
-								<span>Tasks</span>
-								<span class="nav-badge" th:text="${pendingTaskCount}"></span>
-							</a>
-
-							<a th:href="@{/reports}" th:classappend="${activePage == 'reports'} ? ' active' : ''"
-								class="nav-item">
-								<i class="bx bxs-report nav-icon"></i>
-								<span>Reports</span>
-							</a>
-
-							<p class="nav-label">System</p>
-
-							<a th:href="@{/settings}" th:classappend="${activePage == 'settings'} ? ' active' : ''"
-								class="nav-item">
-								<i class="bx bxs-cog nav-icon"></i>
-								<span>Settings</span>
-							</a>
-						</nav>
-
-						<div class="sidebar-bottom">
-							<a th:href="@{/logout}" class="nav-item logout">
-								<i class="bx bx-log-out nav-icon"></i>
-								<span>Logout</span>
-							</a>
-						</div>
-
-					</aside>
-
-					<!-- ══════════════════════════════════════════
-			       TOP BAR
-			  ══════════════════════════════════════════ -->
-					<header class="topbar">
-
-						<div class="topbar-left">
-							<h1 class="topbar-heading"><span>Admin</span> Panel</h1>
-						</div>
-
-						<div class="topbar-search">
-							<i class="bx bx-search search-icon"></i>
-							<input type="text" placeholder="Search employees, projects…" />
-						</div>
-
-						<div class="topbar-right">
-
-							<button class="icon-btn" title="Messages">
-								<i class="bx bx-envelope"></i>
-								<span class="badge" th:text="${messageCount}"></span>
-							</button>
-
-							<button class="icon-btn" title="Notifications">
-								<i class="bx bx-bell"></i>
-								<span class="badge" th:text="${notificationCount}"></span>
-							</button>
-
-							<div class="admin-avatar">
-								<div class="avatar-img" th:text="${adminInitial}"></div>
-								<div>
-									<div class="avatar-name" th:text="${adminName}"></div>
-									<div class="avatar-role" th:text="${adminRole}"></div>
-								</div>
-								<i class="bx bx-chevron-down" style="color:var(--text-muted);font-size:16px;"></i>
-							</div>
-
-						</div>
-					</header>
-
-					<!-- ══════════════════════════════════════════
-			       MAIN CONTENT
-			  ══════════════════════════════════════════ -->
-					<main class="main-content">
-
-						<!-- Page Header -->
-						<div class="page-header">
-							<div>
-								<h2 class="page-title" th:text="${pageHeading}"></h2>
-								<p class="page-subtitle" th:text="${pageSubtitle}"></p>
-							</div>
-							<a th:href="@{/projects/new}" class="btn-primary">
-								<i class="bx bx-plus"></i>
-								<span>New Project</span>
-							</a>
-						</div>
-
-						<!-- ── STAT CARDS ── -->
-						<div class="stats-grid">
-
-							<div class="stat-card card-violet">
-								<div class="stat-icon-wrap"><i class="bx bxs-user-check"></i></div>
-								<div class="stat-body">
-									<div class="stat-value" th:text="${totalEmployees}"></div>
-									<div class="stat-label">Total Employees</div>
-									<div class="stat-change up">
-										<i class="bx bx-trending-up"></i>
-										<span th:text="${employeeGrowth}"></span>
-									</div>
-								</div>
-							</div>
-
-							<div class="stat-card card-cyan">
-								<div class="stat-icon-wrap"><i class="bx bxs-briefcase"></i></div>
-								<div class="stat-body">
-									<div class="stat-value" th:text="${activeProjects}"></div>
-									<div class="stat-label">Active Projects</div>
-									<div class="stat-change up">
-										<i class="bx bx-trending-up"></i>
-										<span th:text="${projectGrowth}"></span>
-									</div>
-								</div>
-							</div>
-
-							<div class="stat-card card-amber">
-								<div class="stat-icon-wrap"><i class="bx bxs-check-square"></i></div>
-								<div class="stat-body">
-									<div class="stat-value" th:text="${tasksDone}"></div>
-									<div class="stat-label">Tasks Completed</div>
-									<div class="stat-change up">
-										<i class="bx bx-trending-up"></i>
-										<span th:text="${taskGrowth}"></span>
-									</div>
-								</div>
-							</div>
-
-							<div class="stat-card card-red">
-								<div class="stat-icon-wrap"><i class="bx bx-time-five"></i></div>
-								<div class="stat-body">
-									<div class="stat-value" th:text="${overdueTasks}"></div>
-									<div class="stat-label">Overdue Tasks</div>
-									<div class="stat-change down">
-										<i class="bx bx-trending-down"></i>
-										<span th:text="${overdueChange}"></span>
-									</div>
-								</div>
-							</div>
-
-						</div><!-- /stats-grid -->
-
-						<!-- ── MIDDLE ROW ── -->
-						<div class="middle-row">
-
-							<!-- Project Status Donut -->
-							<div class="card">
-								<div class="card-header">
-									<span class="card-title">Project Status</span>
-									<a th:href="@{/projects}" class="card-action">Details →</a>
-								</div>
-								<div class="card-body donut-wrap">
-									<div class="donut-chart">
-										<!--
-			              Controller must provide:
-			                completedPct  (e.g. 68)
-			                inProgressPct (e.g. 21)
-			                onHoldPct     (e.g. 11)
-			            -->
-										<svg viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
-											<circle cx="18" cy="18" r="15.9" fill="none" stroke="#e2e8f0"
-												stroke-width="3.5" />
-											<circle cx="18" cy="18" r="15.9" fill="none" stroke="#6366f1"
-												stroke-width="3.5" stroke-linecap="round"
-												th:attr="stroke-dasharray=${completedPct + ' ' + (100 - completedPct)}" />
-											<circle cx="18" cy="18" r="15.9" fill="none" stroke="#06b6d4"
-												stroke-width="3.5" stroke-linecap="round"
-												th:attr="stroke-dasharray=${inProgressPct + ' ' + (100 - inProgressPct)},stroke-dashoffset=${'-' + completedPct}" />
-											<circle cx="18" cy="18" r="15.9" fill="none" stroke="#f59e0b"
-												stroke-width="3.5" stroke-linecap="round"
-												th:attr="stroke-dasharray=${onHoldPct + ' ' + (100 - onHoldPct)},stroke-dashoffset=${'-' + (completedPct + inProgressPct)}" />
-										</svg>
-										<div class="donut-center">
-											<span class="donut-pct" th:text="${completedPct + '%'}"></span>
-											<span class="donut-pct-label">Done</span>
-										</div>
-									</div>
-
-									<div class="donut-legend">
-										<div class="legend-item">
-											<div class="legend-dot-label">
-												<span class="legend-dot" style="background:#6366f1;"></span>
-												<span class="legend-label">Completed</span>
-											</div>
-											<span class="legend-val" th:text="${completedPct + '%'}"></span>
-										</div>
-										<div class="legend-item">
-											<div class="legend-dot-label">
-												<span class="legend-dot" style="background:#06b6d4;"></span>
-												<span class="legend-label">In Progress</span>
-											</div>
-											<span class="legend-val" th:text="${inProgressPct + '%'}"></span>
-										</div>
-										<div class="legend-item">
-											<div class="legend-dot-label">
-												<span class="legend-dot" style="background:#f59e0b;"></span>
-												<span class="legend-label">On Hold</span>
-											</div>
-											<span class="legend-val" th:text="${onHoldPct + '%'}"></span>
-										</div>
-									</div>
-								</div>
-							</div>
-
-							<!-- Recent Activity -->
-							<div class="card">
-								<div class="card-header">
-									<span class="card-title">Recent Activity</span>
-									<span class="card-action">View all →</span>
-								</div>
-								<div class="card-body" style="padding-top:6px;padding-bottom:6px;">
-									<div class="activity-list">
-
-										<!--
-			              Controller: model.addAttribute("recentActivities", list);
-			              Fields needed per item:
-			                activity.initials     — e.g. "AK"
-			                activity.avatarColor  — e.g. "linear-gradient(135deg,#6366f1,#818cf8)"
-			                activity.actorName    — e.g. "Anita K."
-			                activity.actionText   — e.g. "completed task UI Redesign"
-			                activity.timeAgo      — e.g. "2 min ago"
-			            -->
-										<div class="activity-item" th:each="activity : ${recentActivities}">
-											<div class="activity-avatar"
-												th:style="'background:' + ${activity.avatarColor}"
-												th:text="${activity.initials}"></div>
-											<div class="activity-body">
-												<div class="activity-text">
-													<strong th:text="${activity.actorName}"></strong>
-													<span th:text="' ' + ${activity.actionText}"></span>
-												</div>
-												<div class="activity-time" th:text="${activity.timeAgo}"></div>
-											</div>
-										</div>
-
-										<div th:if="${#lists.isEmpty(recentActivities)}"
-											style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;">
-											No recent activity yet.
-										</div>
-
-									</div>
-								</div>
-							</div>
-
-							<!-- Top Employees Table -->
-							<div class="card">
-								<div class="card-header">
-									<span class="card-title">Top Employees</span>
-									<a th:href="@{/employees}" class="card-action">See all →</a>
-								</div>
-								<div class="card-body" style="padding:0 0 6px;">
-									<table class="perf-table">
-										<thead>
-											<tr>
-												<th>Employee</th>
-												<th>Status</th>
-												<th>Progress</th>
-											</tr>
-										</thead>
-										<tbody>
-											<!--
-			                Controller: model.addAttribute("topEmployees", list);
-			                Fields needed per item:
-			                  emp.initials       — e.g. "PK"
-			                  emp.avatarColor    — e.g. "linear-gradient(135deg,#6366f1,#818cf8)"
-			                  emp.name           — e.g. "Priya K."
-			                  emp.department     — e.g. "Design"
-			                  emp.status         — e.g. "Active"
-			                  emp.statusClass    — e.g. "active" | "review" | "pending" | "done"
-			                  emp.progressPct    — e.g. 92  (integer 0-100)
-			                  emp.progressColor  — e.g. "var(--primary)"
-			              -->
-											<tr th:each="emp : ${topEmployees}">
-												<td>
-													<div class="emp-cell">
-														<div class="emp-avatar"
-															th:style="'background:' + ${emp.avatarColor}"
-															th:text="${emp.initials}"></div>
-														<div>
-															<div class="emp-name" th:text="${emp.name}"></div>
-															<div class="emp-dept" th:text="${emp.department}"></div>
-														</div>
-													</div>
-												</td>
-												<td>
-													<span class="status-pill" th:classappend="' ' + ${emp.statusClass}"
-														th:text="${emp.status}"></span>
-												</td>
-												<td>
-													<div class="progress-bar-wrap">
-														<div class="progress-bar-fill"
-															th:style="'width:' + ${emp.progressPct} + '%;background:' + ${emp.progressColor}">
-														</div>
-													</div>
-												</td>
-											</tr>
-
-											<tr th:if="${#lists.isEmpty(topEmployees)}">
-												<td colspan="3"
-													style="text-align:center;color:var(--text-muted);padding:24px;font-size:13px;">
-													No employee data available.
-												</td>
-											</tr>
-										</tbody>
-									</table>
-								</div>
-							</div>
-
-						</div><!-- /middle-row -->
-
-						<!-- ── BOTTOM ROW ── -->
-						<div class="bottom-row">
-
-							<!-- Revenue vs Expense Chart -->
-							<div class="card">
-								<div class="card-header">
-									<span class="card-title">Revenue vs Expense</span>
-									<span style="font-size:11px;color:var(--text-muted);">Last 6 months</span>
-								</div>
-								<div class="card-body">
-									<div class="chart-legend">
-										<div class="chart-legend-item">
-											<div class="chart-legend-dot" style="background:var(--primary);"></div>
-											Revenue
-										</div>
-										<div class="chart-legend-item">
-											<div class="chart-legend-dot" style="background:var(--accent);"></div>
-											Expense
-										</div>
-									</div>
-									<div class="bar-chart">
-										<!--
-			              Controller: model.addAttribute("monthlyData", list);
-			              Fields needed per item:
-			                month.monthLabel  — e.g. "Jan"
-			                month.revenuePct  — e.g. 68  (0-100, used as CSS height %)
-			                month.expensePct  — e.g. 45
-			            -->
-										<div class="bar-group" th:each="month : ${monthlyData}">
-											<div class="bars">
-												<div class="bar revenue"
-													th:style="'height:' + ${month.revenuePct} + '%'"></div>
-												<div class="bar expense"
-													th:style="'height:' + ${month.expensePct} + '%'"></div>
-											</div>
-											<span class="bar-label" th:text="${month.monthLabel}"></span>
-										</div>
-
-										<div th:if="${#lists.isEmpty(monthlyData)}"
-											style="width:100%;text-align:center;color:var(--text-muted);font-size:13px;padding:30px 0;">
-											No chart data available.
-										</div>
-									</div>
-								</div>
-							</div>
-
-							<!-- Pending Tasks -->
-							<div class="card">
-								<div class="card-header">
-									<span class="card-title">Pending Tasks</span>
-									<a th:href="@{/tasks}" class="card-action">View all →</a>
-								</div>
-								<div class="card-body" style="padding-top:6px;">
-									<div class="task-list">
-
-										<!--
-			              Controller: model.addAttribute("pendingTaskList", list);
-			              Fields needed per item:
-			                task.name          — e.g. "Finalize Q3 Budget Report"
-			                task.priority      — e.g. "High"
-			                task.priorityClass — e.g. "high" | "mid" | "low"
-			                task.done          — true / false
-			            -->
-										<div class="task-item" th:each="task : ${pendingTaskList}"
-											th:classappend="${task.done} ? ' done' : ''">
-											<div class="task-checkbox">
-												<i class="bx bx-check" th:if="${task.done}"></i>
-											</div>
-											<span class="task-name" th:text="${task.name}"></span>
-											<span class="task-priority" th:classappend="' ' + ${task.priorityClass}"
-												th:text="${task.priority}"></span>
-										</div>
-
-										<div th:if="${#lists.isEmpty(pendingTaskList)}"
-											style="text-align:center;color:var(--text-muted);padding:24px;font-size:13px;">
-											No pending tasks. 🎉
-										</div>
-
-									</div>
-								</div>
-							</div>
-
-						</div><!-- /bottom-row -->
-
-					</main>
-
-				</div><!-- /crm-shell -->
-
-				<script th:inline="javascript">
-					(function () {
-						const links = document.querySelectorAll('.sidebar .nav-item');
-						const path = window.location.pathname;
-						links.forEach(link => {
-							const href = link.getAttribute('href');
-							if (href && href !== '#' && path.startsWith(href)) {
-								links.forEach(l => l.classList.remove('active'));
-								link.classList.add('active');
-							}
-						});
-					})();
-				</script>
-
-			</body>
-
-			</html>
-			<th>Employee</th>
-			<th>Status</th>
-			<th>Progress</th>
-			</tr>
-			</thead>
-			<tbody>
-				<!-- th:each="emp : ${topEmployees}" -->
-				<tr>
-					<td>
-						<div class="emp-cell">
-							<div class="emp-avatar" style="background:linear-gradient(135deg,#6366f1,#818cf8);">PK</div>
-							<div>
-								<div class="emp-name">Priya K.</div>
-								<div class="emp-dept">Design</div>
-							</div>
-						</div>
-					</td>
-					<td><span class="status-pill active">Active</span></td>
-					<td>
-						<div class="progress-bar-wrap">
-							<div class="progress-bar-fill" style="width:92%;background:var(--primary);">
-							</div>
-						</div>
-					</td>
-				</tr>
-				<tr>
-					<td>
-						<div class="emp-cell">
-							<div class="emp-avatar" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">AS</div>
-							<div>
-								<div class="emp-name">Arjun S.</div>
-								<div class="emp-dept">Engineering</div>
-							</div>
-						</div>
-					</td>
-					<td><span class="status-pill review">In Review</span></td>
-					<td>
-						<div class="progress-bar-wrap">
-							<div class="progress-bar-fill" style="width:78%;background:var(--accent);">
-							</div>
-						</div>
-					</td>
-				</tr>
-				<tr>
-					<td>
-						<div class="emp-cell">
-							<div class="emp-avatar" style="background:linear-gradient(135deg,#f59e0b,#d97706);">MN</div>
-							<div>
-								<div class="emp-name">Meera N.</div>
-								<div class="emp-dept">Marketing</div>
-							</div>
-						</div>
-					</td>
-					<td><span class="status-pill active">Active</span></td>
-					<td>
-						<div class="progress-bar-wrap">
-							<div class="progress-bar-fill" style="width:85%;background:var(--accent-warm);"></div>
-						</div>
-					</td>
-				</tr>
-				<tr>
-					<td>
-						<div class="emp-cell">
-							<div class="emp-avatar" style="background:linear-gradient(135deg,#10b981,#059669);">KR</div>
-							<div>
-								<div class="emp-name">Karan R.</div>
-								<div class="emp-dept">Sales</div>
-							</div>
-						</div>
-					</td>
-					<td><span class="status-pill done">Done</span></td>
-					<td>
-						<div class="progress-bar-wrap">
-							<div class="progress-bar-fill" style="width:100%;background:var(--success);"></div>
-						</div>
-					</td>
-				</tr>
-			</tbody>
-			</table>
-	</div>
-	</div><!-- /top employees -->
-
-	</div><!-- /middle-row -->
-
-	<!-- ── BOTTOM ROW ── -->
-	<div class="bottom-row">
-
-		<!-- Revenue vs Expense Bar Chart -->
-		<div class="card">
-			<div class="card-header">
-				<span class="card-title">Revenue vs Expense</span>
-				<span style="font-size:11px;color:var(--text-muted);">Last 6 months</span>
-			</div>
-			<div class="card-body">
-				<div class="chart-legend">
-					<div class="chart-legend-item">
-						<div class="chart-legend-dot" style="background:var(--primary);"></div>
-						Revenue
-					</div>
-					<div class="chart-legend-item">
-						<div class="chart-legend-dot" style="background:var(--accent);"></div>
-						Expense
-					</div>
-				</div>
-				<div class="bar-chart">
-					<!-- th:each="month : ${monthlyData}" -->
-					<div class="bar-group">
-						<div class="bars">
-							<div class="bar revenue" style="height:68%;"></div>
-							<div class="bar expense" style="height:45%;"></div>
-						</div>
-						<span class="bar-label">Jan</span>
-					</div>
-					<div class="bar-group">
-						<div class="bars">
-							<div class="bar revenue" style="height:82%;"></div>
-							<div class="bar expense" style="height:55%;"></div>
-						</div>
-						<span class="bar-label">Feb</span>
-					</div>
-					<div class="bar-group">
-						<div class="bars">
-							<div class="bar revenue" style="height:75%;"></div>
-							<div class="bar expense" style="height:62%;"></div>
-						</div>
-						<span class="bar-label">Mar</span>
-					</div>
-					<div class="bar-group">
-						<div class="bars">
-							<div class="bar revenue" style="height:91%;"></div>
-							<div class="bar expense" style="height:50%;"></div>
-						</div>
-						<span class="bar-label">Apr</span>
-					</div>
-					<div class="bar-group">
-						<div class="bars">
-							<div class="bar revenue" style="height:88%;"></div>
-							<div class="bar expense" style="height:70%;"></div>
-						</div>
-						<span class="bar-label">May</span>
-					</div>
-					<div class="bar-group">
-						<div class="bars">
-							<div class="bar revenue" style="height:95%;"></div>
-							<div class="bar expense" style="height:48%;"></div>
-						</div>
-						<span class="bar-label">Jun</span>
-					</div>
-				</div>
-			</div>
-		</div><!-- /chart -->
-
-		<!-- Pending Tasks -->
-		<div class="card">
-			<div class="card-header">
-				<span class="card-title">Pending Tasks</span>
-				<span class="card-action" th:href="@{/tasks}">View all →</span>
-			</div>
-			<div class="card-body" style="padding-top:6px;">
-				<div class="task-list">
-
-					<!-- th:each="task : ${pendingTaskList}" -->
-					<div class="task-item">
-						<div class="task-checkbox"></div>
-						<span class="task-name">Finalize Q3 Budget Report</span>
-						<span class="task-priority high">High</span>
-					</div>
-					<div class="task-item done">
-						<div class="task-checkbox"><i class="bx bx-check"></i></div>
-						<span class="task-name">Onboard new team members</span>
-						<span class="task-priority low">Low</span>
-					</div>
-					<div class="task-item">
-						<div class="task-checkbox"></div>
-						<span class="task-name">Review project proposals</span>
-						<span class="task-priority mid">Mid</span>
-					</div>
-					<div class="task-item">
-						<div class="task-checkbox"></div>
-						<span class="task-name">Update employee KPIs</span>
-						<span class="task-priority high">High</span>
-					</div>
-					<div class="task-item done">
-						<div class="task-checkbox"><i class="bx bx-check"></i></div>
-						<span class="task-name">Send client invoices</span>
-						<span class="task-priority mid">Mid</span>
-					</div>
-					<div class="task-item">
-						<div class="task-checkbox"></div>
-						<span class="task-name">Deploy CRM v2.1 patch</span>
-						<span class="task-priority high">High</span>
-					</div>
-
-				</div>
-			</div>
-		</div><!-- /tasks -->
-
-	</div><!-- /bottom-row -->
-
-	</main><!-- /main-content -->
-
-	</div><!-- /crm-shell -->
-
-	<!-- ─────────────────────────────────────────────────
-     Optional: inline JS for sidebar active highlight
-───────────────────────────────────────────────── -->
-	<script th:inline="javascript">
-		/* Highlight active sidebar link based on current URL */
-		(function () {
-			const links = document.querySelectorAll('.sidebar .nav-item');
-			const path = window.location.pathname;
-			links.forEach(link => {
-				if (link.getAttribute('href') && path.includes(link.getAttribute('href').replace('#', ''))) {
-					links.forEach(l => l.classList.remove('active'));
-					link.classList.add('active');
-				}
-			});
-		})();
-	</script>
+<div class="crm-shell">
+
+    <!-- ══════════════════════════════════════════
+         SIDEBAR
+    ══════════════════════════════════════════ -->
+    <aside class="sidebar">
+
+        <div class="sidebar-logo">
+            <div class="logo-mark">C</div>
+            <span class="logo-text">CRM</span>
+        </div>
+
+        <nav class="sidebar-nav">
+            <p class="nav-label">Menu</p>
+
+            <a th:href="@{/dashboard}" th:classappend="${activePage == 'dashboard'} ? ' active' : ''" class="nav-item active">
+                <i class="bx bxs-dashboard nav-icon"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <a th:href="@{/employees}" th:classappend="${activePage == 'employees'} ? ' active' : ''" class="nav-item">
+                <i class="bx bxs-group nav-icon"></i>
+                <span>Employees</span>
+                <span class="nav-badge" th:text="${employeeCount} ?: '24'">24</span>
+            </a>
+
+            <a th:href="@{/projects}" th:classappend="${activePage == 'projects'} ? ' active' : ''" class="nav-item">
+                <i class="bx bxs-briefcase nav-icon"></i>
+                <span>Projects</span>
+                <span class="nav-badge" th:text="${projectCount} ?: '8'">8</span>
+            </a>
+
+            <a th:href="@{/tasks}" th:classappend="${activePage == 'tasks'} ? ' active' : ''" class="nav-item">
+                <i class="bx bxs-check-square nav-icon"></i>
+                <span>Tasks</span>
+                <span class="nav-badge" th:text="${pendingTasks} ?: '12'">12</span>
+            </a>
+
+            <a th:href="@{/reports}" th:classappend="${activePage == 'reports'} ? ' active' : ''" class="nav-item">
+                <i class="bx bxs-report nav-icon"></i>
+                <span>Reports</span>
+            </a>
+
+            <p class="nav-label">System</p>
+
+            <a th:href="@{/manager/add}" th:classappend="${activePage == 'add-manager'} ? ' active' : ''" class="nav-item">
+                <i class="bx bxs-user-plus nav-icon"></i>
+                <span>Add Manager</span>
+            </a>
+
+            <a th:href="@{/settings}" th:classappend="${activePage == 'settings'} ? ' active' : ''" class="nav-item">
+                <i class="bx bxs-cog nav-icon"></i>
+                <span>Settings</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-bottom">
+            <a th:href="@{/logout}" class="nav-item logout">
+                <i class="bx bx-log-out nav-icon"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+
+    </aside>
+
+    <!-- ══════════════════════════════════════════
+         TOP BAR
+    ══════════════════════════════════════════ -->
+    <header class="topbar">
+
+        <div class="topbar-left">
+            <h1 class="topbar-heading"><span>Admin</span> Panel</h1>
+        </div>
+
+        <div class="topbar-search">
+            <i class="bx bx-search search-icon"></i>
+            <input type="text" placeholder="Search employees, projects…" />
+        </div>
+
+        <div class="topbar-right">
+
+            <button class="icon-btn" title="Messages">
+                <i class="bx bx-envelope"></i>
+                <span class="badge" th:text="${messageCount} ?: '3'">3</span>
+            </button>
+
+            <button class="icon-btn" title="Notifications">
+                <i class="bx bx-bell"></i>
+                <span class="badge" th:text="${notificationCount} ?: '7'">7</span>
+            </button>
+
+            <div class="admin-avatar">
+                <div class="avatar-img" th:text="${#strings.substring(adminName ?: 'Admin User', 0, 1)}">A</div>
+                <div>
+                    <div class="avatar-name" th:text="${adminName} ?: 'Admin User'">Admin User</div>
+                    <div class="avatar-role" th:text="${adminRole} ?: 'Admin'">Admin</div>
+                </div>
+                <i class="bx bx-chevron-down" style="color:var(--text-muted);font-size:16px;"></i>
+            </div>
+
+        </div>
+
+    </header>
+
+    <!-- ══════════════════════════════════════════
+         MAIN CONTENT
+    ══════════════════════════════════════════ -->
+    <main class="main-content">
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <div>
+                <h2 class="page-title" th:text="${pageHeading} ?: 'Dashboard'">Dashboard</h2>
+                <p class="page-subtitle" th:text="${pageSubtitle} ?: 'Welcome back!'">Welcome back!</p>
+            </div>
+            <a th:href="@{/projects/new}" class="btn-primary">
+                <i class="bx bx-plus"></i>
+                <span>New Project</span>
+            </a>
+        </div>
+
+        <!-- ── STAT CARDS ── -->
+        <div class="stats-grid">
+
+            <div class="stat-card card-violet">
+                <div class="stat-icon-wrap"><i class="bx bxs-user-check"></i></div>
+                <div class="stat-body">
+                    <div class="stat-value" th:text="${totalEmployees} ?: '0'">0</div>
+                    <div class="stat-label">Total Employees</div>
+                    <div class="stat-change up">
+                        <i class="bx bx-trending-up"></i>
+                        <span th:text="${employeeGrowth} ?: '+0%'">+0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card card-cyan">
+                <div class="stat-icon-wrap"><i class="bx bxs-briefcase"></i></div>
+                <div class="stat-body">
+                    <div class="stat-value" th:text="${activeProjects} ?: '0'">0</div>
+                    <div class="stat-label">Active Projects</div>
+                    <div class="stat-change up">
+                        <i class="bx bx-trending-up"></i>
+                        <span th:text="${projectGrowth} ?: '+0%'">+0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card card-amber">
+                <div class="stat-icon-wrap"><i class="bx bxs-check-square"></i></div>
+                <div class="stat-body">
+                    <div class="stat-value" th:text="${tasksDone} ?: '0'">0</div>
+                    <div class="stat-label">Tasks Completed</div>
+                    <div class="stat-change up">
+                        <i class="bx bx-trending-up"></i>
+                        <span th:text="${taskGrowth} ?: '+0%'">+0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card card-red">
+                <div class="stat-icon-wrap"><i class="bx bx-time-five"></i></div>
+                <div class="stat-body">
+                    <div class="stat-value" th:text="${overdueTasks} ?: '0'">0</div>
+                    <div class="stat-label">Overdue Tasks</div>
+                    <div class="stat-change down">
+                        <i class="bx bx-trending-down"></i>
+                        <span th:text="${overdueChange} ?: '0%'">0%</span>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /stats-grid -->
+
+        <!-- ── MIDDLE ROW ── -->
+        <div class="middle-row">
+
+            <!-- Project Status Donut -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Project Status</span>
+                    <a th:href="@{/projects}" class="card-action">Details →</a>
+                </div>
+                <div class="card-body donut-wrap">
+                    <div class="donut-chart">
+                        <svg viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e2e8f0" stroke-width="3.5" />
+                            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#6366f1" stroke-width="3.5"
+                                stroke-linecap="round"
+                                th:attr="stroke-dasharray=${(completedPct ?: 0) + ' ' + (100 - (completedPct ?: 0))}" />
+                            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#06b6d4" stroke-width="3.5"
+                                stroke-linecap="round"
+                                th:attr="stroke-dasharray=${(inProgressPct ?: 0) + ' ' + (100 - (inProgressPct ?: 0))},stroke-dashoffset=${'-' + (completedPct ?: 0)}" />
+                            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f59e0b" stroke-width="3.5"
+                                stroke-linecap="round"
+                                th:attr="stroke-dasharray=${(onHoldPct ?: 0) + ' ' + (100 - (onHoldPct ?: 0))},stroke-dashoffset=${'-' + ((completedPct ?: 0) + (inProgressPct ?: 0))}" />
+                        </svg>
+                        <div class="donut-center">
+                            <span class="donut-pct" th:text="${(completedPct ?: 0) + '%'}">0%</span>
+                            <span class="donut-pct-label">Done</span>
+                        </div>
+                    </div>
+                    <div class="donut-legend">
+                        <div class="legend-item">
+                            <div class="legend-dot-label">
+                                <span class="legend-dot" style="background:#6366f1;"></span>
+                                <span class="legend-label">Completed</span>
+                            </div>
+                            <span class="legend-val" th:text="${(completedPct ?: 0) + '%'}">0%</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot-label">
+                                <span class="legend-dot" style="background:#06b6d4;"></span>
+                                <span class="legend-label">In Progress</span>
+                            </div>
+                            <span class="legend-val" th:text="${(inProgressPct ?: 0) + '%'}">0%</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot-label">
+                                <span class="legend-dot" style="background:#f59e0b;"></span>
+                                <span class="legend-label">On Hold</span>
+                            </div>
+                            <span class="legend-val" th:text="${(onHoldPct ?: 0) + '%'}">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Recent Activity</span>
+                    <span class="card-action">View all →</span>
+                </div>
+                <div class="card-body" style="padding-top:6px;padding-bottom:6px;">
+                    <div class="activity-list">
+                        <div class="activity-item" th:each="activity : ${recentActivities}">
+                            <div class="activity-avatar"
+                                 th:style="'background:' + ${activity.avatarColor}"
+                                 th:text="${activity.initials}"></div>
+                            <div class="activity-body">
+                                <div class="activity-text">
+                                    <strong th:text="${activity.actorName}"></strong>
+                                    <span th:text="' ' + ${activity.actionText}"></span>
+                                </div>
+                                <div class="activity-time" th:text="${activity.timeAgo}"></div>
+                            </div>
+                        </div>
+                        <div th:if="${recentActivities == null or #lists.isEmpty(recentActivities)}"
+                             style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;">
+                            No recent activity yet.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Employees -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Top Employees</span>
+                    <a th:href="@{/employees}" class="card-action">See all →</a>
+                </div>
+                <div class="card-body" style="padding:0 0 6px;">
+                    <table class="perf-table">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Status</th>
+                                <th>Progress</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="emp : ${topEmployees}">
+                                <td>
+                                    <div class="emp-cell">
+                                        <div class="emp-avatar"
+                                             th:style="'background:' + ${emp.avatarColor}"
+                                             th:text="${emp.initials}"></div>
+                                        <div>
+                                            <div class="emp-name" th:text="${emp.name}"></div>
+                                            <div class="emp-dept" th:text="${emp.department}"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="status-pill"
+                                          th:classappend="' ' + ${emp.statusClass}"
+                                          th:text="${emp.status}"></span>
+                                </td>
+                                <td>
+                                    <div class="progress-bar-wrap">
+                                        <div class="progress-bar-fill"
+                                             th:style="'width:' + ${emp.progressPct} + '%;background:' + ${emp.progressColor}">
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <!-- Static fallback rows when no data from controller -->
+                            <tr th:if="${topEmployees == null or #lists.isEmpty(topEmployees)}">
+                                <td colspan="3"
+                                    style="text-align:center;color:var(--text-muted);padding:24px;font-size:13px;">
+                                    No employee data available.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div><!-- /middle-row -->
+
+        <!-- ── BOTTOM ROW ── -->
+        <div class="bottom-row">
+
+            <!-- Revenue vs Expense Bar Chart -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Revenue vs Expense</span>
+                    <span style="font-size:11px;color:var(--text-muted);">Last 6 months</span>
+                </div>
+                <div class="card-body">
+                    <div class="chart-legend">
+                        <div class="chart-legend-item">
+                            <div class="chart-legend-dot" style="background:var(--primary);"></div>
+                            Revenue
+                        </div>
+                        <div class="chart-legend-item">
+                            <div class="chart-legend-dot" style="background:var(--accent);"></div>
+                            Expense
+                        </div>
+                    </div>
+                    <div class="bar-chart">
+                        <div class="bar-group" th:each="month : ${monthlyData}">
+                            <div class="bars">
+                                <div class="bar revenue" th:style="'height:' + ${month.revenuePct} + '%'"></div>
+                                <div class="bar expense" th:style="'height:' + ${month.expensePct} + '%'"></div>
+                            </div>
+                            <span class="bar-label" th:text="${month.monthLabel}"></span>
+                        </div>
+                        <!-- Static fallback bars when no data from controller -->
+                        <th:block th:if="${monthlyData == null or #lists.isEmpty(monthlyData)}">
+                            <div class="bar-group" th:each="m : ${ {'Jan','Feb','Mar','Apr','May','Jun'} }">
+                                <div class="bars">
+                                    <div class="bar revenue" style="height:0%;"></div>
+                                    <div class="bar expense" style="height:0%;"></div>
+                                </div>
+                                <span class="bar-label" th:text="${m}"></span>
+                            </div>
+                        </th:block>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pending Tasks -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Pending Tasks</span>
+                    <a th:href="@{/tasks}" class="card-action">View all →</a>
+                </div>
+                <div class="card-body" style="padding-top:6px;">
+                    <div class="task-list">
+                        <div class="task-item" th:each="task : ${pendingTaskList}"
+                             th:classappend="${task.done} ? ' done' : ''">
+                            <div class="task-checkbox">
+                                <i class="bx bx-check" th:if="${task.done}"></i>
+                            </div>
+                            <span class="task-name" th:text="${task.name}"></span>
+                            <span class="task-priority"
+                                  th:classappend="' ' + ${task.priorityClass}"
+                                  th:text="${task.priority}"></span>
+                        </div>
+                        <div th:if="${pendingTaskList == null or #lists.isEmpty(pendingTaskList)}"
+                             style="text-align:center;color:var(--text-muted);padding:24px;font-size:13px;">
+                            No pending tasks. 🎉
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /bottom-row -->
+
+    </main><!-- /main-content -->
+
+</div><!-- /crm-shell -->
+
+<script>
+    (function () {
+        const links = document.querySelectorAll('.sidebar .nav-item');
+        const path = window.location.pathname;
+        links.forEach(link => {
+            const href = link.getAttribute('href');
+            if (href && href !== '#' && path.startsWith(href)) {
+                links.forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+            }
+        });
+    })();
+</script>
 
 </body>
-
 </html>

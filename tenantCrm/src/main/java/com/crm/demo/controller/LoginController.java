@@ -41,11 +41,11 @@ public class LoginController {
             String role = user.getRole();
 
             if ("SUPER_ADMIN".equalsIgnoreCase(role)) {
-                return "superadmin";
+                return "redirect:/superadmin";
             } else if ("ADMIN".equalsIgnoreCase(role)) {
-                return "admin";
+                return "redirect:/admin/dashboard";
             } else if ("MANAGER".equalsIgnoreCase(role)) {
-                return "manager";
+                return "redirect:/manager";
             } else {
                 model.addAttribute("error", "You do not have permission to access this panel.");
                 return "login";
