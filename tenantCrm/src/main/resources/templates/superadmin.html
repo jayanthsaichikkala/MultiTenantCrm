@@ -145,7 +145,10 @@
                                             </div>
                                         </td>
                                         <td th:text="${admin.email}" style="font-size:13px;color:#6b7280"></td>
-                                        <td><span class="status-badge active">Active</span></td>
+                                        <td>
+                                            <span class="status-badge active"   th:if="${admin.status == 'active'}">Active</span>
+                                            <span class="status-badge inactive" th:unless="${admin.status == 'active'}">Inactive</span>
+                                        </td>
                                     </tr>
                                     <tr th:if="${#lists.isEmpty(admins)}">
                                         <td colspan="3">
@@ -246,7 +249,8 @@
             <div class="toast error"   th:if="${errorMessage}"   th:text="${errorMessage}"></div>
 
             <!-- ── INLINE ADD ADMIN FORM (hidden by default, toggled by JS) ── -->
-            <div class="card edit-card hidden" id="addAdminCard">
+            <div class="card edit-card hidden" id="addAdminCard"
+                 th:data-open="${showAddForm != null and showAddForm} ? 'true' : 'false'">
                 <div class="card-header">
                     <div>
                         <h2>Add New Admin</h2>
@@ -330,7 +334,7 @@
                                     <input type="hidden" name="status" id="editStatusHidden"
                                            th:value="${editAdmin.status}">
                                     <button type="button"
-                                            th:classappend="${editAdmin.status == 'active'} ? 'toggle-btn active' : 'toggle-btn inactive'"
+                                            th:class="${editAdmin.status == 'active'} ? 'toggle-btn active' : 'toggle-btn inactive'"
                                             id="editStatusToggle"
                                             onclick="toggleEditStatus()">
                                         <span class="toggle-knob"></span>
@@ -393,7 +397,7 @@
                                             <form th:action="@{/superadmin/toggle-status/{id}(id=${admin.id})}"
                                                   method="post" style="display:inline-flex;align-items:center;">
                                                 <button type="submit"
-                                                        th:classappend="${admin.status == 'active'} ? 'toggle-btn active' : 'toggle-btn inactive'"
+                                                        th:class="${admin.status == 'active'} ? 'toggle-btn active' : 'toggle-btn inactive'"
                                                         title="Click to toggle status">
                                                     <span class="toggle-knob"></span>
                                                 </button>
@@ -548,7 +552,10 @@
                                     </td>
                                     <td th:text="${admin.email}">admin@example.com</td>
                                     <td><span class="role-badge">ADMIN</span></td>
-                                    <td><span class="status-badge active">Active</span></td>
+                                    <td>
+                                        <span class="status-badge active"   th:if="${admin.status == 'active'}">Active</span>
+                                        <span class="status-badge inactive" th:unless="${admin.status == 'active'}">Inactive</span>
+                                    </td>
                                 </tr>
                                 <tr th:if="${#lists.isEmpty(admins)}">
                                     <td colspan="5">
@@ -699,7 +706,8 @@
     // or if server sent back a validation error
     if (addCard) {
         var params = new URLSearchParams(window.location.search);
-        if (params.get('add') === 'true' || /*[[${showAddForm}]]*/ false) {
+        var serverOpen = addCard.getAttribute('data-open') === 'true';
+        if (params.get('add') === 'true' || serverOpen) {
             showAddForm();
         }
     }

@@ -13,6 +13,8 @@
 
 <div class="crm-shell">
 
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <!-- ══════════════════════════════════════════
          SIDEBAR
     ══════════════════════════════════════════ -->
@@ -82,6 +84,9 @@
     <header class="topbar">
 
         <div class="topbar-left">
+            <button class="hamburger-btn" id="hamburgerBtn" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
             <h1 class="topbar-heading"><span>Admin</span> Panel</h1>
         </div>
 
@@ -398,6 +403,7 @@
 
 <script>
     (function () {
+        // Active nav highlight
         const links = document.querySelectorAll('.sidebar .nav-item');
         const path = window.location.pathname;
         links.forEach(link => {
@@ -406,6 +412,32 @@
                 links.forEach(l => l.classList.remove('active'));
                 link.classList.add('active');
             }
+        });
+
+        // Mobile sidebar toggle
+        const hamburger = document.getElementById('hamburgerBtn');
+        const sidebar    = document.querySelector('.sidebar');
+        const overlay    = document.getElementById('sidebarOverlay');
+
+        function openSidebar() {
+            sidebar.classList.add('open');
+            overlay.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeSidebar() {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        if (hamburger) hamburger.addEventListener('click', openSidebar);
+        if (overlay)   overlay.addEventListener('click', closeSidebar);
+
+        // Close on nav link click (mobile)
+        links.forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 900) closeSidebar();
+            });
         });
     })();
 </script>

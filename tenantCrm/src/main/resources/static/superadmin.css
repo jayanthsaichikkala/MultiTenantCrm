@@ -772,8 +772,22 @@ tbody tr:hover {
 }
 
 /* =========================
-   HIDDEN UTILITY
+   CARD BODY
 ========================= */
+
+.card-body {
+    padding: 0 2px 4px;
+}
+
+/* Forms inside card-body need their own padding */
+.card-body form,
+.card-body .table-wrap,
+.card-body .summary-list,
+.card-body .quick-actions {
+    padding: 0;
+}
+
+
 
 .hidden {
     display: none !important;
@@ -897,6 +911,7 @@ tbody tr:hover {
     height: 34px;
     border-radius: 50%;
     background: #f5f9fb;
+    border: none;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -906,6 +921,7 @@ tbody tr:hover {
     transition: background 0.2s ease;
     flex-shrink: 0;
     align-self: flex-start;
+    cursor: pointer;
 }
 
 .btn-icon-close:hover {
