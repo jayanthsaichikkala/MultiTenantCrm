@@ -56,7 +56,7 @@
 
             <p class="nav-label">System</p>
 
-            <a th:href="@{/manager/add}" th:classappend="${activePage == 'add-manager'} ? ' active' : ''" class="nav-item">
+            <a th:href="@{/admin/add-user}" th:classappend="${activePage == 'add-manager'} ? ' active' : ''" class="nav-item">
                 <i class="bx bxs-user-plus nav-icon"></i>
                 <span>Add Manager</span>
             </a>
@@ -68,7 +68,7 @@
         </nav>
 
         <div class="sidebar-bottom">
-            <a th:href="@{/logout}" class="nav-item logout">
+            <a href="#" data-logout class="nav-item logout">
                 <i class="bx bx-log-out nav-icon"></i>
                 <span>Logout</span>
             </a>
@@ -409,6 +409,6 @@
         });
     })();
 </script>
-
+<script th:src="@{/auth.js}" src="/auth.js"></script>
 </body>
 </html>

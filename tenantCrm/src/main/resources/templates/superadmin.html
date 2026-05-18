@@ -10,7 +10,6 @@
     <title>Super Admin Dashboard</title>
 
     <link rel="stylesheet" th:href="@{/superadmin.css}">
-
 </head>
 
 <body>
@@ -96,7 +95,7 @@
 
         <!-- LOGOUT -->
 
-		<a th:href="@{/logout}">
+		<a href="#" data-logout>
 		    <button class="logout-btn">
 		        🚪 Logout
 		    </button>
@@ -520,6 +519,7 @@
             });
         });
     </script>
+    <script th:src="@{/auth.js}" src="/auth.js"></script>
 </body>
 
 </html>

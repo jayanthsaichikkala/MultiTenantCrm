@@ -90,7 +90,7 @@
         </nav>
 
         <div class="sidebar-bottom">
-            <a th:href="@{/logout}" class="nav-item logout">
+            <a href="#" data-logout class="nav-item logout">
                 <span class="nav-icon"><i class="bx bx-log-out"></i></span>
                 <span>Logout</span>
             </a>
@@ -354,6 +354,7 @@
         overlay.classList.remove('open');
     });
 </script>
+<script th:src="@{/auth.js}" src="/auth.js"></script>
 
 </body>
 </html>

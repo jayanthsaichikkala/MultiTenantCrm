@@ -20,12 +20,13 @@
         <h2>Welcome Back</h2>
         <p class="subtitle">Sign in to your account to continue</p>
 
-        <!-- ERROR MESSAGE -->
-        <div class="error-msg" th:if="${error}" th:text="${error}"></div>
+        <!-- Error shown by JS -->
+        <div class="error-msg" id="errorMsg" style="display:none;"></div>
 
-        <form th:action="@{/login}" method="post">
+        <!-- No th:action — submission handled by JS fetch() -->
+        <form id="loginForm" onsubmit="handleLogin(event)">
 
-            <label for="username">Email</label>
+            <label for="username">Email / Username</label>
             <input type="text"
                    id="username"
                    name="username"
@@ -41,7 +42,7 @@
                    autocomplete="current-password"
                    required>
 
-            <button type="submit">Sign In</button>
+            <button type="submit" id="signInBtn">Sign In</button>
 
             <a href="#" class="forgot-link">Forgot password?</a>
 
@@ -49,6 +50,99 @@
 
     </div>
 
-</body>
+    <script>
+        // ── If a valid token already exists, skip the login page ──────────────
+        (function () {
+            const token = localStorage.getItem('jwt_token');
+            const role  = localStorage.getItem('jwt_role');
+            if (token && role) {
+                // Verify it hasn't expired client-side (decode payload)
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    if (payload.exp * 1000 > Date.now()) {
+                        window.location.href = redirectFor(role);
+                        return;
+                    }
+                } catch (e) { /* malformed token — fall through to login */ }
+            }
+            // Clear any stale data
+            localStorage.removeItem('jwt_token');
+            localStorage.removeItem('jwt_role');
+            localStorage.removeItem('jwt_username');
+        })();
 
+        // ── Handle form submit ────────────────────────────────────────────────
+        async function handleLogin(event) {
+            event.preventDefault();
+
+            const btn      = document.getElementById('signInBtn');
+            const errorDiv = document.getElementById('errorMsg');
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            btn.disabled    = true;
+            btn.textContent = 'Signing in…';
+            errorDiv.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.token) {
+                    // ── Store JWT in localStorage ─────────────────────────────
+                    localStorage.setItem('jwt_token',    data.token);
+                    localStorage.setItem('jwt_role',     data.role);
+                    localStorage.setItem('jwt_username', data.username);
+
+                    // ── Also store in cookie for Thymeleaf page navigation ────
+                    // The cookie carries the JWT on browser GET requests so the
+                    // server-side JwtAuthFilter can authenticate page loads.
+                    try {
+                        const payload = JSON.parse(atob(data.token.split('.')[1]));
+                        const expires = new Date(payload.exp * 1000).toUTCString();
+                        document.cookie = 'jwt_token=' + data.token
+                            + '; expires=' + expires
+                            + '; path=/'
+                            + '; SameSite=Strict';
+                    } catch (e) {
+                        document.cookie = 'jwt_token=' + data.token + '; path=/; SameSite=Strict';
+                    }
+
+                    // ── Navigate to the role dashboard ────────────────────────
+                    window.location.href = data.redirect;
+                } else {
+                    showError(data.error || 'Login failed. Please try again.');
+                }
+            } catch (err) {
+                showError('Network error. Please check your connection.');
+            } finally {
+                btn.disabled    = false;
+                btn.textContent = 'Sign In';
+            }
+        }
+
+        function showError(msg) {
+            const div = document.getElementById('errorMsg');
+            div.textContent    = msg;
+            div.style.display  = 'block';
+        }
+
+        function redirectFor(role) {
+            const map = {
+                'SUPER_ADMIN': '/superadmin',
+                'ADMIN':       '/admin/dashboard',
+                'MANAGER':     '/manager/dashboard',
+                'HR':          '/hr/dashboard',
+                'EMPLOYEE':    '/employee/dashboard'
+            };
+            return map[role] || '/login';
+        }
+    </script>
+
+</body>
 </html>

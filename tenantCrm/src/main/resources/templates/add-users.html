@@ -52,7 +52,7 @@
                 <span>Dashboard</span>
             </a>
 
-            <a th:href="@{/manager/add}" class="nav-item active">
+            <a th:href="@{/admin/add-user}" class="nav-item active">
                 <span class="nav-icon">
                     <i class="bx bxs-user-plus"></i>
                 </span>
@@ -72,7 +72,7 @@
 
         <div class="sidebar-bottom">
 
-            <a th:href="@{/logout}" class="nav-item logout">
+            <a href="#" data-logout class="nav-item logout">
                 <span class="nav-icon">
                     <i class="bx bx-log-out"></i>
                 </span>
@@ -202,7 +202,7 @@
                             <span th:text="${errorMessage}"></span>
                         </div>
 
-                        <form th:action="@{/manager/add}" method="post">
+                        <form th:action="@{/admin/add-user}" method="post">
 
                             <!-- EMAIL -->
                             <div style="margin-bottom:18px;">
@@ -531,6 +531,7 @@
     });
 
 </script>
+<script th:src="@{/auth.js}" src="/auth.js"></script>
 
 </body>
 </html>

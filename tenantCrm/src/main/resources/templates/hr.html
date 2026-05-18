@@ -40,7 +40,7 @@
 								class="fas fa-envelope-open-text"></i><span>Leave Request</span></a></li>
 					<li class="nav-item"><a href="#" class="nav-link"><i
 								class="fas fa-cog"></i><span>Settings</span></a></li>
-					<li class="nav-item logout-item"><a th:href="@{/logout}" href="/logout" class="nav-link"><i
+					<li class="nav-item logout-item"><a href="#" data-logout class="nav-link"><i
 								class="fas fa-sign-out-alt"></i><span>Log out</span></a></li>
 				</ul>
 			</nav>
@@ -275,8 +275,7 @@
 	</div>
 
 	<!-- JavaScript for Sidebar & Chart (empty data to be replaced) -->
-	<script>
-		// Sidebar toggle logic
+	<script>		// Sidebar toggle logic
 		const hamburger = document.getElementById('hamburgerBtn');
 		const sidebar = document.getElementById('sidebar');
 		const overlay = document.getElementById('mobileOverlay');
@@ -314,6 +313,7 @@
 		// Example: you can update chart data dynamically via backend model
 		// e.g., using th:inline="javascript" to inject monthlyData array.
 	</script>
+	<script th:src="@{/auth.js}" src="/auth.js"></script>
 </body>
 
 </html>

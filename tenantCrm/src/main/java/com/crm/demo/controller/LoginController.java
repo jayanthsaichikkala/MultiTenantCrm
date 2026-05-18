@@ -1,70 +1,78 @@
 package com.crm.demo.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-
 import com.crm.demo.model.User;
 import com.crm.demo.repository.UserRepository;
+import com.crm.demo.security.JwtUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @Controller
 public class LoginController {
 
-	@Autowired
-	private UserRepository userRepository;
+    @Autowired private UserRepository      userRepository;
+    @Autowired private BCryptPasswordEncoder passwordEncoder;
+    @Autowired private JwtUtil             jwtUtil;
 
-	@Autowired
-	private BCryptPasswordEncoder passwordEncoder;
+    // ─── Serve the login HTML page ────────────────────────────────────────────────
+    @GetMapping("/login")
+    public String loginPage() {
+        return "login";
+    }
 
-	// ─── LOGIN PAGE
-	// ───────────────────────────────────────────────────────────────
-	@GetMapping("/login")
-	public String loginPage() {
-		return "login";
-	}
+    // ─── REST: authenticate and return JWT ───────────────────────────────────────
+    // Called by the login form via fetch() — returns JSON, no redirect
+    @PostMapping("/api/auth/login")
+    @ResponseBody
+    public ResponseEntity<?> authenticate(@RequestBody Map<String, String> body) {
 
-	// ─── LOGIN PROCESS
-	// ────────────────────────────────────────────────────────────
-	@PostMapping("/login")
-	public String loginUser(@RequestParam String username, @RequestParam String password, Model model) {
+        String username = body.get("username");
+        String password = body.get("password");
 
-		// Find user by username OR email
-		User user = userRepository.findByUsernameOrEmail(username, username);
+        if (username == null || password == null) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Username and password are required."));
+        }
 
-		// Verify user exists and BCrypt hash matches the submitted password
-		if (user != null && passwordEncoder.matches(password, user.getPassword())) {
+        User user = userRepository.findByUsernameOrEmail(username, username);
 
-			String role = user.getRole();
+        if (user != null && passwordEncoder.matches(password, user.getPassword())) {
+            String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
 
-			if ("SUPER_ADMIN".equalsIgnoreCase(role)) {
-				return "redirect:/superadmin";
-			} else if ("ADMIN".equalsIgnoreCase(role)) {
-				return "redirect:/admin/dashboard";
-			} else if ("MANAGER".equalsIgnoreCase(role)) {
-				return "redirect:/manager/dashboard";
-			} else if ("HR".equalsIgnoreCase(role)) {
-				return "redirect:/hr/dashboard";
-			} else if ("EMPLOYEE".equalsIgnoreCase(role)) {
-				return "redirect:/employee/dashboard";
-			} else {
-				model.addAttribute("error", "You do not have permission to access this panel.");
-				return "login";
-			}
-		}
+            return ResponseEntity.ok(Map.of(
+                    "token",    token,
+                    "username", user.getUsername(),
+                    "role",     user.getRole(),
+                    "redirect", dashboardFor(user.getRole())
+            ));
+        }
 
-		// Wrong credentials
-		model.addAttribute("error", "Invalid Username or Password");
-		return "login";
-	}
+        return ResponseEntity.status(401)
+                .body(Map.of("error", "Invalid username or password."));
+    }
 
-	// ─── LOGOUT
-	// ───────────────────────────────────────────────────────────────────
-	@GetMapping("/logout")
-	public String logout() {
-		return "redirect:/login";
-	}
+    // ─── Logout: client just deletes the token from localStorage ─────────────────
+    // This endpoint is optional — kept for convenience (e.g. server-side audit log)
+    @GetMapping("/logout")
+    public String logout() {
+        // Nothing to invalidate server-side — token lives only in the browser
+        return "redirect:/login";
+    }
+
+    // ─── Helper ───────────────────────────────────────────────────────────────────
+    private String dashboardFor(String role) {
+        if (role == null) return "/login";
+        return switch (role.toUpperCase()) {
+            case "SUPER_ADMIN" -> "/superadmin";
+            case "ADMIN"       -> "/admin/dashboard";
+            case "MANAGER"     -> "/manager/dashboard";
+            case "HR"          -> "/hr/dashboard";
+            case "EMPLOYEE"    -> "/employee/dashboard";
+            default            -> "/login";
+        };
+    }
 }

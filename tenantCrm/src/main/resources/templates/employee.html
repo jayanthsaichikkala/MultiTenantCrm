@@ -37,7 +37,7 @@
 								class="fas fa-envelope-open-text"></i><span>Leave Request</span></a></li>
 					<li class="nav-item"><a href="#" class="nav-link"><i
 								class="fas fa-cog"></i><span>Settings</span></a></li>
-					<li class="nav-item logout-item"><a th:href="@{/logout}" href="/logout" class="nav-link"><i
+					<li class="nav-item logout-item"><a href="#" data-logout class="nav-link"><i
 								class="fas fa-sign-out-alt"></i><span>Log out</span></a></li>
 				</ul>
 			</nav>
@@ -260,6 +260,7 @@
 			document.addEventListener('click', function (e) {if (!bell.contains(e.target)) {const drop = bell.querySelector('.notification-dropdown'); if (drop) drop.classList.remove('show-dropdown');} });
 		}
 	</script>
+	<script th:src="@{/auth.js}" src="/auth.js"></script>
 </body>
 
 </html>
