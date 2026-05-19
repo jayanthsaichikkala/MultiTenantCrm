@@ -1,305 +1,266 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
 /* =========================
    RESET
 ========================= */
-
-*,
-*::before,
-*::after {
-	margin: 0;
-	padding: 0;
-	box-sizing: border-box;
-	font-family: 'DM Sans', sans-serif;
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 /* =========================
-   BODY
+   BODY — matches dashboard gradient
 ========================= */
-
 body {
-	min-height: 100vh;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	padding: 24px 16px;
-	background: #f4f3ff;
-	background-image:
-		radial-gradient(circle at 20% 20%, rgba(167, 139, 250, 0.14) 0%, transparent 50%),
-		radial-gradient(circle at 80% 80%, rgba(196, 181, 253, 0.16) 0%, transparent 50%),
-		radial-gradient(circle at 60% 10%, rgba(221, 214, 254, 0.18) 0%, transparent 40%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 24px 16px;
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(160deg, #cfe6ef 0%, #b7d7e5 100%);
+    color: #163647;
 }
 
 /* =========================
-   CARD
+   CARD — matches .card style
 ========================= */
-
 .login-container {
-	background: #ffffff;
-	padding: 44px 40px;
-	width: 100%;
-	max-width: 420px;
-	border-radius: 24px;
-	border: 1px solid rgba(167, 139, 250, 0.18);
-	box-shadow:
-		0 4px 6px rgba(109, 40, 217, 0.04),
-		0 12px 40px rgba(109, 40, 217, 0.09),
-		0 1px 2px rgba(0, 0, 0, 0.04);
-	animation: floatIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    background: #ffffff;
+    padding: 36px 32px;
+    width: 100%;
+    max-width: 380px;
+    border-radius: 28px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.13);
+    animation: floatIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes floatIn {
-	from {
-		opacity: 0;
-		transform: translateY(20px) scale(0.98);
-	}
-
-	to {
-		opacity: 1;
-		transform: translateY(0) scale(1);
-	}
+    from { opacity: 0; transform: translateY(22px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    }
 }
 
 /* =========================
-   BRAND ICON
+   BRAND ICON — matches .logo-icon
 ========================= */
-
 .brand-icon {
-	display: flex;
-	justify-content: center;
-	margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 16px;
 }
 
 .brand-icon span {
-	width: 52px;
-	height: 52px;
-	background: linear-gradient(135deg, #ede9fe, #ddd6fe);
-	border-radius: 14px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-size: 24px;
-	box-shadow: 0 4px 12px rgba(109, 40, 217, 0.12);
+    width: 48px;
+    height: 48px;
+    background: #17455e;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 6px 18px rgba(23, 69, 94, 0.28);
 }
 
 /* =========================
    HEADING
 ========================= */
-
 .login-container h2 {
-	text-align: center;
-	margin-bottom: 6px;
-	color: #1e1b4b;
-	font-size: 22px;
-	font-weight: 600;
-	letter-spacing: -0.3px;
+    text-align: center;
+    margin-bottom: 4px;
+    color: #163647;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
 }
 
 .login-container .subtitle {
-	text-align: center;
-	font-size: 13.5px;
-	color: #9ca3af;
-	margin-bottom: 30px;
-	font-weight: 400;
+    text-align: center;
+    font-size: 12.5px;
+    color: #6b7280;
+    margin-bottom: 24px;
+    font-weight: 400;
 }
 
 /* =========================
-   ERROR MESSAGE
+   ERROR MESSAGE — matches .toast.error
 ========================= */
-
 .error-msg {
-	background: #fef2f2;
-	color: #dc2626;
-	border: 1px solid #fecaca;
-	border-radius: 10px;
-	padding: 10px 14px;
-	font-size: 13px;
-	font-weight: 500;
-	margin-bottom: 20px;
-	text-align: center;
+    background: #fdecec;
+    color: #d11a2a;
+    border-radius: 12px;
+    padding: 11px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 20px;
+    text-align: center;
 }
 
 /* =========================
    LABELS
 ========================= */
-
 label {
-	font-size: 13px;
-	font-weight: 500;
-	color: #4b5563;
-	display: block;
-	margin-bottom: 7px;
-	letter-spacing: 0.1px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #163647;
+    display: block;
+    margin-bottom: 6px;
 }
 
 /* =========================
-   FORGOT LINK
+   INPUTS — matches .input-wrap input
 ========================= */
-
-.forgot-link {
-	display: block;
-	text-align: center;
-	margin-top: 30px;
-	font-size: 11.5px;
-	font-weight: 500;
-	color: #7c3aed;
-	text-decoration: none;
-	transition: color 0.2s ease;
-}
-
-.forgot-link:hover {
-	color: #5b21b6;
-	text-decoration: underline;
-}
-
-/* =========================
-   INPUTS (shared styles)
-========================= */
-
 input {
-	width: 100%;
-	padding: 12px 14px;
-	border: 1.5px solid #e5e7eb;
-	border-radius: 12px;
-	margin-bottom: 18px;
-	font-size: 14px;
-	color: #1f2937;
-	background: #fafafa;
-	transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    width: 100%;
+    height: 46px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 12px;
+    margin-bottom: 14px;
+    font-size: 13.5px;
+    font-family: 'Poppins', sans-serif;
+    color: #163647;
+    background: #f5f9fb;
+    transition: background 0.25s ease, box-shadow 0.25s ease;
 }
 
 input::placeholder {
-	color: #c4b5fd;
-	font-weight: 400;
+    color: #8aa7b6;
+    font-weight: 400;
 }
 
 input:focus {
-	border-color: #a78bfa;
-	outline: none;
-	background: #ffffff;
-	box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.15);
+    outline: none;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(23, 69, 94, 0.14);
 }
 
 /* =========================
    PASSWORD WRAPPER + EYE
 ========================= */
-
 .password-wrapper {
-	position: relative;
-	display: flex;
-	align-items: center;
-	margin-bottom: 18px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-bottom: 14px;
 }
 
-/* Remove the default bottom margin from the input inside wrapper
-   (wrapper itself carries the 18px gap) */
 .password-wrapper input {
-	margin-bottom: 0;
-	/* right padding leaves room for the eye icon */
-	padding-right: 44px;
-	/* stretch to fill the wrapper */
-	width: 100%;
+    margin-bottom: 0;
+    padding-right: 44px;
+    width: 100%;
 }
 
-/* Eye toggle button */
 .eye-toggle {
-	position: absolute;
-	right: 0;
-	top: 0;
-	bottom: 0;
-	width: 44px;
-	background: transparent;
-	border: none;
-	border-radius: 0 12px 12px 0;
-	cursor: pointer;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	padding: 0;
-	margin: 0;
-	box-shadow: none;
-	transform: none !important;
-	transition: color 0.2s ease;
-	color: #c4b5fd;
-	line-height: 1;
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 44px;
+    background: transparent;
+    border: none;
+    border-radius: 0 12px 12px 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: #8aa7b6;
+    transition: color 0.2s ease;
+    box-shadow: none;
+    transform: none !important;
 }
 
-.eye-toggle:hover {
-	color: #7c3aed;
-	background: transparent;
-	box-shadow: none;
-	transform: none !important;
-}
-
-.eye-toggle:active {
-	transform: none !important;
-	box-shadow: none;
-}
-
-.eye-toggle:focus {
-	outline: none;
-}
-
-.eye-toggle svg {
-	display: block;
-	flex-shrink: 0;
-	pointer-events: none;
-}
+.eye-toggle:hover  { color: #17455e; background: transparent; box-shadow: none; }
+.eye-toggle:active { transform: none !important; box-shadow: none; }
+.eye-toggle:focus  { outline: none; }
+.eye-toggle svg    { display: block; flex-shrink: 0; pointer-events: none; }
 
 /* =========================
-   SUBMIT BUTTON
+   SUBMIT BUTTON — matches .btn-primary
 ========================= */
-
 button[type="submit"] {
-	width: 100%;
-	padding: 13px;
-	background: linear-gradient(135deg, #7c3aed, #6d28d9);
-	color: white;
-	border: none;
-	border-radius: 12px;
-	font-size: 15px;
-	font-weight: 600;
-	cursor: pointer;
-	letter-spacing: 0.1px;
-	transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
-	box-shadow: 0 4px 16px rgba(109, 40, 217, 0.3);
-	margin-top: 6px;
+    width: 100%;
+    height: 46px;
+    background: #17455e;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Poppins', sans-serif;
+    cursor: pointer;
+    letter-spacing: 0.1px;
+    transition: background 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+    box-shadow: 0 6px 16px rgba(23, 69, 94, 0.28);
+    margin-top: 4px;
 }
 
 button[type="submit"]:hover {
-	background: linear-gradient(135deg, #6d28d9, #5b21b6);
-	box-shadow: 0 6px 22px rgba(109, 40, 217, 0.38);
-	transform: translateY(-1px);
+    background: #21556f;
+    box-shadow: 0 10px 22px rgba(23, 69, 94, 0.34);
+    transform: translateY(-2px);
 }
 
 button[type="submit"]:active {
-	transform: translateY(0);
-	box-shadow: 0 2px 8px rgba(109, 40, 217, 0.25);
+    transform: translateY(0);
+    box-shadow: 0 4px 10px rgba(23, 69, 94, 0.2);
+}
+
+button[type="submit"]:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
 }
 
 /* =========================
-   RESPONSIVE — 480px
+   FORGOT LINK
 ========================= */
+.forgot-link {
+    display: block;
+    text-align: center;
+    margin-top: 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #17455e;
+    text-decoration: none;
+    transition: color 0.2s ease;
+    opacity: 0.7;
+}
 
+.forgot-link:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
 @media (max-width: 480px) {
-	.login-container {
-		padding: 32px 24px;
-		border-radius: 20px;
-	}
+    body {
+        padding: 16px 12px;
+        align-items: flex-start;
+        padding-top: 40px;
+    }
 
-	.login-container h2 {
-		font-size: 20px;
-	}
+    .login-container {
+        padding: 28px 22px;
+        border-radius: 22px;
+    }
 
-	.brand-icon span {
-		width: 46px;
-		height: 46px;
-		font-size: 20px;
-	}
+    .login-container h2 { font-size: 18px; }
+
+    .brand-icon span {
+        width: 42px;
+        height: 42px;
+        font-size: 20px;
+        border-radius: 14px;
+    }
+
+    input, button[type="submit"] { height: 44px; }
 }
 
 @media (max-width: 360px) {
-	.login-container {
-		padding: 28px 18px;
-	}
+    .login-container { padding: 24px 16px; }
+    .login-container h2 { font-size: 17px; }
 }

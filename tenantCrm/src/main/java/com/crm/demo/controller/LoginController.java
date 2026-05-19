@@ -41,6 +41,13 @@ public class LoginController {
         User user = userRepository.findByUsernameOrEmail(username, username);
 
         if (user != null && passwordEncoder.matches(password, user.getPassword())) {
+
+            // Block inactive users from logging in
+            if (!user.isActive()) {
+                return ResponseEntity.status(403)
+                        .body(Map.of("error", "Your account is inactive. Please contact your administrator."));
+            }
+
             String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
 
             return ResponseEntity.ok(Map.of(

@@ -84,7 +84,7 @@
                          (${activePage == 'admins'}   ? 'Admins' :
                          (${activePage == 'views'}    ? 'Views'  : 'Profile'))">Dashboard</h1>
 				<p class="topbar-subtitle"
-					th:text="${activePage == 'dashboard'} ? 'Welcome back, Super Admin 👋' :
+					th:text="
                         (${activePage == 'admins'}   ? 'Manage all administrator accounts' :
                         (${activePage == 'views'}    ? 'Analytics and overview reports' : 'Manage your account settings'))">
 					Welcome back

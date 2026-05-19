@@ -19,7 +19,7 @@
 <div class="sidebar" id="sidebar">
     <div class="sidebar-logo">
         <div class="logo-icon">&#128737;</div>
-        <h2>CRM</h2>
+        <h2>Admin</h2>
     </div>
     <div class="profile-box">
         <div class="profile-avatar" th:text="${#strings.substring(adminName ?: 'Admin', 0, 1).toUpperCase()}">A</div>
@@ -74,7 +74,6 @@
 
         <!-- ===================== DASHBOARD PAGE ===================== -->
         <div th:if="${activePage == 'dashboard'}">
-            <p class="page-subtitle" th:text="${pageSubtitle}">Welcome back!</p>
 
             <!-- Stats Row -->
             <div class="stats-row">

@@ -35,6 +35,47 @@ public class AdminController {
         model.addAttribute("adminRole", role     != null ? role     : "ADMIN");
     }
 
+    /**
+     * Derive the tenant segment from the logged-in admin's email.
+     *
+     * Email format:  <prefix>.<tenant>@<domain>
+     * Example:       admin.tcs@crm.com  →  "tcs"
+     *                admin.amazon@crm.com → "amazon"
+     *
+     * The segment is the part between the last dot before '@' and the '@'.
+     * Falls back to the full local-part if no dot is found.
+     *
+     * SUPER_ADMIN (whose email has no tenant segment) gets null → sees everyone.
+     */
+    private String getTenantSegment(HttpServletRequest request) {
+        String username = (String) request.getAttribute("loggedInUser");
+        String role     = (String) request.getAttribute("loggedInRole");
+
+        // Super-admin sees all tenants
+        if ("SUPER_ADMIN".equalsIgnoreCase(role)) return null;
+
+        if (username == null) return null;
+        User admin = userRepository.findByUsername(username);
+        if (admin == null || admin.getEmail() == null) return null;
+
+        String email     = admin.getEmail();                  // e.g. admin.tcs@crm.com
+        String localPart = email.contains("@")
+                           ? email.substring(0, email.indexOf('@'))
+                           : email;                           // e.g. admin.tcs
+        int lastDot = localPart.lastIndexOf('.');
+        return lastDot >= 0
+               ? localPart.substring(lastDot + 1)            // e.g. "tcs"
+               : localPart;
+    }
+
+    /** Return tenant-scoped user list (or all users for SUPER_ADMIN). */
+    private List<User> getTenantUsers(HttpServletRequest request) {
+        String segment = getTenantSegment(request);
+        return segment != null
+               ? userRepository.findByTenantSegment(segment)
+               : userRepository.findAll();
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     //  DASHBOARD
     // ═══════════════════════════════════════════════════════════════════════
@@ -43,7 +84,7 @@ public class AdminController {
         injectUser(request, model);
 
         String username = (String) request.getAttribute("loggedInUser");
-        List<User> allUsers = userRepository.findAll();
+        List<User> allUsers = getTenantUsers(request);
         List<Project> allProjects = projectRepository.findAll();
         List<Task> allTasks = taskRepository.findAll();
 
@@ -81,7 +122,7 @@ public class AdminController {
     @GetMapping("/employees")
     public String employeesPage(HttpServletRequest request, Model model) {
         injectUser(request, model);
-        List<User> employees = userRepository.findAll().stream()
+        List<User> employees = getTenantUsers(request).stream()
                 .filter(u -> "EMPLOYEE".equalsIgnoreCase(u.getRole())).toList();
         long active   = employees.stream().filter(User::isActive).count();
         long inactive = employees.size() - active;
@@ -243,7 +284,7 @@ public class AdminController {
     @GetMapping("/reports")
     public String reportsPage(HttpServletRequest request, Model model) {
         injectUser(request, model);
-        List<User> allUsers = userRepository.findAll();
+        List<User> allUsers = getTenantUsers(request);
         List<Project> allProjects = projectRepository.findAll();
         List<Task> allTasks = taskRepository.findAll();
 
@@ -269,7 +310,7 @@ public class AdminController {
     @GetMapping("/add-user")
     public String addUserPage(HttpServletRequest request, Model model) {
         injectUser(request, model);
-        List<User> users = userRepository.findAll();
+        List<User> users = getTenantUsers(request);
         model.addAttribute("managers",      users);
         model.addAttribute("totalManagers", users.size());
         model.addAttribute("activeCount",   users.stream().filter(u -> "active".equalsIgnoreCase(u.getStatus()) || u.getStatus() == null).count());
@@ -289,6 +330,15 @@ public class AdminController {
             ra.addFlashAttribute("errorMessage", "Passwords do not match.");
             return "redirect:/admin/add-user";
         }
+
+        // Enforce tenant domain: new user's email must contain the admin's tenant segment
+        String segment = getTenantSegment(request);
+        if (segment != null && !email.contains("." + segment + "@")) {
+            ra.addFlashAttribute("errorMessage",
+                    "Email must belong to your tenant domain (e.g. user." + segment + "@crm.com).");
+            return "redirect:/admin/add-user";
+        }
+
         if (userRepository.findByUsernameOrEmail(username, email) != null) {
             ra.addFlashAttribute("errorMessage", "Username or email already exists.");
             return "redirect:/admin/add-user";
@@ -317,7 +367,7 @@ public class AdminController {
         model.addAttribute("pageHeading", "Settings");
         model.addAttribute("activePage",  "settings");
         model.addAttribute("adminEmail",  admin != null ? admin.getEmail() : "");
-        model.addAttribute("settingsTotalUsers", userRepository.count());
+        model.addAttribute("settingsTotalUsers", getTenantUsers(request).size());
         return "admin";
     }
 

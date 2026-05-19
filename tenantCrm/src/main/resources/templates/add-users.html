@@ -19,7 +19,7 @@
 <div class="sidebar" id="sidebar">
     <div class="sidebar-logo">
         <div class="logo-icon">&#128737;</div>
-        <h2>CRM</h2>
+        <h2>Admin</h2>
     </div>
     <div class="profile-box">
         <div class="profile-avatar" th:text="${#strings.substring(adminName ?: 'Admin', 0, 1).toUpperCase()}">A</div>
@@ -160,10 +160,18 @@
                     <h2>Existing Employees</h2>
                     <p th:text="${totalManagers} + ' registered employee(s)'">0 registered employee(s)</p>
                 </div>
-                <button type="button" class="btn btn-primary" id="openAddForm"
-                        style="display:inline-flex;align-items:center;gap:6px;">
-                    &#10133; Add Employee
-                </button>
+                <div style="display:inline-flex;align-items:center;gap:10px;">
+                    <select id="statusFilter" class="select-input"
+                            style="padding:8px 14px;border-radius:8px;border:1.5px solid #e5e7eb;font-size:13px;background:#fff;cursor:pointer;min-width:130px;">
+                        <option value="all">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                    <button type="button" class="btn btn-primary" id="openAddForm"
+                            style="display:inline-flex;align-items:center;gap:6px;">
+                        &#10133; Add Employee
+                    </button>
+                </div>
             </div>
             <div class="table-wrap">
                 <table id="usersTable">
@@ -250,15 +258,29 @@
         showForm();
     }
 
-    // Search filter
+    // Search + Status filter
+    function applyFilters() {
+        var q      = (document.getElementById('userSearch').value || '').toLowerCase();
+        var status = (document.getElementById('statusFilter').value || 'all').toLowerCase();
+        document.querySelectorAll('#usersTable tbody tr').forEach(function(row) {
+            var text        = row.textContent.toLowerCase();
+            var statusBadge = row.querySelector('.status-badge');
+            var rowStatus   = statusBadge ? statusBadge.textContent.trim().toLowerCase() : 'active';
+
+            var matchSearch = q === '' || text.indexOf(q) > -1;
+            var matchStatus = status === 'all' || rowStatus === status;
+            row.style.display = (matchSearch && matchStatus) ? '' : 'none';
+        });
+    }
+
     var searchInput = document.getElementById('userSearch');
     if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            var q = this.value.toLowerCase();
-            document.querySelectorAll('#usersTable tbody tr').forEach(function(row) {
-                row.style.display = row.textContent.toLowerCase().indexOf(q) > -1 ? '' : 'none';
-            });
-        });
+        searchInput.addEventListener('input', applyFilters);
+    }
+
+    var statusFilter = document.getElementById('statusFilter');
+    if (statusFilter) {
+        statusFilter.addEventListener('change', applyFilters);
     }
 </script>
 <script th:src="@{/auth.js}"></script>
