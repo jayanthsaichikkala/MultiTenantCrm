@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Users — CRM</title>
+    <title>Employees — CRM</title>
     <link rel="stylesheet" th:href="@{/admin.css}">
 </head>
 <body>
@@ -30,23 +30,20 @@
         <li>
             <a th:href="@{/admin/dashboard}">&#128202; Dashboard</a>
         </li>
-        <li>
-            <a th:href="@{/employees}">&#128101; Employees</a>
-        </li>
-        <li>
-            <a th:href="@{/projects}">&#128193; Projects</a>
-        </li>
-        <li>
-            <a th:href="@{/tasks}">&#9989; Tasks</a>
-        </li>
-        <li>
-            <a th:href="@{/reports}">&#128196; Reports</a>
-        </li>
         <li class="active">
-            <a th:href="@{/admin/add-user}">&#128100; Add Users</a>
+            <a th:href="@{/admin/add-user}">&#128101; Employees</a>
         </li>
         <li>
-            <a th:href="@{/settings}">&#9881; Settings</a>
+            <a th:href="@{/admin/projects}">&#128193; Projects</a>
+        </li>
+        <li>
+            <a th:href="@{/admin/tasks}">&#9989; Tasks</a>
+        </li>
+        <li>
+            <a th:href="@{/admin/reports}">&#128196; Reports</a>
+        </li>
+        <li>
+            <a th:href="@{/admin/settings}">&#9881; Settings</a>
         </li>
     </ul>
     <a href="#" data-logout style="text-decoration:none;">
@@ -59,10 +56,10 @@
 
     <!-- TOPBAR -->
     <div class="topbar">
-        <h1>User Management</h1>
+        <h1>Employee Management</h1>
         <div class="topbar-right">
             <div class="search-box">
-                <input type="text" id="userSearch" placeholder="Search users…">
+                <input type="text" id="userSearch" placeholder="Search employees…">
             </div>
             <a th:href="@{/admin/dashboard}" class="back-btn">&#8592; Dashboard</a>
             <div class="user-badge" th:text="${#strings.substring(adminName ?: 'Admin', 0, 1).toUpperCase()}">A</div>
@@ -78,14 +75,14 @@
                 <div class="stat-icon green">&#128101;</div>
                 <div class="stat-info">
                     <h3 th:text="${totalManagers} ?: '0'">0</h3>
-                    <p>Total Users</p>
+                    <p>Total Employees</p>
                 </div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon blue">&#9989;</div>
                 <div class="stat-info">
                     <h3 th:text="${activeCount} ?: '0'">0</h3>
-                    <p>Active Users</p>
+                    <p>Active Employees</p>
                 </div>
             </div>
             <div class="stat-card">
@@ -101,12 +98,12 @@
         <div class="toast success" th:if="${successMessage}" th:text="${successMessage}"></div>
         <div class="toast error"   th:if="${errorMessage}"   th:text="${errorMessage}"></div>
 
-        <!-- ADD USER FORM — hidden by default, shown on button click -->
+        <!-- ADD EMPLOYEE FORM — hidden by default, shown on button click -->
         <div class="card au-form-card" id="addUserCard"
              th:class="${errorMessage != null} ? 'card au-form-card' : 'card au-form-card hidden'">
             <div class="card-header">
                 <div>
-                    <h2>Add New User</h2>
+                    <h2>Add New Employee</h2>
                     <p>Fill in the details below</p>
                 </div>
                 <button type="button" class="au-close-btn" id="closeAddForm" title="Close">&#10005;</button>
@@ -151,21 +148,21 @@
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-clear" id="cancelAddForm">Cancel</button>
-                    <button type="submit" class="btn btn-primary">&#10133; Add User</button>
+                    <button type="submit" class="btn btn-primary">&#10133; Add Employee</button>
                 </div>
             </form>
         </div>
 
-        <!-- EXISTING USERS TABLE — full width -->
+        <!-- EXISTING EMPLOYEES TABLE — full width -->
         <div class="card">
             <div class="card-header">
                 <div>
-                    <h2>Existing Users</h2>
-                    <p th:text="${totalManagers} + ' registered user(s)'">0 registered user(s)</p>
+                    <h2>Existing Employees</h2>
+                    <p th:text="${totalManagers} + ' registered employee(s)'">0 registered employee(s)</p>
                 </div>
                 <button type="button" class="btn btn-primary" id="openAddForm"
                         style="display:inline-flex;align-items:center;gap:6px;">
-                    &#10133; Add User
+                    &#10133; Add Employee
                 </button>
             </div>
             <div class="table-wrap">
@@ -173,7 +170,7 @@
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>User</th>
+                            <th>Employee</th>
                             <th>Email</th>
                             <th>Role</th>
                             <th>Status</th>
@@ -203,9 +200,9 @@
                         <tr th:if="${managers == null or #lists.isEmpty(managers)}">
                             <td colspan="5">
                                 <div class="empty-state">
-                                    <div style="font-size:48px;">&#128100;</div>
-                                    <h3>No Users Yet</h3>
-                                    <p>Click "Add User" to create the first user.</p>
+                                    <div style="font-size:48px;">&#128101;</div>
+                                    <h3>No Employees Yet</h3>
+                                    <p>Click "Add Employee" to create the first one.</p>
                                 </div>
                             </td>
                         </tr>
