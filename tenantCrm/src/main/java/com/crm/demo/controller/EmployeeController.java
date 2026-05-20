@@ -29,9 +29,9 @@ public class EmployeeController {
 
     // ── helpers ───────────────────────────────────────────────────────────
 
-    private void injectUser(HttpServletRequest request, Model model) {
-        String username = (String) request.getAttribute("loggedInUser");
-        model.addAttribute("employeeName", username != null ? username : "Employee");
+    private void injectUser(Model model) {
+        User emp = getCurrentEmployee();
+        model.addAttribute("employeeName", emp != null ? emp.getUsername() : "Employee");
         model.addAttribute("employeeRole", "Employee");
     }
 
@@ -69,22 +69,22 @@ public class EmployeeController {
     // ── pages ─────────────────────────────────────────────────────────────
 
     @GetMapping("/dashboard")
-    public String dashboard(HttpServletRequest request, Model model) {
-        injectUser(request, model);
+    public String dashboard(Model model) {
+        injectUser(model);
         injectStats(model);
         return "employee-dashboard";
     }
 
     @GetMapping("/projects")
-    public String projectsPage(HttpServletRequest request, Model model) {
-        injectUser(request, model);
+    public String projectsPage(Model model) {
+        injectUser(model);
         injectStats(model);
         return "employee-projects";
     }
 
     @GetMapping("/tasks")
-    public String tasksPage(HttpServletRequest request, Model model) {
-        injectUser(request, model);
+    public String tasksPage(Model model) {
+        injectUser(model);
         injectStats(model);
         return "employee-tasks";
     }
@@ -92,8 +92,8 @@ public class EmployeeController {
     // ── ATTENDANCE ────────────────────────────────────────────────────────
 
     @GetMapping("/attendance")
-    public String attendancePage(HttpServletRequest request, Model model) {
-        injectUser(request, model);
+    public String attendancePage(Model model) {
+        injectUser(model);
         injectStats(model);
 
         User emp = getCurrentEmployee();
@@ -189,15 +189,15 @@ public class EmployeeController {
     // ── other pages ───────────────────────────────────────────────────────
 
     @GetMapping("/leaves")
-    public String leavesPage(HttpServletRequest request, Model model) {
-        injectUser(request, model);
+    public String leavesPage(Model model) {
+        injectUser(model);
         injectStats(model);
         return "employee-leaves";
     }
 
     @GetMapping("/settings")
-    public String settingsPage(HttpServletRequest request, Model model) {
-        injectUser(request, model);
+    public String settingsPage(Model model) {
+        injectUser(model);
         injectStats(model);
         User emp = getCurrentEmployee();
         model.addAttribute("employeeEmail", emp != null ? emp.getEmail() : "");
