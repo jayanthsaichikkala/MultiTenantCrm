@@ -116,7 +116,30 @@ tbody tr:hover { background:#f7fbfd; }
 .empty-state { text-align:center; padding:40px 20px; color:#6b7280; }
 .empty-state h3 { margin-top:12px; font-size:17px; font-weight:600; }
 
-@media (max-width:1200px) { .stats-row { grid-template-columns:repeat(2,1fr); } .dashboard-grid { grid-template-columns:1fr; } }
+/* Settings Page Styles */
+.settings-container { display:grid; grid-template-columns:2fr 1fr; gap:20px; align-items:start; }
+.settings-main { display:flex; flex-direction:column; }
+.settings-sidebar { display:flex; flex-direction:column; gap:18px; }
+.settings-form { display:flex; flex-direction:column; gap:16px; }
+.form-group { display:flex; flex-direction:column; gap:8px; }
+.form-group label { font-size:14px; font-weight:600; color:#163647; }
+.optional-text { color:#6b7280; font-weight:400; }
+.input-wrap { display:flex; }
+.input-wrap input { width:100%; padding:12px 14px; border:1px solid #d1dce3; border-radius:12px; font-size:14px; font-family:inherit; transition:border-color 0.2s ease,box-shadow 0.2s ease; }
+.input-wrap input:focus { outline:none; border-color:#17455e; box-shadow:0 0 0 3px rgba(23,69,94,0.1); }
+.form-actions { display:flex; gap:10px; margin-top:8px; }
+.btn { display:inline-flex; align-items:center; gap:8px; padding:12px 20px; border:none; border-radius:12px; font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; transition:all 0.2s ease; }
+.btn-primary { background:#17455e; color:white; }
+.btn-primary:hover { background:#1f5573; transform:translateY(-2px); box-shadow:0 4px 12px rgba(23,69,94,0.2); }
+.btn-primary:active { transform:translateY(0); }
+.info-section { display:flex; flex-direction:column; gap:0; }
+.info-row { display:flex; align-items:center; justify-content:space-between; padding:14px 0; border-bottom:1px solid #edf3f6; font-size:14px; }
+.info-row:last-child { border-bottom:none; }
+.info-label { color:#6b7280; font-weight:500; }
+.info-value { font-weight:700; color:#163647; }
+.role-badge { display:inline-flex; align-items:center; padding:6px 14px; border-radius:30px; background:#dcecf5; color:#17455e; font-size:12px; font-weight:700; }
+
+@media (max-width:1200px) { .stats-row { grid-template-columns:repeat(2,1fr); } .dashboard-grid { grid-template-columns:1fr; } .settings-container { grid-template-columns:1fr; } }
 @media (max-width:900px) {
   .mobile-topbar { display:flex; }
   .sidebar { left:0; top:0; bottom:0; border-radius:0 28px 28px 0; transform:translateX(-110%); }
