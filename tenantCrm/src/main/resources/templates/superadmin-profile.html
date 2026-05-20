@@ -18,7 +18,6 @@
     <ul class="sidebar-menu">
         <li><a th:href="@{/superadmin/dashboard}"><span class="menu-icon"><i data-lucide="layout-dashboard"></i></span> Dashboard</a></li>
         <li><a th:href="@{/superadmin/admins}"><span class="menu-icon"><i data-lucide="users"></i></span> Admins</a></li>
-        <li><a th:href="@{/superadmin/views}"><span class="menu-icon"><i data-lucide="eye"></i></span> Views</a></li>
         <li class="active"><a th:href="@{/superadmin/profile}"><span class="menu-icon"><i data-lucide="user"></i></span> Profile</a></li>
     </ul>
     <div class="sidebar-divider"></div>
@@ -26,7 +25,7 @@
 </div>
 <div class="main-wrapper">
     <div class="topbar">
-        <div><h1>Profile</h1><p class="topbar-subtitle">Manage your account settings</p></div>
+        <div><h1>Profile</h1><p class="topbar-subtitle">Manage your account settings</p><div class="breadcrumb"><a th:href="@{/superadmin/dashboard}"><i data-lucide="home"></i> Home</a><span>&#8250;</span><span>Profile</span></div></div>
         <div class="topbar-right">
             <div class="search-box"><span class="search-icon"><i data-lucide="search"></i></span><input type="text" placeholder="Search…"></div>
             <button class="notif-btn"><i data-lucide="bell"></i><span class="notif-dot"></span></button>
@@ -36,7 +35,6 @@
     <div class="page-content">
         <div class="toast success" th:if="${successMessage}"><i data-lucide="check-circle"></i> <span th:text="${successMessage}"></span></div>
         <div class="toast error"   th:if="${errorMessage}"><i data-lucide="alert-triangle"></i> <span th:text="${errorMessage}"></span></div>
-        <div class="breadcrumb"><a th:href="@{/superadmin/dashboard}"><i data-lucide="home"></i> Home</a><span>&#8250;</span><span>Profile</span></div>
         <div class="profile-page-grid">
             <div class="card profile-info-card">
                 <div class="profile-page-avatar">S</div>

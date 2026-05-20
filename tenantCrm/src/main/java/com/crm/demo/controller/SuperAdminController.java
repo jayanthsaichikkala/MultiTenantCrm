@@ -48,13 +48,17 @@ public class SuperAdminController {
     @GetMapping("/admins")
     public String adminsPage(Model model) {
         loadAdmins(model);
+        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        model.addAttribute("superAdminUser", userRepository.findByUsername(currentUsername));
         return "superadmin-admins";
     }
 
-    // ── Add Admin page (GET) — redirect to admins ──
+    // ── Add Admin page (GET) ──────────────────────────────────────────────────
     @GetMapping("/add-admin")
-    public String addAdminPage() {
-        return "redirect:/superadmin/admins";
+    public String addAdminPage(Model model) {
+        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        model.addAttribute("superAdminUser", userRepository.findByUsername(currentUsername));
+        return "superadmin-add-admin";
     }
 
     // ── Add Admin (POST) ──────────────────────────────────────────────────────
@@ -68,13 +72,11 @@ public class SuperAdminController {
 
         if (!password.equals(confirmPassword)) {
             ra.addFlashAttribute("errorMessage", "Passwords do not match.");
-            ra.addFlashAttribute("showAddForm", true);
-            return "redirect:/superadmin/admins";
+            return "redirect:/superadmin/add-admin";
         }
         if (userRepository.findByUsernameOrEmail(username, email) != null) {
             ra.addFlashAttribute("errorMessage", "Username or email already exists.");
-            ra.addFlashAttribute("showAddForm", true);
-            return "redirect:/superadmin/admins";
+            return "redirect:/superadmin/add-admin";
         }
 
         User newAdmin = new User();
@@ -96,9 +98,10 @@ public class SuperAdminController {
         if (admin == null || !"ADMIN".equalsIgnoreCase(admin.getRole())) {
             return "redirect:/superadmin/admins";
         }
-        loadAdmins(model);
+        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        model.addAttribute("superAdminUser", userRepository.findByUsername(currentUsername));
         model.addAttribute("editAdmin", admin);
-        return "superadmin-admins";
+        return "superadmin-edit-admin";
     }
 
     // ── Edit Admin (POST) — no password change, only username/email/status ────
@@ -156,11 +159,10 @@ public class SuperAdminController {
         return "redirect:/superadmin/admins";
     }
 
-    // ── Views page ────────────────────────────────────────────────────────────
+    // ── Views page — removed, redirect to dashboard ──────────────────────────
     @GetMapping("/views")
-    public String viewsPage(Model model) {
-        loadAdmins(model);
-        return "superadmin-views";
+    public String viewsPage() {
+        return "redirect:/superadmin/dashboard";
     }
 
     // ── Profile page ──────────────────────────────────────────────────────────

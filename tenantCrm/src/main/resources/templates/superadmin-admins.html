@@ -19,7 +19,6 @@
     <ul class="sidebar-menu">
         <li><a th:href="@{/superadmin/dashboard}"><span class="menu-icon"><i data-lucide="layout-dashboard"></i></span> Dashboard</a></li>
         <li class="active"><a th:href="@{/superadmin/admins}"><span class="menu-icon"><i data-lucide="users"></i></span> Admins</a></li>
-        <li><a th:href="@{/superadmin/views}"><span class="menu-icon"><i data-lucide="eye"></i></span> Views</a></li>
         <li><a th:href="@{/superadmin/profile}"><span class="menu-icon"><i data-lucide="user"></i></span> Profile</a></li>
     </ul>
     <div class="sidebar-divider"></div>
@@ -27,7 +26,7 @@
 </div>
 <div class="main-wrapper">
     <div class="topbar">
-        <div><h1>Admins</h1><p class="topbar-subtitle">Manage all administrator accounts</p></div>
+        <div><h1>Admins</h1><p class="topbar-subtitle">Manage all administrator accounts</p><div class="breadcrumb"><a th:href="@{/superadmin/dashboard}"><i data-lucide="home"></i> Home</a><span>&#8250;</span><span>Admins</span></div></div>
         <div class="topbar-right">
             <div class="search-box"><span class="search-icon"><i data-lucide="search"></i></span><input type="text" id="globalSearch" placeholder="Search admins…"></div>
             <button class="notif-btn"><i data-lucide="bell"></i><span class="notif-dot"></span></button>
@@ -37,43 +36,8 @@
     <div class="page-content">
         <div class="toast success" th:if="${successMessage}"><i data-lucide="check-circle"></i> <span th:text="${successMessage}"></span></div>
         <div class="toast error"   th:if="${errorMessage}"><i data-lucide="alert-triangle"></i> <span th:text="${errorMessage}"></span></div>
-        <div class="breadcrumb"><a th:href="@{/superadmin/dashboard}"><i data-lucide="home"></i> Home</a><span>&#8250;</span><span>Admins</span></div>
-        <div class="card edit-card hidden" id="addAdminCard" th:data-open="${showAddForm != null and showAddForm} ? 'true' : 'false'">
-            <div class="card-header"><div><h2>Add New Admin</h2><p>Create a new administrator account</p></div><button type="button" class="btn-icon-close" id="closeAddForm"><i data-lucide="x"></i></button></div>
-            <div class="card-body">
-                <form th:action="@{/superadmin/add-admin}" method="post">
-                    <div class="form-grid">
-                        <div class="form-group"><label>Email Address</label><div class="input-wrap"><input type="email" name="email" placeholder="admin@example.com" required></div></div>
-                        <div class="form-group"><label>Username</label><div class="input-wrap"><input type="text" name="username" placeholder="Enter username" required></div></div>
-                        <div class="form-group"><label>Password</label><div class="input-wrap"><input type="password" name="password" placeholder="Create password" required></div></div>
-                        <div class="form-group"><label>Confirm Password</label><div class="input-wrap"><input type="password" name="confirmPassword" placeholder="Confirm password" required></div></div>
-                        <div class="form-group"><label>Status</label><div class="input-wrap"><select name="status" class="select-input"><option value="active">Active</option><option value="inactive">Inactive</option></select></div></div>
-                    </div>
-                    <div class="form-actions"><button type="button" class="btn btn-clear" id="cancelAddForm">Cancel</button><button type="submit" class="btn btn-primary"><i data-lucide="user-plus"></i> Add Admin</button></div>
-                </form>
-            </div>
-        </div>
-        <div class="card edit-card" th:if="${editAdmin != null}">
-            <div class="card-header"><div><h2>Edit Admin</h2><p>Update administrator details</p></div><a th:href="@{/superadmin/admins}" class="btn-icon-close"><i data-lucide="x"></i></a></div>
-            <div class="card-body">
-                <form th:action="@{/superadmin/edit-admin/{id}(id=${editAdmin.id})}" method="post">
-                    <div class="form-grid">
-                        <div class="form-group"><label>Email Address</label><div class="input-wrap"><input type="email" name="email" th:value="${editAdmin.email}" required></div></div>
-                        <div class="form-group"><label>Username</label><div class="input-wrap"><input type="text" name="username" th:value="${editAdmin.username}" required></div></div>
-                        <div class="form-group" style="grid-column:1/-1;"><label>Status</label>
-                            <div class="toggle-field">
-                                <input type="hidden" name="status" id="editStatusHidden" th:value="${editAdmin.status}">
-                                <button type="button" th:class="${editAdmin.status == 'active'} ? 'toggle-btn active' : 'toggle-btn inactive'" id="editStatusToggle" onclick="toggleEditStatus()"><span class="toggle-knob"></span></button>
-                                <span class="toggle-label" id="editStatusLabel" th:text="${editAdmin.status == 'active'} ? 'Active' : 'Inactive'">Active</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-actions"><a th:href="@{/superadmin/admins}" class="btn btn-outline-cancel">Cancel</a><button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Save Changes</button></div>
-                </form>
-            </div>
-        </div>
         <div class="card">
-            <div class="card-header"><div><h2>All Admins</h2><p th:text="${totalAdmins} + ' administrator(s) registered'">0 administrator(s)</p></div><button type="button" class="btn btn-primary" id="openAddForm"><i data-lucide="user-plus"></i> Add Admin</button></div>
+            <div class="card-header"><div><h2>All Admins</h2><p th:text="${totalAdmins} + ' administrator(s) registered'">0 administrator(s)</p></div><a th:href="@{/superadmin/add-admin}" class="btn btn-primary"><i data-lucide="user-plus"></i> Add Admin</a></div>
             <div class="card-body">
                 <div class="table-wrap">
                     <table id="adminsTable">
@@ -109,18 +73,10 @@
     function closeSidebar(){sidebar.classList.remove('open');overlay.classList.remove('active');document.body.style.overflow='';}
     if(hamburger)hamburger.addEventListener('click',openSidebar);
     if(overlay)overlay.addEventListener('click',closeSidebar);
-    var addCard=document.getElementById('addAdminCard'),openBtn=document.getElementById('openAddForm'),closeBtn=document.getElementById('closeAddForm'),cancelBtn=document.getElementById('cancelAddForm');
-    function showAddForm(){if(addCard){addCard.classList.remove('hidden');addCard.scrollIntoView({behavior:'smooth',block:'start'});}}
-    function hideAddForm(){if(addCard)addCard.classList.add('hidden');}
-    if(openBtn)openBtn.addEventListener('click',showAddForm);
-    if(closeBtn)closeBtn.addEventListener('click',hideAddForm);
-    if(cancelBtn)cancelBtn.addEventListener('click',hideAddForm);
-    if(addCard&&(new URLSearchParams(window.location.search).get('add')==='true'||addCard.getAttribute('data-open')==='true'))showAddForm();
-    function toggleEditStatus(){var h=document.getElementById('editStatusHidden'),b=document.getElementById('editStatusToggle'),l=document.getElementById('editStatusLabel');if(h.value==='active'){h.value='inactive';b.className='toggle-btn inactive';l.textContent='Inactive';}else{h.value='active';b.className='toggle-btn active';l.textContent='Active';}}
     function openDeleteModal(btn){document.getElementById('deleteAdminName').textContent=btn.getAttribute('data-name');document.getElementById('deleteAdminForm').action='/superadmin/delete-admin/'+btn.getAttribute('data-id');document.getElementById('deleteModalOverlay').classList.remove('hidden');document.body.style.overflow='hidden';}
     function closeDeleteModal(){document.getElementById('deleteModalOverlay').classList.add('hidden');document.body.style.overflow='';}
     var mo=document.getElementById('deleteModalOverlay');if(mo)mo.addEventListener('click',function(e){if(e.target===mo)closeDeleteModal();});
-    document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeDeleteModal();hideAddForm();}});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape')closeDeleteModal();});
     var si=document.getElementById('globalSearch');if(si)si.addEventListener('input',function(){var q=this.value.toLowerCase();document.querySelectorAll('#adminsTable tbody tr').forEach(r=>{r.style.display=(!q||r.textContent.toLowerCase().includes(q))?'':'none';});});
     document.querySelectorAll('.toast').forEach(t=>{setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .5s';},4000);});
     lucide.createIcons();

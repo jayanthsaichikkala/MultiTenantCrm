@@ -368,7 +368,7 @@ body {
 ========================= */
 .topbar {
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	justify-content: space-between;
 	flex-wrap: wrap;
 	gap: 14px;
@@ -1330,49 +1330,6 @@ tbody tr:hover {
 }
 
 /* =========================
-   VIEWS PAGE
-========================= */
-.views-grid {
-	display: grid;
-	grid-template-columns: repeat(4, minmax(0, 1fr));
-	gap: 16px;
-	margin-bottom: 20px;
-}
-
-.views-card {
-	display: flex;
-	align-items: center;
-	gap: 14px;
-	padding: 18px;
-}
-
-.views-icon {
-	width: 54px;
-	height: 54px;
-	border-radius: 16px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-size: 22px;
-	flex-shrink: 0;
-}
-
-.views-info h3 {
-	font-size: 26px;
-	font-weight: 800;
-	line-height: 1;
-	color: var(--text-dark);
-	letter-spacing: -.02em;
-}
-
-.views-info p {
-	margin-top: 3px;
-	color: var(--text-muted);
-	font-size: 11.5px;
-	font-weight: 500;
-}
-
-/* =========================
    PROFILE PAGE
 ========================= */
 .profile-page-grid {
@@ -1450,21 +1407,30 @@ tbody tr:hover {
 .breadcrumb {
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: 5px;
 	font-size: 12px;
 	color: var(--text-muted);
-	margin-bottom: 18px;
+	margin-top: 8px;
 	font-weight: 500;
+	line-height: 1;
 }
 
 .breadcrumb a {
 	color: var(--primary);
 	text-decoration: none;
 	font-weight: 600;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.breadcrumb a:hover {
+	text-decoration: underline;
 }
 
 .breadcrumb span {
 	color: #aabbc4;
+	line-height: 1;
 }
 
 /* =========================
@@ -1526,10 +1492,6 @@ tbody tr:hover {
 		grid-template-columns: 1fr;
 	}
 
-	.views-grid {
-		grid-template-columns: repeat(2, 1fr);
-	}
-
 	.profile-page-grid {
 		grid-template-columns: 1fr;
 	}
@@ -1587,11 +1549,6 @@ tbody tr:hover {
 @media (max-width: 700px) {
 	.topbar h1 {
 		font-size: 22px;
-	}
-
-	.views-grid {
-		grid-template-columns: repeat(2, 1fr);
-		gap: 12px;
 	}
 
 	.action-btns {
@@ -1652,15 +1609,6 @@ tbody tr:hover {
 		flex: 1;
 	}
 
-	.views-grid {
-		grid-template-columns: 1fr 1fr;
-		gap: 10px;
-	}
-
-	.views-info h3 {
-		font-size: 22px;
-	}
-
 	.modal {
 		padding: 28px 20px 22px;
 	}
@@ -1691,10 +1639,6 @@ tbody tr:hover {
 ========================= */
 @media (max-width: 400px) {
 	.stats-row {
-		grid-template-columns: 1fr;
-	}
-
-	.views-grid {
 		grid-template-columns: 1fr;
 	}
 

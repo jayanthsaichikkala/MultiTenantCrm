@@ -27,13 +27,18 @@ body { font-family:'Poppins',sans-serif; background:linear-gradient(160deg,#cfe6
 .sidebar-menu li a { text-decoration:none; display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:14px; color:#d8edf7; font-size:14px; font-weight:500; transition:background 0.25s ease,transform 0.25s ease; }
 .sidebar-menu li a:hover { background:#2f6784; transform:translateX(4px); }
 .sidebar-menu li.active a { background:white; color:#17455e; font-weight:600; box-shadow:0 4px 14px rgba(0,0,0,0.1); }
-.logout-btn { margin-top:14px; width:100%; background:#21556f; border:none; height:48px; border-radius:16px; color:white; font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; transition:background 0.25s ease; flex-shrink:0; }
+.logout-btn { margin-top:14px; width:100%; background:#21556f; border:none; height:48px; border-radius:16px; color:white; font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; transition:background 0.25s ease; flex-shrink:0; display:flex; align-items:center; justify-content:center; gap:8px; }
 .logout-btn:hover { background:#2f6784; }
 
 .main-wrapper { position:fixed; left:280px; top:0; right:0; bottom:0; padding:24px 24px 24px 0; display:flex; flex-direction:column; overflow:hidden; }
 .topbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; margin-bottom:22px; flex-shrink:0; }
 .topbar h1 { font-size:26px; font-weight:700; color:#163647; }
 .topbar-right { display:flex; align-items:center; gap:14px; }
+.topbar-subtitle { font-size:14px; color:#6b7280; margin-top:4px; }
+.breadcrumb { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; }
+.breadcrumb a { color:#17455e; text-decoration:none; display:flex; align-items:center; gap:4px; }
+.breadcrumb a:hover { text-decoration:underline; }
+.breadcrumb span { color:#9ab3bd; }
 .search-box { width:260px; height:46px; background:white; border-radius:30px; display:flex; align-items:center; padding:0 18px; box-shadow:0 4px 16px rgba(0,0,0,0.08); }
 .search-box input { width:100%; border:none; outline:none; font-size:14px; font-family:inherit; background:transparent; }
 .user-badge { width:46px; height:46px; border-radius:50%; background:#17455e; display:flex; align-items:center; justify-content:center; color:white; font-size:15px; font-weight:700; flex-shrink:0; box-shadow:0 4px 14px rgba(23,69,94,0.25); }
@@ -55,6 +60,7 @@ body { font-family:'Poppins',sans-serif; background:linear-gradient(160deg,#cfe6
 .card-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; }
 .card-header h2 { font-size:19px; font-weight:700; color:#163647; }
 .card-header p { font-size:12px; color:#6b7280; margin-top:3px; }
+.card-body { padding:0; }
 .btn-link { font-size:13px; font-weight:600; color:#17455e; text-decoration:none; white-space:nowrap; align-self:center; }
 .btn-link:hover { text-decoration:underline; }
 
@@ -173,6 +179,10 @@ tbody tr:hover { background:#f7fbfd; }
 
 /* Buttons */
 .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     border: none;
     height: 50px;
     padding: 0 26px;
@@ -183,6 +193,7 @@ tbody tr:hover { background:#f7fbfd; }
     cursor: pointer;
     transition: background 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
     white-space: nowrap;
+    text-decoration: none;
 }
 
 .btn-clear {
@@ -202,6 +213,27 @@ tbody tr:hover { background:#f7fbfd; }
     background: #21556f;
     transform: translateY(-2px);
     box-shadow: 0 10px 22px rgba(23, 69, 94, 0.28);
+}
+
+.btn-icon-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #f5f9fb;
+    border: none;
+    color: #163647;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s ease;
+    text-decoration: none;
+}
+
+.btn-icon-close:hover {
+    background: #fdecec;
+    color: #d11a2a;
 }
 
 .form-actions {
@@ -392,6 +424,77 @@ tbody tr:hover { background:#f7fbfd; }
 }
 .delete-btn:hover { background: #fbd5d5; transform: translateY(-1px); }
 
+/* Superadmin-style action buttons (used in employees table) */
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 12px;
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'Poppins', sans-serif;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    transition: background .18s ease, transform .18s ease;
+    white-space: nowrap;
+}
+.btn-action.edit {
+    background: #dcecf5;
+    color: #17455e;
+}
+.btn-action.edit:hover {
+    background: #c3d8e8;
+    transform: translateY(-1px);
+}
+.btn-action.delete {
+    background: #fdecec;
+    color: #d11a2a;
+}
+.btn-action.delete:hover {
+    background: #fad5d5;
+    transform: translateY(-1px);
+}
+
+/* ── Toggle switch (status) ── */
+.table-status-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.toggle-btn {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    border-radius: 30px;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    transition: background .3s ease;
+}
+
+.toggle-btn.active   { background: #17455e; }
+.toggle-btn.inactive { background: #d1d5db; }
+
+.toggle-knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,.2);
+    transition: transform .3s ease;
+    display: block;
+}
+
+.toggle-btn.active   .toggle-knob { transform: translateX(18px); }
+.toggle-btn.inactive .toggle-knob { transform: translateX(0); }
+
 /* Priority badges */
 .priority-badge {
     display: inline-flex;
@@ -428,6 +531,91 @@ tbody tr:hover { background:#f7fbfd; }
 .input-wrap textarea::placeholder { color: #8aa7b6; }
 
 /* =========================
+   DELETE MODAL
+========================= */
+.modal-overlay {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    backdrop-filter: blur(2px);
+}
+
+.modal-overlay.hidden {
+    display: none !important;
+}
+
+.modal {
+    background: white;
+    border-radius: 20px;
+    padding: 32px;
+    max-width: 420px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    text-align: center;
+}
+
+.modal-icon {
+    font-size: 46px;
+    margin-bottom: 12px;
+}
+
+.modal-title {
+    font-size: 19px;
+    font-weight: 800;
+    color: #163647;
+    margin-bottom: 8px;
+}
+
+.modal-msg {
+    font-size: 13.5px;
+    color: #6b7280;
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+.modal-msg strong {
+    color: #163647;
+    font-weight: 700;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.modal-actions .btn {
+    min-width: 110px;
+}
+
+.btn-danger {
+    background: #d11a2a;
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background: #b91525;
+    transform: translateY(-2px);
+}
+
+@media (max-width: 600px) {
+    .modal {
+        padding: 24px;
+    }
+
+    .modal-actions {
+        flex-direction: column;
+    }
+
+    .modal-actions .btn {
+        width: 100%;
+    }
+}
+
+/* =========================
    LUCIDE ICONS
 ========================= */
 i[data-lucide] { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; stroke-width:2; vertical-align:middle; flex-shrink:0; }
@@ -435,7 +623,7 @@ i[data-lucide] { display:inline-flex; align-items:center; justify-content:center
 .sidebar-menu i[data-lucide] { width:17px; height:17px; }
 .logo-icon i[data-lucide] { width:22px; height:22px; color:white; }
 .logout-btn i[data-lucide] { width:16px; height:16px; margin-right:6px; }
-.btn i[data-lucide], .action-btn i[data-lucide] { width:14px; height:14px; margin-right:4px; }
+.btn i[data-lucide], .action-btn i[data-lucide], .btn-action i[data-lucide] { width:14px; height:14px; margin-right:4px; }
 .notif-btn i[data-lucide] { width:20px; height:20px; }
 .qa-icon i[data-lucide] { width:20px; height:20px; }
 .au-close-btn i[data-lucide] { width:14px; height:14px; }

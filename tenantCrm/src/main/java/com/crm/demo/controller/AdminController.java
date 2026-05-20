@@ -189,6 +189,106 @@ public class AdminController {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    //  EDIT EMPLOYEE (for add-users page)
+    // ═══════════════════════════════════════════════════════════════════════
+    @GetMapping("/edit-employee/{id}")
+    public String editEmployeePage(@PathVariable Long id, HttpServletRequest request, Model model) {
+        injectUser(request, model);
+        User emp = userRepository.findById(id).orElse(null);
+        // Block editing ADMIN or SUPER_ADMIN accounts
+        if (emp == null
+                || "ADMIN".equalsIgnoreCase(emp.getRole())
+                || "SUPER_ADMIN".equalsIgnoreCase(emp.getRole())) {
+            return "redirect:/admin/add-user";
+        }
+        model.addAttribute("employee", emp);
+        model.addAttribute("pageTitle", "CRM — Edit Employee");
+        model.addAttribute("pageHeading", "Edit Employee");
+        return "edit-employee";
+    }
+
+    @PostMapping("/edit-employee/{id}")
+    public String updateEmployee(@PathVariable Long id,
+                                 @RequestParam String username,
+                                 @RequestParam String email,
+                                 @RequestParam String role,
+                                 @RequestParam(required = false) String password,
+                                 @RequestParam(required = false) String confirmPassword,
+                                 HttpServletRequest request,
+                                 RedirectAttributes ra) {
+        User emp = userRepository.findById(id).orElse(null);
+        if (emp == null
+                || "ADMIN".equalsIgnoreCase(emp.getRole())
+                || "SUPER_ADMIN".equalsIgnoreCase(emp.getRole())) {
+            ra.addFlashAttribute("errorMessage", "User not found or cannot be edited.");
+            return "redirect:/admin/add-user";
+        }
+
+        // Check duplicate (excluding self)
+        User existing = userRepository.findByUsernameOrEmail(username, email);
+        if (existing != null && !existing.getId().equals(emp.getId())) {
+            ra.addFlashAttribute("errorMessage", "Username or email already exists.");
+            return "redirect:/admin/edit-employee/" + id;
+        }
+
+        // Enforce tenant domain
+        String segment = getTenantSegment(request);
+        if (segment != null && !email.contains("." + segment + "@")) {
+            ra.addFlashAttribute("errorMessage",
+                    "Email must belong to your tenant domain (e.g. user." + segment + "@crm.com).");
+            return "redirect:/admin/edit-employee/" + id;
+        }
+
+        emp.setUsername(username);
+        emp.setEmail(email);
+        emp.setRole(role);
+        if (password != null && !password.isBlank()) {
+            if (!password.equals(confirmPassword)) {
+                ra.addFlashAttribute("errorMessage", "Passwords do not match.");
+                return "redirect:/admin/edit-employee/" + id;
+            }
+            emp.setPassword(passwordEncoder.encode(password));
+        }
+        userRepository.save(emp);
+        ra.addFlashAttribute("successMessage", "Employee '" + username + "' updated successfully.");
+        return "redirect:/admin/add-user";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  DELETE EMPLOYEE (for add-users page)
+    // ═══════════════════════════════════════════════════════════════════════
+    @PostMapping("/delete-employee/{id}")
+    public String deleteEmployeeFromAddUsers(@PathVariable Long id, RedirectAttributes ra) {
+        User emp = userRepository.findById(id).orElse(null);
+        if (emp != null
+                && !"ADMIN".equalsIgnoreCase(emp.getRole())
+                && !"SUPER_ADMIN".equalsIgnoreCase(emp.getRole())) {
+            String name = emp.getUsername();
+            userRepository.delete(emp);
+            ra.addFlashAttribute("successMessage", "User '" + name + "' deleted.");
+        }
+        return "redirect:/admin/add-user";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  TOGGLE USER STATUS (for add-users page)
+    // ═══════════════════════════════════════════════════════════════════════
+    @PostMapping("/toggle-user/{id}")
+    public String toggleUserStatus(@PathVariable Long id, RedirectAttributes ra) {
+        User user = userRepository.findById(id).orElse(null);
+        if (user != null
+                && !"ADMIN".equalsIgnoreCase(user.getRole())
+                && !"SUPER_ADMIN".equalsIgnoreCase(user.getRole())) {
+            String newStatus = "active".equalsIgnoreCase(user.getStatus()) ? "inactive" : "active";
+            user.setStatus(newStatus);
+            userRepository.save(user);
+            ra.addFlashAttribute("successMessage",
+                    user.getUsername() + " is now " + newStatus + ".");
+        }
+        return "redirect:/admin/add-user";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     //  PROJECTS
     // ═══════════════════════════════════════════════════════════════════════
     @GetMapping("/projects")
@@ -310,7 +410,11 @@ public class AdminController {
     @GetMapping("/add-user")
     public String addUserPage(HttpServletRequest request, Model model) {
         injectUser(request, model);
-        List<User> users = getTenantUsers(request);
+        // Exclude ADMIN and SUPER_ADMIN — only show manageable users
+        List<User> users = getTenantUsers(request).stream()
+                .filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
+                          && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
+                .toList();
         model.addAttribute("managers",      users);
         model.addAttribute("totalManagers", users.size());
         model.addAttribute("activeCount",   users.stream().filter(u -> "active".equalsIgnoreCase(u.getStatus()) || u.getStatus() == null).count());

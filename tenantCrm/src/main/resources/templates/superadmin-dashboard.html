@@ -27,7 +27,6 @@
     <ul class="sidebar-menu">
         <li class="active"><a th:href="@{/superadmin/dashboard}"><span class="menu-icon"><i data-lucide="layout-dashboard"></i></span> Dashboard</a></li>
         <li><a th:href="@{/superadmin/admins}"><span class="menu-icon"><i data-lucide="users"></i></span> Admins</a></li>
-        <li><a th:href="@{/superadmin/views}"><span class="menu-icon"><i data-lucide="eye"></i></span> Views</a></li>
         <li><a th:href="@{/superadmin/profile}"><span class="menu-icon"><i data-lucide="user"></i></span> Profile</a></li>
     </ul>
     <div class="sidebar-divider"></div>
@@ -37,7 +36,11 @@
 </div>
 <div class="main-wrapper">
     <div class="topbar">
-        <div><h1>Dashboard</h1><p class="topbar-subtitle">Welcome back, Super Admin</p></div>
+        <div>
+            <h1>Dashboard</h1>
+            <p class="topbar-subtitle">Welcome back, Super Admin</p>
+            <div class="breadcrumb"><i data-lucide="home"></i><span>&#8250;</span><span>Dashboard</span></div>
+        </div>
         <div class="topbar-right">
             <div class="search-box">
                 <span class="search-icon"><i data-lucide="search"></i></span>
@@ -50,7 +53,6 @@
     <div class="page-content">
         <div class="toast success" th:if="${successMessage}"><i data-lucide="check-circle"></i> <span th:text="${successMessage}"></span></div>
         <div class="toast error"   th:if="${errorMessage}"><i data-lucide="alert-triangle"></i> <span th:text="${errorMessage}"></span></div>
-        <div class="breadcrumb"><i data-lucide="home"></i><span>&#8250;</span><span>Dashboard</span></div>
         <div class="stats-row">
             <div class="stat-card"><div class="stat-icon green"><i data-lucide="users"></i></div><div class="stat-info"><h3 th:text="${totalAdmins}">0</h3><p>Total Admins</p><span class="stat-trend up">All time</span></div></div>
             <div class="stat-card"><div class="stat-icon blue"><i data-lucide="check-square"></i></div><div class="stat-info"><h3 th:text="${activeAdmins}">0</h3><p>Active Admins</p><span class="stat-trend up">Live</span></div></div>
@@ -83,7 +85,6 @@
                         <div class="quick-actions">
                             <a th:href="@{/superadmin/admins}" class="quick-action-btn"><span class="qa-icon" style="background:var(--green-bg);color:var(--green-fg);"><i data-lucide="users"></i></span><span>Manage Admins</span></a>
                             <a th:href="@{/superadmin/admins}" class="quick-action-btn"><span class="qa-icon" style="background:var(--blue-bg);color:var(--blue-fg);"><i data-lucide="user-plus"></i></span><span>Add Admin</span></a>
-                            <a th:href="@{/superadmin/views}" class="quick-action-btn"><span class="qa-icon" style="background:var(--purple-bg);color:var(--purple-fg);"><i data-lucide="bar-chart-2"></i></span><span>View Reports</span></a>
                             <a th:href="@{/superadmin/profile}" class="quick-action-btn"><span class="qa-icon" style="background:var(--orange-bg);color:var(--orange-fg);"><i data-lucide="user"></i></span><span>My Profile</span></a>
                         </div>
                     </div>

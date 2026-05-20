@@ -119,12 +119,7 @@
 					&#9888; <span th:text="${errorMessage}"></span>
 				</div>
 
-				<!-- BREADCRUMB -->
-				<div class="breadcrumb">
-					<span>&#127968;</span>
-					<span>&#8250;</span>
-					<span>Dashboard</span>
-				</div>
+			<!-- BREADCRUMB removed — topbar already shows page title -->
 
 				<!-- STATS ROW -->
 				<div class="stats-row">
@@ -316,13 +311,6 @@
 				</div>
 				<div class="toast error" th:if="${errorMessage}">
 					&#9888; <span th:text="${errorMessage}"></span>
-				</div>
-
-				<!-- BREADCRUMB -->
-				<div class="breadcrumb">
-					<a th:href="@{/superadmin}">&#127968; Home</a>
-					<span>&#8250;</span>
-					<span>Admins</span>
 				</div>
 
 				<!-- ADD ADMIN FORM (hidden by default) -->
@@ -553,13 +541,6 @@
         ====================================================== -->
 			<div th:if="${activePage == 'views'}">
 
-				<!-- BREADCRUMB -->
-				<div class="breadcrumb">
-					<a th:href="@{/superadmin}">&#127968; Home</a>
-					<span>&#8250;</span>
-					<span>Views</span>
-				</div>
-
 				<!-- STATS -->
 				<div class="stats-row">
 					<div class="stat-card">
@@ -697,13 +678,6 @@
 				</div>
 				<div class="toast error" th:if="${errorMessage}">
 					&#9888; <span th:text="${errorMessage}"></span>
-				</div>
-
-				<!-- BREADCRUMB -->
-				<div class="breadcrumb">
-					<a th:href="@{/superadmin}">&#127968; Home</a>
-					<span>&#8250;</span>
-					<span>Profile</span>
 				</div>
 
 				<div class="profile-page-grid">
