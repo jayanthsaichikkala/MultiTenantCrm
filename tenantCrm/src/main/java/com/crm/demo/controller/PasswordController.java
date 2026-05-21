@@ -18,133 +18,130 @@ import com.crm.demo.model.PasswordResetToken;
 import com.crm.demo.model.User;
 import com.crm.demo.repository.PasswordResetTokenRepository;
 import com.crm.demo.repository.UserRepository;
-@Controller
 
+@Controller
 public class PasswordController {
+
 	@Autowired
 	private JavaMailSender mailSender;
+
 	@Autowired
 	private PasswordResetTokenRepository tokenRepository;
+
 	@Autowired
 	private UserRepository userRepository;
+
 	@Autowired
 	private PasswordEncoder passwordEncoder;
-	 //forgot password controller logic
-	 
-	 @GetMapping("/forgot-password")
-	    public String forgotPasswordPage()
-	    {
-	        return "forgot-password";
-	    }
-	  //email will be used to fetch and validates the user   
-	    @PostMapping("/forgot-password")
-	    public String processForgotPassword(@RequestParam String email)
-	    {
-	    	
 
-	    	User user=userRepository.findByEmail(email);
-	              //  .orElseThrow(() -> new RuntimeException("User not found"));
-	    	    	String token=UUID.randomUUID().toString();
-	    	    	//checking if the token already there in db forthis user
-	    	    	Optional<PasswordResetToken> existingToken=
-	    	    	        tokenRepository.findByUser(user);
+	// Forgot Password Page
+	@GetMapping("/forgot-password")
+	public String forgotPasswordPage() {
+		return "forgot-password";
+	}
 
-	    	    	if(existingToken.isPresent())
-	    	    	{
-	    	    	    tokenRepository.delete(existingToken.get());
-	    	    	}
-	 PasswordResetToken resetToken=
-	    	            new PasswordResetToken();
-	    	    resetToken.setToken(token);
-	    	    resetToken.setUser(user);
-	    	    resetToken.setExpiryTime(
-	    	            LocalDateTime.now().plusMinutes(30));
-	    	    tokenRepository.save(resetToken);
+	// Process Forgot Password
+	@PostMapping("/forgot-password")
+	public String processForgotPassword(@RequestParam String email, Model model) {
 
-	    	    String resetLink="http://localhost:8080/reset-password?token=" +token;
-	    	         
-	    	    SimpleMailMessage message=
-	    	            new SimpleMailMessage();
-	             //user email
-	    	    message.setTo(user.getEmail());
-	              //setting subject as password reset
-	    	    message.setSubject("Password Reset");
-	                         //generated link
-	    	    message.setText(
-	    	            "Click below link:\n"+resetLink);
-	             //sending the mail
-	    	    mailSender.send(message);
-	    	    return "redirect:/login";
-	    	}
-	    //resetting password
-	    @GetMapping("/reset-password")
-	    public String resetPasswordPage(
-	            @RequestParam String token,
-	            Model model)
-	    {
+		User user = userRepository.findByEmail(email);
 
-	        PasswordResetToken resetToken=
-	                tokenRepository.findByToken(token)
-	                .orElseThrow(() ->
-	                        new RuntimeException("Invalid token"));
+		// Check if user exists
+		if (user == null) {
+			model.addAttribute("error", "User not found");
+			return "forgot-password";
+		}
 
+		// Generate token
+		String token = UUID.randomUUID().toString();
 
-	        if(resetToken.getExpiryTime()
-	                .isBefore(LocalDateTime.now()))
-	        {
-	            throw new RuntimeException("Token expired");
-	        }
+		// Delete old token if exists
+		Optional<PasswordResetToken> existingToken = tokenRepository.findByUser(user);
 
+		existingToken.ifPresent(tokenRepository::delete);
 
-	        model.addAttribute("token", token);
+		// Create new token
+		PasswordResetToken resetToken = new PasswordResetToken();
 
-	        return "reset-password";
-	    }
-	    //password reset 
-	    @PostMapping("/reset-password")
-	    public String resetPassword(
-	            @RequestParam String token,
-	            @RequestParam String password,
-	            @RequestParam String confirmPassword,
-	            Model model)
-	    {
+		resetToken.setToken(token);
+		resetToken.setUser(user);
+		resetToken.setExpiryTime(LocalDateTime.now().plusMinutes(30));
 
-	    	if(!password.equals(confirmPassword))
-	    	{
-	    	    model.addAttribute(
-	    	            "error",
-	    	            "Passwords are not match");
+		tokenRepository.save(resetToken);
 
-	    	    model.addAttribute("token", token);
+		// Reset link
+		String resetLink = "http://localhost:8080/reset-password?token=" + token;
 
-	    	    return "reset-password";
-	    	}
+		// Send email
+		SimpleMailMessage message = new SimpleMailMessage();
 
-	        PasswordResetToken resetToken=
-	                tokenRepository.findByToken(token)
-	                .orElseThrow(() ->
-	                        new RuntimeException("Invalid token"));
+		message.setTo(user.getEmail());
+		message.setSubject("Password Reset Request");
 
+		message.setText("Hello " + user.getUsername() + ",\n\n" + "Click the below link to reset your password:\n\n"
+				+ resetLink + "\n\nThis link will expire in 30 minutes.");
 
-	        User user=resetToken.getUser();
+		mailSender.send(message);
 
+		model.addAttribute("message", "Password reset link sent to your email");
 
-	        String encodedPassword=
-	                passwordEncoder.encode(password);
+		return "forgot-password";
+	}
 
+	// Reset Password Page
+	@GetMapping("/reset-password")
+	public String resetPasswordPage(@RequestParam String token, Model model) {
 
-	        user.setPassword(encodedPassword);
+		PasswordResetToken resetToken = tokenRepository.findByToken(token)
+				.orElseThrow(() -> new RuntimeException("Invalid token"));
 
-	        userRepository.save(user);
+		// Check token expiry
+		if (resetToken.getExpiryTime().isBefore(LocalDateTime.now())) {
 
+			throw new RuntimeException("Token expired");
+		}
 
-	        tokenRepository.delete(resetToken);
+		model.addAttribute("token", token);
 
+		return "reset-password";
+	}
 
-	        return "redirect:/login";
-	    }
-	    
-	    
-	    
-	 
+	// Reset Password Logic
+	@PostMapping("/reset-password")
+	public String resetPassword(@RequestParam String token, @RequestParam String password,
+			@RequestParam String confirmPassword, Model model) {
+
+		// Password match validation
+		if (!password.equals(confirmPassword)) {
+
+			model.addAttribute("error", "Passwords do not match");
+
+			model.addAttribute("token", token);
+
+			return "reset-password";
+		}
+
+		PasswordResetToken resetToken = tokenRepository.findByToken(token)
+				.orElseThrow(() -> new RuntimeException("Invalid token"));
+
+		// Check expiry again
+		if (resetToken.getExpiryTime().isBefore(LocalDateTime.now())) {
+
+			throw new RuntimeException("Token expired");
+		}
+
+		User user = resetToken.getUser();
+
+		// Encode password
+		String encodedPassword = passwordEncoder.encode(password);
+
+		user.setPassword(encodedPassword);
+
+		userRepository.save(user);
+
+		// Delete token after reset
+		tokenRepository.delete(resetToken);
+
+		return "redirect:/login";
+	}
 }
