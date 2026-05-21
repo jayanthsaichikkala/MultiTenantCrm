@@ -1,5 +1,5 @@
 package com.crm.demo.controller;
-
+import org.springframework.web.bind.annotation.RequestParam;
 import com.crm.demo.model.Attendance;
 import com.crm.demo.model.Project;
 import com.crm.demo.model.Task;
@@ -49,7 +49,7 @@ public class ManagerController {
 	// =========================
 	// COMMON STATS METHOD
 	// =========================
-	private void injectStats(HttpServletRequest request, Model model) {
+	private void injectStats(Model model) {
 
 		// Logged-in manager username
 		String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -58,22 +58,48 @@ public class ManagerController {
 
 		// Safety check
 		if (manager == null) {
+			// Set default values if manager not found
+			model.addAttribute("managerName", "Manager");
+			model.addAttribute("managerEmail", "");
+			model.addAttribute("teamMembers", Collections.emptyList());
+			model.addAttribute("teamCount", 0);
+			model.addAttribute("activeTeam", 0);
+			model.addAttribute("inactiveTeam", 0);
+			model.addAttribute("projects", Collections.emptyList());
+			model.addAttribute("totalProjects", 0);
+			model.addAttribute("activeProjects", 0);
+			model.addAttribute("completedProjects", 0);
+			model.addAttribute("projectCount", 0);
+			model.addAttribute("tasks", Collections.emptyList());
+			model.addAttribute("totalTasks", 0);
+			model.addAttribute("doneTasks", 0);
+			model.addAttribute("pendingTaskCount", 0);
+			model.addAttribute("taskCount", 0);
+			model.addAttribute("overdueTasks", 0);
+			model.addAttribute("notificationCount", 0);
+			model.addAttribute("pendingTaskList", Collections.emptyList());
 			return;
 		}
 
 		model.addAttribute("managerName", manager.getUsername());
 		model.addAttribute("managerEmail", manager.getEmail());
 
-		// Example:
-		// manager.tcs@crm.com
-
 		String email = manager.getEmail();
+		String tenantSegment = "";
 
-		// Extract company/tenant
-		String tenantSegment = email.split("\\.")[1].split("@")[0];
+		// Extract company/tenant safely
+		try {
+			if (email != null && email.contains(".") && email.contains("@")) {
+				tenantSegment = email.split("\\.")[1].split("@")[0];
+			}
+		} catch (Exception e) {
+			tenantSegment = "";
+		}
 
 		// Fetch only same company employees
-		List<User> team = userRepository.findEmployeesByTenant(tenantSegment);
+		List<User> team = tenantSegment.isEmpty() ? 
+			userRepository.findAll().stream().filter(u -> "EMPLOYEE".equalsIgnoreCase(u.getRole())).toList() :
+			userRepository.findEmployeesByTenant(tenantSegment);
 
 		List<Project> projects = projectRepository.findAll();
 
@@ -123,9 +149,9 @@ public class ManagerController {
 	// DASHBOARD PAGE
 	// =========================
 	@GetMapping("/dashboard")
-	public String dashboard(HttpServletRequest request, Model model) {
+	public String dashboard(Model model) {
 
-		injectStats(request, model);
+		injectStats(model);
 
 		return "manager-dashboard";
 	}
@@ -134,11 +160,96 @@ public class ManagerController {
 	// TEAM PAGE
 	// =========================
 	@GetMapping("/team")
-	public String teamPage(HttpServletRequest request, Model model) {
+	public String teamPage(Model model) {
 
-		injectStats(request, model);
+		injectStats(model);
 
 		return "manager-team";
+	}
+
+	// =========================
+	// PROJECTS PAGE
+	// =========================
+	@GetMapping("/projects")
+	public String projectsPage(Model model) {
+
+		injectStats(model);
+
+		return "manager-projects";
+	}
+
+	// =========================
+	// TASKS PAGE
+	// =========================
+	@GetMapping("/tasks")
+	public String tasksPage(Model model) {
+
+		injectStats(model);
+
+		return "manager-tasks";
+	}
+
+	// =========================
+	// REPORTS PAGE
+	// =========================
+	@GetMapping("/reports")
+	public String reportsPage(Model model) {
+
+		injectStats(model);
+
+		return "manager-reports";
+	}
+
+	// =========================
+	// SETTINGS PAGE
+	// =========================
+	@GetMapping("/settings")
+	public String settingsPage(Model model) {
+
+		injectStats(model);
+
+		return "manager-settings";
+	}
+
+	// =========================
+	// UPDATE PROFILE
+	// =========================
+	@PostMapping("/settings/profile")
+	public String updateProfile(@RequestParam String username,
+								@RequestParam String email,
+								@RequestParam(required = false) String password,
+								@RequestParam(required = false) String confirmPassword,
+								RedirectAttributes ra) {
+
+		String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+		User manager = userRepository.findByUsername(currentUsername);
+
+		if (manager == null) {
+			return "redirect:/manager/settings";
+		}
+
+		// Check if username or email already exists (excluding current user)
+		User existing = userRepository.findByUsernameOrEmail(username, email);
+		if (existing != null && !existing.getId().equals(manager.getId())) {
+			ra.addFlashAttribute("errorMessage", "Username or email already in use.");
+			return "redirect:/manager/settings";
+		}
+
+		manager.setUsername(username);
+		manager.setEmail(email);
+
+		if (password != null && !password.isBlank()) {
+			if (!password.equals(confirmPassword)) {
+				ra.addFlashAttribute("errorMessage", "Passwords do not match.");
+				return "redirect:/manager/settings";
+			}
+			manager.setPassword(passwordEncoder.encode(password));
+		}
+
+		userRepository.save(manager);
+		ra.addFlashAttribute("successMessage", "Profile updated successfully.");
+
+		return "redirect:/manager/settings";
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════
@@ -162,15 +273,20 @@ public class ManagerController {
 	}
 
 	@GetMapping("/attendance")
-	public String attendancePage(HttpServletRequest request, Model model) {
-		injectStats(request, model);
+	public String attendancePage(Model model) {
+		injectStats(model);
 
 		User manager = getCurrentManager();
+		if (manager == null) {
+			return "redirect:/manager/dashboard";
+		}
+
 		String tenant = getTenantSegment(manager);
 
 		// All attendance records for this tenant
-		List<Attendance> records =
-				attendanceRepository.findByTenantSegmentOrderByDateDescCheckInDesc(tenant);
+		List<Attendance> records = tenant.isEmpty() ? 
+			Collections.emptyList() :
+			attendanceRepository.findByTenantSegmentOrderByDateDescCheckInDesc(tenant);
 
 		// Today's record for the manager (drives punch-in / punch-out button state)
 		LocalDate today = LocalDate.now();
