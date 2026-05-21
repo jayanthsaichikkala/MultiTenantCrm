@@ -4,6 +4,7 @@
 * { scrollbar-width:none; -ms-overflow-style:none; }
 *::-webkit-scrollbar { display:none; }
 html, body { width:100%; height:100%; overflow:hidden; }
+html { zoom:0.85; }
 body { font-family:'Poppins',sans-serif; background:linear-gradient(160deg,#cfe6ef 0%,#b7d7e5 100%); color:#163647; }
 
 .mobile-topbar { display:none; align-items:center; gap:14px; position:sticky; top:0; z-index:900; background:#17455e; padding:14px 18px; flex-shrink:0; }
