@@ -46,30 +46,34 @@
 
 /* =========================
    BODY — GRADIENT + DYNAMIC AURA
+   FIX: removed zoom, removed overflow:hidden on html,
+        use min-height + auto overflow so card never clips
 ========================= */
 html {
 	height: 100%;
-	overflow: hidden;
+	/* FIXED: was overflow:hidden — caused top-clip on short screens */
 }
 
 body {
-	height: 100%;
+	min-height: 100%;
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	padding: 24px 16px;
+	padding: 32px 16px;
 	font-family: 'Inter', system-ui, -apple-system, 'Poppins', sans-serif;
 	background: radial-gradient(circle at 20% 30%, var(--bg-gradient-start), var(--bg-gradient-end));
+	/* FIXED: background-attachment keeps gradient stable on scroll */
+	background-attachment: fixed;
 	position: relative;
 	color: var(--text-dark);
-	overflow: auto;
-	zoom: 0.85;
+	/* FIXED: removed zoom:0.85 — caused clipping on 768px height screens */
+	/* FIXED: removed height:100% + overflow:auto combo that caused clip */
 }
 
-/* Premium background orbs (no interactivity, just visual depth) */
+/* Premium background orbs */
 body::before {
 	content: '';
-	position: absolute;
+	position: fixed;
 	width: 70vmax;
 	height: 70vmax;
 	background: radial-gradient(circle, rgba(72, 182, 194, 0.08) 0%, rgba(107, 201, 215, 0) 70%);
@@ -82,7 +86,7 @@ body::before {
 
 body::after {
 	content: '';
-	position: absolute;
+	position: fixed;
 	width: 60vmax;
 	height: 60vmax;
 	background: radial-gradient(circle, rgba(27, 93, 110, 0.05) 0%, rgba(27, 93, 110, 0) 70%);
@@ -233,7 +237,7 @@ input:focus {
 }
 
 /* =========================
-   PASSWORD WRAPPER + EYE ( PERFECT VERTICAL CENTERING )
+   PASSWORD WRAPPER + EYE
 ========================= */
 .password-wrapper {
 	position: relative;
@@ -350,7 +354,7 @@ button[type="submit"]:disabled::before {
 }
 
 /* =========================
-   FORGOT LINK — subtle fluid hover
+   FORGOT LINK
 ========================= */
 .forgot-link {
 	display: block;
@@ -373,7 +377,7 @@ button[type="submit"]:disabled::before {
 }
 
 /* =========================
-   RESPONSIVE: TABLET & MOBILE PERFECT ALIGNMENT
+   RESPONSIVE — MOBILE (≤520px)
 ========================= */
 @media (max-width: 520px) {
 	.login-container {
@@ -404,9 +408,12 @@ button[type="submit"]:disabled::before {
 	}
 }
 
+/* =========================
+   RESPONSIVE — SMALL MOBILE (≤450px)
+========================= */
 @media (max-width: 450px) {
 	body {
-		padding: 16px 12px;
+		padding: 24px 12px;
 		align-items: center;
 	}
 
@@ -446,19 +453,19 @@ button[type="submit"]:disabled::before {
 	}
 }
 
-/* small height device (not breaking center) */
+/* =========================
+   RESPONSIVE — SHORT SCREENS (height ≤ 680px)
+   FIXED: was pushing card off-top; now scrollable
+========================= */
 @media (max-height: 680px) {
 	body {
 		align-items: flex-start;
-		padding-top: 40px;
-	}
-
-	.login-container {
-		margin-bottom: 20px;
+		padding-top: 24px;
+		padding-bottom: 24px;
 	}
 }
 
-/* HIGH DPI & RETINA GLOSS */
+/* HIGH DPI & RETINA */
 @media (-webkit-min-device-pixel-ratio: 2),
 (min-resolution: 192dpi) {
 	.login-container {
@@ -467,7 +474,7 @@ button[type="submit"]:disabled::before {
 	}
 }
 
-/* Accessibility focus visible for inputs */
+/* Accessibility focus */
 input:focus-visible,
 button:focus-visible,
 .eye-toggle:focus-visible {
@@ -475,7 +482,7 @@ button:focus-visible,
 	outline-offset: 2px;
 }
 
-/* Variant color enhancements: error animation */
+/* Error shake animation */
 @keyframes gentleShake {
 
 	0%,
@@ -496,13 +503,19 @@ button:focus-visible,
 	animation: gentleShake 0.25s ease;
 }
 
-/* make password manager fill look consistent */
+/* Autofill consistency */
 input:-webkit-autofill,
 input:-webkit-autofill:focus {
 	transition: background-color 0s 600000s, color 0s 600000s;
 	background-color: #fefefe;
 }
 
-/* hide scrollbars on login page */
-::-webkit-scrollbar { display: none; }
-* { scrollbar-width: none; -ms-overflow-style: none; }
+/* Hide scrollbars */
+::-webkit-scrollbar {
+	display: none;
+}
+
+* {
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+}
