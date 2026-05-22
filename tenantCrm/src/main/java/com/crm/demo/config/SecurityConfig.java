@@ -25,22 +25,11 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            // ── Disable CSRF — safe for stateless JWT APIs ──────────────────
             .csrf(csrf -> csrf.disable())
-
-            // ── STATELESS: never create or use an HTTP session ───────────────
-            .sessionManagement(sm ->
-                sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-            // ── Disable request cache (prevents session creation for saving
-            //    the pre-authentication request) ─────────────────────────────
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .requestCache(rc -> rc.disable())
-
-            // ── Route permissions ────────────────────────────────────────────
             .authorizeHttpRequests(auth -> auth
-                // Public: login page, auth API, static assets
-                // NOTE: Spring Security 6 does not allow patterns like /**/*.css
-                // Use AntPathRequestMatcher for wildcard extension matching.
+                // ── Public assets & auth pages ──────────────────────────────
                 .requestMatchers(
                     new AntPathRequestMatcher("/login"),
                     new AntPathRequestMatcher("/forgot-password"),
@@ -54,25 +43,25 @@ public class SecurityConfig {
                     new AntPathRequestMatcher("/**/*.ico"),
                     new AntPathRequestMatcher("/**/*.woff"),
                     new AntPathRequestMatcher("/**/*.woff2")
-                ).permitAll().requestMatchers(
-                        "/getHolidays",
-                        "/getHolidayByDate"
-                ).permitAll().requestMatchers(
-                        "/addHoliday",
-                        "/updateHoliday",
-                        "/deleteHoliday"
-                ).hasRole("ADMIN")
+                ).permitAll()
+                // ── Holiday API ─────────────────────────────────────────────
+                // GET  /api/holidays   — any authenticated user (all roles see their tenant's holidays)
+                // POST /api/holidays   — ADMIN or HR only
+                // PUT  /api/holidays/* — ADMIN or HR only
+                // DELETE /api/holidays/* — ADMIN or HR only
+                .requestMatchers(new AntPathRequestMatcher("/api/holidays", "GET")).authenticated()
+                .requestMatchers(new AntPathRequestMatcher("/api/holidays/**", "GET")).authenticated()
+                .requestMatchers(new AntPathRequestMatcher("/api/holidays", "POST")).hasAnyRole("ADMIN", "HR")
+                .requestMatchers(new AntPathRequestMatcher("/api/holidays/**", "PUT")).hasAnyRole("ADMIN", "HR")
+                .requestMatchers(new AntPathRequestMatcher("/api/holidays/**", "DELETE")).hasAnyRole("ADMIN", "HR")
+                // ── Role-scoped pages ────────────────────────────────────────
                 .requestMatchers(new AntPathRequestMatcher("/superadmin/**")).hasRole("SUPER_ADMIN")
                 .requestMatchers(new AntPathRequestMatcher("/admin/**")).hasRole("ADMIN")
                 .requestMatchers(new AntPathRequestMatcher("/manager/**")).hasRole("MANAGER")
                 .requestMatchers(new AntPathRequestMatcher("/hr/**")).hasRole("HR")
                 .requestMatchers(new AntPathRequestMatcher("/employee/**")).hasRole("EMPLOYEE")
-              
-                // Everything else requires authentication
                 .anyRequest().authenticated()
             )
-
-            // ── Return 401 JSON for API calls, redirect to /login for browsers
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((request, response, authException) -> {
                     String accept = request.getHeader("Accept");
@@ -85,21 +74,13 @@ public class SecurityConfig {
                     }
                 })
             )
-
-            // ── Disable Spring Security's default form login & basic auth ────
             .formLogin(fl -> fl.disable())
             .httpBasic(hb -> hb.disable())
-
-            // ── Plug in our JWT filter before the username/password filter ───
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    /**
-     * Strict firewall that REJECTS any URL containing a semicolon.
-     * Blocks requests like /admin/dashboard;jsessionid=XXXX with a 400.
-     */
     @Bean
     public HttpFirewall httpFirewall() {
         StrictHttpFirewall firewall = new StrictHttpFirewall();
@@ -107,7 +88,6 @@ public class SecurityConfig {
         return firewall;
     }
 
-    /** BCryptPasswordEncoder bean — used by LoginController and all user-creation flows. */
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

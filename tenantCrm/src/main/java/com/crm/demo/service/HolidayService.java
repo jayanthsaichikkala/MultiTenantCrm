@@ -1,47 +1,51 @@
 package com.crm.demo.service;
 
-import java.util.List;
-
+import com.crm.demo.model.Holiday;
+import com.crm.demo.repository.HolidayRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.crm.demo.model.Holiday;
-import com.crm.demo.repository.HolidayRepository;
+import java.util.List;
+import java.util.Optional;
 
 @Service
-public class HolidayService
-{
+public class HolidayService {
 
     @Autowired
     private HolidayRepository repository;
 
-
-
-    public List<Holiday> getAll()
-    {
-        return repository.findAll();
+    /** All holidays for a tenant, ordered by date. */
+    public List<Holiday> getByTenant(String tenantSegment) {
+        return repository.findByTenantSegmentOrderByDateAsc(tenantSegment);
     }
 
-
-
-    public Holiday getByDate(String date)
-    {
-        return repository.findById(date)
-                .orElse(null);
+    /** Find a single holiday by date + tenant. */
+    public Optional<Holiday> getByDateAndTenant(String date, String tenantSegment) {
+        return repository.findByDateAndTenantSegment(date, tenantSegment);
     }
 
-
-
-    public void save(Holiday holiday)
-    {
-        repository.save(holiday);
+    /** Find by id. */
+    public Optional<Holiday> getById(Long id) {
+        return repository.findById(id);
     }
 
-
-
-    public void delete(String date)
-    {
-        repository.deleteById(date);
+    /** Save (create or update). */
+    public Holiday save(Holiday holiday) {
+        return repository.save(holiday);
     }
 
+    /** Delete by id. */
+    public void deleteById(Long id) {
+        repository.deleteById(id);
+    }
+
+    /** Check if a date is already used by this tenant (for new records). */
+    public boolean dateExists(String date, String tenantSegment) {
+        return repository.existsByDateAndTenantSegment(date, tenantSegment);
+    }
+
+    /** Check if a date is already used by this tenant (excluding current record on edit). */
+    public boolean dateExistsExcluding(String date, String tenantSegment, Long excludeId) {
+        return repository.existsByDateAndTenantSegmentAndIdNot(date, tenantSegment, excludeId);
+    }
 }

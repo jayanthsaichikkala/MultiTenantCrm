@@ -7,8 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.crm.demo.model.PasswordResetToken;
 import com.crm.demo.model.User;
 
-public interface PasswordResetTokenRepository extends JpaRepository<PasswordResetToken, Integer> {
-	PasswordResetToken findByToken(String token);
+public interface PasswordResetTokenRepository extends JpaRepository<PasswordResetToken, Long> {
+	Optional<PasswordResetToken> findByToken(String token);
 	Optional<PasswordResetToken> findByUser(User user);
 
 

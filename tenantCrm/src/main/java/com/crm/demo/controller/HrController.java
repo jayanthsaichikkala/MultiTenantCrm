@@ -82,6 +82,15 @@ public class HrController {
         return "hr-leaves";
     }
 
+    @GetMapping("/calendar")
+    public String calendarPage(HttpServletRequest request, Model model) {
+        injectUser(request, model);
+        model.addAttribute("pageTitle",   "HR — Calendar");
+        model.addAttribute("pageHeading", "Holiday Calendar");
+        model.addAttribute("activePage",  "calendar");
+        return "hr-calendar";
+    }
+
     @GetMapping("/settings")
     public String settingsPage(HttpServletRequest request, Model model) {
         injectUser(request, model);

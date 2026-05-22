@@ -188,6 +188,13 @@ public class EmployeeController {
 
     // ── other pages ───────────────────────────────────────────────────────
 
+    @GetMapping("/calendar")
+    public String calendarPage(Model model) {
+        injectUser(model);
+        injectStats(model);
+        return "employee-calendar";
+    }
+
     @GetMapping("/leaves")
     public String leavesPage(Model model) {
         injectUser(model);

@@ -93,13 +93,19 @@ public class PasswordController {
 	@GetMapping("/reset-password")
 	public String resetPasswordPage(@RequestParam String token, Model model) {
 
-		PasswordResetToken resetToken = tokenRepository.findByToken(token)
-				.orElseThrow(() -> new RuntimeException("Invalid token"));
+		Optional<PasswordResetToken> opt = tokenRepository.findByToken(token);
+		if (opt.isEmpty()) {
+			model.addAttribute("error", "Invalid or expired reset link. Please request a new one.");
+			return "forgot-password";
+		}
+
+		PasswordResetToken resetToken = opt.get();
 
 		// Check token expiry
 		if (resetToken.getExpiryTime().isBefore(LocalDateTime.now())) {
-
-			throw new RuntimeException("Token expired");
+			tokenRepository.delete(resetToken);
+			model.addAttribute("error", "Reset link has expired. Please request a new one.");
+			return "forgot-password";
 		}
 
 		model.addAttribute("token", token);
@@ -122,13 +128,19 @@ public class PasswordController {
 			return "reset-password";
 		}
 
-		PasswordResetToken resetToken = tokenRepository.findByToken(token)
-				.orElseThrow(() -> new RuntimeException("Invalid token"));
+		Optional<PasswordResetToken> opt = tokenRepository.findByToken(token);
+		if (opt.isEmpty()) {
+			model.addAttribute("error", "Invalid or expired reset link. Please request a new one.");
+			return "forgot-password";
+		}
+
+		PasswordResetToken resetToken = opt.get();
 
 		// Check expiry again
 		if (resetToken.getExpiryTime().isBefore(LocalDateTime.now())) {
-
-			throw new RuntimeException("Token expired");
+			tokenRepository.delete(resetToken);
+			model.addAttribute("error", "Reset link has expired. Please request a new one.");
+			return "forgot-password";
 		}
 
 		User user = resetToken.getUser();

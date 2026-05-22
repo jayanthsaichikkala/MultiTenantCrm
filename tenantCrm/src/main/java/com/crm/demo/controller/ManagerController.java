@@ -201,6 +201,15 @@ public class ManagerController {
 	}
 
 	// =========================
+	// CALENDAR PAGE (read-only)
+	// =========================
+	@GetMapping("/calendar")
+	public String calendarPage(Model model) {
+		injectStats(model);
+		return "manager-calendar";
+	}
+
+	// =========================
 	// SETTINGS PAGE
 	// =========================
 	@GetMapping("/settings")
