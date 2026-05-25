@@ -1,7 +1,12 @@
 package com.crm.demo.controller;
 
+import com.crm.demo.model.Attendance;
+import com.crm.demo.model.AttendanceDay;
+import com.crm.demo.model.Holiday;
 import com.crm.demo.model.Team;
 import com.crm.demo.model.User;
+import com.crm.demo.repository.AttendanceRepository;
+import com.crm.demo.repository.HolidayRepository;
 import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,8 +18,10 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.Collections;
-import java.util.List;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.*;
 
 @Controller
 @RequestMapping("/hr")
@@ -22,6 +29,8 @@ public class HrController {
 
     @Autowired private UserRepository        userRepository;
     @Autowired private TeamRepository        teamRepository;
+    @Autowired private AttendanceRepository  attendanceRepository;
+    @Autowired private HolidayRepository     holidayRepository;
     @Autowired private BCryptPasswordEncoder passwordEncoder;
 
     // ── Helpers ───────────────────────────────────────────────────────────
@@ -30,6 +39,12 @@ public class HrController {
         String username = (String) request.getAttribute("loggedInUser");
         model.addAttribute("adminName", username != null ? username : "HR User");
         model.addAttribute("adminRole", "HR");
+    }
+
+    /** Resolve the currently logged-in HR user via SecurityContextHolder. */
+    private User getCurrentHr() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        return userRepository.findByUsername(username);
     }
 
     /** Extract tenant segment from the logged-in HR user's email. */
@@ -42,6 +57,56 @@ public class HrController {
         String local = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
         int dot = local.lastIndexOf('.');
         return dot >= 0 ? local.substring(dot + 1) : local;
+    }
+
+    private String getTenantSegmentFromUser(User user) {
+        if (user == null || user.getEmail() == null) return "";
+        String email = user.getEmail();
+        String local = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
+        int dot = local.lastIndexOf('.');
+        return dot >= 0 ? local.substring(dot + 1) : local;
+    }
+
+    /**
+     * Build a merged day list for the given date range.
+     * Priority: holiday > weekend > real record > absent.
+     * Result is sorted newest-first.
+     */
+    private List<AttendanceDay> buildDayList(List<Attendance> records,
+                                              LocalDate from, LocalDate to,
+                                              Map<LocalDate, String> holidays) {
+        Map<LocalDate, Attendance> byDate = new LinkedHashMap<>();
+        for (Attendance a : records) byDate.put(a.getDate(), a);
+
+        List<AttendanceDay> days = new ArrayList<>();
+        LocalDate today  = LocalDate.now();
+        LocalDate cursor = to;
+        while (!cursor.isBefore(from)) {
+            if (holidays.containsKey(cursor)) {
+                days.add(new AttendanceDay(cursor, holidays.get(cursor), true));
+            } else {
+                DayOfWeek dow = cursor.getDayOfWeek();
+                if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
+                    days.add(new AttendanceDay(cursor, "weekend"));
+                } else if (byDate.containsKey(cursor)) {
+                    days.add(new AttendanceDay(byDate.get(cursor)));
+                } else if (!cursor.isAfter(today)) {
+                    days.add(new AttendanceDay(cursor, "absent"));
+                }
+            }
+            cursor = cursor.minusDays(1);
+        }
+        return days;
+    }
+
+    /** Build holiday map (date → name) for a tenant within a date range. */
+    private Map<LocalDate, String> fetchHolidays(String tenant, LocalDate from, LocalDate to) {
+        Map<LocalDate, String> map = new LinkedHashMap<>();
+        if (tenant == null || tenant.isBlank()) return map;
+        List<Holiday> list = holidayRepository.findByTenantAndDateRange(
+                tenant, from.toString(), to.toString());
+        for (Holiday h : list) map.put(LocalDate.parse(h.getDate()), h.getName());
+        return map;
     }
 
     private void injectStats(HttpServletRequest request, Model model) {
@@ -92,10 +157,218 @@ public class HrController {
     }
 
     @GetMapping("/attendance")
-    public String attendancePage(HttpServletRequest request, Model model) {
+    public String attendancePage(
+            HttpServletRequest request,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            @RequestParam(required = false) String status,
+            Model model) {
         injectUser(request, model);
         injectStats(request, model);
+
+        User hr = getCurrentHr();
+        LocalDate today = LocalDate.now();
+
+        // Date range (default: last 30 days)
+        LocalDate filterFrom = (from != null && !from.isBlank()) ? LocalDate.parse(from) : today.minusDays(29);
+        LocalDate filterTo   = (to   != null && !to.isBlank())   ? LocalDate.parse(to)   : today;
+        if (filterTo.isAfter(today))      filterTo   = today;
+        if (filterFrom.isAfter(filterTo)) filterFrom = filterTo;
+
+        // Fetch real records in range
+        String tenant = getTenantSegmentFromUser(hr);
+        List<Attendance> records = hr != null
+                ? attendanceRepository.findByUserAndDateBetweenOrderByDateDesc(hr, filterFrom, filterTo)
+                : Collections.emptyList();
+
+        // Holidays in range
+        Map<LocalDate, String> holidays = fetchHolidays(tenant, filterFrom, filterTo);
+
+        // Today's record — drives button state
+        Optional<Attendance> todayOpt = hr != null
+                ? attendanceRepository.findByUserAndDate(hr, today)
+                : Optional.empty();
+
+        // Is today a holiday?
+        String todayHolidayName = holidays.get(today);
+        boolean isHolidayToday  = todayHolidayName != null;
+
+        boolean punchedIn  = todayOpt.isPresent();
+        boolean punchedOut = todayOpt.map(a -> a.getCheckOut() != null).orElse(false);
+        boolean onBreak    = todayOpt.map(a ->
+                (a.getBreakStart() != null && a.getBreakEnd() == null) ||
+                (a.getBreak2Start() != null && a.getBreak2End() == null)).orElse(false);
+        boolean breakDone  = todayOpt.map(a -> a.getBreak2End() != null).orElse(false);
+        boolean canStartBreak = punchedIn && !punchedOut && !onBreak && !breakDone &&
+                todayOpt.map(a -> a.getBreakStart() == null ||
+                        (a.getBreakEnd() != null && a.getBreak2Start() == null)).orElse(false);
+
+        // Build merged day list (fills absent/weekend/holiday gaps)
+        List<AttendanceDay> allDays = buildDayList(records, filterFrom, filterTo, holidays);
+
+        // Apply status filter
+        List<AttendanceDay> filteredDays = allDays;
+        if (status != null && !status.isBlank() && !"all".equalsIgnoreCase(status)) {
+            List<AttendanceDay> tmp = new ArrayList<>();
+            for (AttendanceDay d : allDays) {
+                if (d.getStatus().equalsIgnoreCase(status)) tmp.add(d);
+            }
+            filteredDays = tmp;
+        }
+
+        // Stats from all-time records
+        List<Attendance> allRecords = hr != null
+                ? attendanceRepository.findByUserOrderByDateDesc(hr)
+                : Collections.emptyList();
+        long presentCount = allRecords.stream()
+                .filter(a -> "present".equalsIgnoreCase(a.getStatus()) || "late".equalsIgnoreCase(a.getStatus()))
+                .count();
+        long lateCount = allRecords.stream()
+                .filter(a -> "late".equalsIgnoreCase(a.getStatus()))
+                .count();
+
+        model.addAttribute("attendanceDays",    filteredDays);
+        model.addAttribute("totalRecords",      filteredDays.size());
+        model.addAttribute("todayRecord",       todayOpt.orElse(null));
+        model.addAttribute("punchedIn",         punchedIn);
+        model.addAttribute("punchedOut",        punchedOut);
+        model.addAttribute("onBreak",           onBreak);
+        model.addAttribute("breakDone",         breakDone);
+        model.addAttribute("canStartBreak",     canStartBreak);
+        model.addAttribute("isHolidayToday",    isHolidayToday);
+        model.addAttribute("todayHolidayName",  todayHolidayName);
+        model.addAttribute("presentCount",      presentCount);
+        model.addAttribute("lateCount",         lateCount);
+        model.addAttribute("filterFrom",        filterFrom.toString());
+        model.addAttribute("filterTo",          filterTo.toString());
+        model.addAttribute("filterStatus",      status != null ? status : "all");
+
         return "hr-attendance";
+    }
+
+    @PostMapping("/attendance/punch-in")
+    public String punchIn(HttpServletRequest request, RedirectAttributes ra) {
+        User hr = getCurrentHr();
+        if (hr == null) return "redirect:/hr/attendance";
+
+        LocalDate today  = LocalDate.now();
+        String    tenant = getTenantSegmentFromUser(hr);
+
+        // Block punch-in on holidays
+        if (holidayRepository.findByDateAndTenantSegment(today.toString(), tenant).isPresent()) {
+            ra.addFlashAttribute("errorMessage", "Today is a holiday. Punch-in is not allowed.");
+            return "redirect:/hr/attendance";
+        }
+
+        if (attendanceRepository.findByUserAndDate(hr, today).isPresent()) {
+            ra.addFlashAttribute("errorMessage", "You have already punched in today.");
+            return "redirect:/hr/attendance";
+        }
+
+        LocalTime now    = LocalTime.now();
+        String   status  = now.isAfter(LocalTime.of(9, 30)) ? "late" : "present";
+
+        Attendance att = new Attendance();
+        att.setUser(hr);
+        att.setDate(today);
+        att.setCheckIn(now);
+        att.setStatus(status);
+        att.setTenantSegment(tenant);
+        attendanceRepository.save(att);
+
+        ra.addFlashAttribute("successMessage",
+                "Punched in at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
+        return "redirect:/hr/attendance";
+    }
+
+    @PostMapping("/attendance/punch-out")
+    public String punchOut(RedirectAttributes ra) {
+        User hr = getCurrentHr();
+        if (hr == null) return "redirect:/hr/attendance";
+
+        LocalDate today = LocalDate.now();
+        Optional<Attendance> opt = attendanceRepository.findByUserAndDate(hr, today);
+        if (opt.isEmpty()) {
+            ra.addFlashAttribute("errorMessage", "You haven't punched in today.");
+            return "redirect:/hr/attendance";
+        }
+        Attendance att = opt.get();
+        if (att.getCheckOut() != null) {
+            ra.addFlashAttribute("errorMessage", "You have already punched out today.");
+            return "redirect:/hr/attendance";
+        }
+        LocalTime now = LocalTime.now();
+        att.setCheckOut(now);
+        attendanceRepository.save(att);
+        ra.addFlashAttribute("successMessage",
+                "Punched out at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
+        return "redirect:/hr/attendance";
+    }
+
+    @PostMapping("/attendance/break-start")
+    public String breakStart(RedirectAttributes ra) {
+        User hr = getCurrentHr();
+        if (hr == null) return "redirect:/hr/attendance";
+
+        LocalDate today = LocalDate.now();
+        Optional<Attendance> opt = attendanceRepository.findByUserAndDate(hr, today);
+        if (opt.isEmpty()) {
+            ra.addFlashAttribute("errorMessage", "You haven't punched in today.");
+            return "redirect:/hr/attendance";
+        }
+        Attendance att = opt.get();
+        if (att.getCheckOut() != null) {
+            ra.addFlashAttribute("errorMessage", "You have already punched out.");
+            return "redirect:/hr/attendance";
+        }
+        LocalTime now = LocalTime.now();
+        if (att.getBreakStart() == null) {
+            att.setBreakStart(now);
+            attendanceRepository.save(att);
+            ra.addFlashAttribute("successMessage",
+                    "Break 1 started at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
+            return "redirect:/hr/attendance";
+        }
+        if (att.getBreakEnd() != null && att.getBreak2Start() == null) {
+            att.setBreak2Start(now);
+            attendanceRepository.save(att);
+            ra.addFlashAttribute("successMessage",
+                    "Break 2 started at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
+            return "redirect:/hr/attendance";
+        }
+        ra.addFlashAttribute("errorMessage", "No more breaks available today.");
+        return "redirect:/hr/attendance";
+    }
+
+    @PostMapping("/attendance/break-end")
+    public String breakEnd(RedirectAttributes ra) {
+        User hr = getCurrentHr();
+        if (hr == null) return "redirect:/hr/attendance";
+
+        LocalDate today = LocalDate.now();
+        Optional<Attendance> opt = attendanceRepository.findByUserAndDate(hr, today);
+        if (opt.isEmpty()) {
+            ra.addFlashAttribute("errorMessage", "You haven't punched in today.");
+            return "redirect:/hr/attendance";
+        }
+        Attendance att = opt.get();
+        LocalTime now = LocalTime.now();
+        if (att.getBreak2Start() != null && att.getBreak2End() == null) {
+            att.setBreak2End(now);
+            attendanceRepository.save(att);
+            ra.addFlashAttribute("successMessage",
+                    "Break 2 ended at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
+            return "redirect:/hr/attendance";
+        }
+        if (att.getBreakStart() != null && att.getBreakEnd() == null) {
+            att.setBreakEnd(now);
+            attendanceRepository.save(att);
+            ra.addFlashAttribute("successMessage",
+                    "Break 1 ended at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
+            return "redirect:/hr/attendance";
+        }
+        ra.addFlashAttribute("errorMessage", "No active break to end.");
+        return "redirect:/hr/attendance";
     }
 
     @GetMapping("/leaves")

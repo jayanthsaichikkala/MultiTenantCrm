@@ -2,11 +2,13 @@ package com.crm.demo.controller;
 import org.springframework.web.bind.annotation.RequestParam;
 import com.crm.demo.model.Attendance;
 import com.crm.demo.model.AttendanceDay;
+import com.crm.demo.model.Holiday;
 import com.crm.demo.model.Project;
 import com.crm.demo.model.Task;
 import com.crm.demo.model.Team;
 import com.crm.demo.model.User;
 import com.crm.demo.repository.AttendanceRepository;
+import com.crm.demo.repository.HolidayRepository;
 import com.crm.demo.repository.ProjectRepository;
 import com.crm.demo.repository.TaskRepository;
 import com.crm.demo.repository.TeamRepository;
@@ -49,6 +51,9 @@ public class ManagerController {
 
 	@Autowired
 	private AttendanceRepository attendanceRepository;
+
+	@Autowired
+	private HolidayRepository holidayRepository;
 
 	@Autowired
 	private TeamRepository teamRepository;
@@ -272,10 +277,12 @@ public class ManagerController {
 
 	/**
 	 * Build a merged day list for the given date range.
-	 * Real records are used where they exist; missing weekdays become "absent";
-	 * Saturday/Sunday become "weekend". Result is sorted newest-first.
+	 * Priority: holiday > weekend > real record > absent.
+	 * Result is sorted newest-first.
 	 */
-	private List<AttendanceDay> buildDayList(List<Attendance> records, LocalDate from, LocalDate to) {
+	private List<AttendanceDay> buildDayList(List<Attendance> records,
+	                                          LocalDate from, LocalDate to,
+	                                          Map<LocalDate, String> holidays) {
 		Map<LocalDate, Attendance> byDate = new LinkedHashMap<>();
 		for (Attendance a : records) byDate.put(a.getDate(), a);
 
@@ -283,17 +290,31 @@ public class ManagerController {
 		LocalDate today  = LocalDate.now();
 		LocalDate cursor = to;
 		while (!cursor.isBefore(from)) {
-			DayOfWeek dow = cursor.getDayOfWeek();
-			if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
-				days.add(new AttendanceDay(cursor, "weekend"));
-			} else if (byDate.containsKey(cursor)) {
-				days.add(new AttendanceDay(byDate.get(cursor)));
-			} else if (!cursor.isAfter(today)) {
-				days.add(new AttendanceDay(cursor, "absent"));
+			if (holidays.containsKey(cursor)) {
+				days.add(new AttendanceDay(cursor, holidays.get(cursor), true));
+			} else {
+				DayOfWeek dow = cursor.getDayOfWeek();
+				if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
+					days.add(new AttendanceDay(cursor, "weekend"));
+				} else if (byDate.containsKey(cursor)) {
+					days.add(new AttendanceDay(byDate.get(cursor)));
+				} else if (!cursor.isAfter(today)) {
+					days.add(new AttendanceDay(cursor, "absent"));
+				}
 			}
 			cursor = cursor.minusDays(1);
 		}
 		return days;
+	}
+
+	/** Build holiday map (date → name) for a tenant within a date range. */
+	private Map<LocalDate, String> fetchHolidays(String tenant, LocalDate from, LocalDate to) {
+		Map<LocalDate, String> map = new LinkedHashMap<>();
+		if (tenant == null || tenant.isBlank()) return map;
+		List<Holiday> list = holidayRepository.findByTenantAndDateRange(
+				tenant, from.toString(), to.toString());
+		for (Holiday h : list) map.put(LocalDate.parse(h.getDate()), h.getName());
+		return map;
 	}
 
 	@GetMapping("/attendance")
@@ -318,11 +339,19 @@ public class ManagerController {
 		if (filterFrom.isAfter(filterTo)) filterFrom = filterTo;
 
 		// Fetch real records in range
+		String tenant = getTenantSegment(manager);
 		List<Attendance> records = attendanceRepository
 				.findByUserAndDateBetweenOrderByDateDesc(manager, filterFrom, filterTo);
 
+		// Holidays in range
+		Map<LocalDate, String> holidays = fetchHolidays(tenant, filterFrom, filterTo);
+
 		// Today's record — drives punch-in / punch-out button state
 		Optional<Attendance> todayOpt = attendanceRepository.findByUserAndDate(manager, today);
+
+		// Is today a holiday?
+		String todayHolidayName = holidays.get(today);
+		boolean isHolidayToday  = todayHolidayName != null;
 
 		boolean punchedIn  = todayOpt.isPresent();
 		boolean punchedOut = todayOpt.map(a -> a.getCheckOut() != null).orElse(false);
@@ -334,8 +363,8 @@ public class ManagerController {
 				todayOpt.map(a -> a.getBreakStart() == null ||
 						(a.getBreakEnd() != null && a.getBreak2Start() == null)).orElse(false);
 
-		// Build merged day list (fills absent/weekend gaps)
-		List<AttendanceDay> allDays = buildDayList(records, filterFrom, filterTo);
+		// Build merged day list (fills absent/weekend/holiday gaps)
+		List<AttendanceDay> allDays = buildDayList(records, filterFrom, filterTo, holidays);
 
 		// Apply status filter
 		List<AttendanceDay> filteredDays = allDays;
@@ -356,19 +385,21 @@ public class ManagerController {
 				.filter(a -> "late".equalsIgnoreCase(a.getStatus()))
 				.count();
 
-		model.addAttribute("attendanceDays",  filteredDays);
-		model.addAttribute("totalRecords",    filteredDays.size());
-		model.addAttribute("todayRecord",     todayOpt.orElse(null));
-		model.addAttribute("punchedIn",       punchedIn);
-		model.addAttribute("punchedOut",      punchedOut);
-		model.addAttribute("onBreak",         onBreak);
-		model.addAttribute("breakDone",       breakDone);
-		model.addAttribute("canStartBreak",   canStartBreak);
-		model.addAttribute("presentCount",    presentCount);
-		model.addAttribute("lateCount",       lateCount);
-		model.addAttribute("filterFrom",      filterFrom.toString());
-		model.addAttribute("filterTo",        filterTo.toString());
-		model.addAttribute("filterStatus",    status != null ? status : "all");
+		model.addAttribute("attendanceDays",    filteredDays);
+		model.addAttribute("totalRecords",      filteredDays.size());
+		model.addAttribute("todayRecord",       todayOpt.orElse(null));
+		model.addAttribute("punchedIn",         punchedIn);
+		model.addAttribute("punchedOut",        punchedOut);
+		model.addAttribute("onBreak",           onBreak);
+		model.addAttribute("breakDone",         breakDone);
+		model.addAttribute("canStartBreak",     canStartBreak);
+		model.addAttribute("isHolidayToday",    isHolidayToday);
+		model.addAttribute("todayHolidayName",  todayHolidayName);
+		model.addAttribute("presentCount",      presentCount);
+		model.addAttribute("lateCount",         lateCount);
+		model.addAttribute("filterFrom",        filterFrom.toString());
+		model.addAttribute("filterTo",          filterTo.toString());
+		model.addAttribute("filterStatus",      status != null ? status : "all");
 
 		return "manager-attendance";
 	}
@@ -379,8 +410,14 @@ public class ManagerController {
 		User manager = getCurrentManager();
 		if (manager == null) return "redirect:/manager/attendance";
 
-		String tenant = getTenantSegment(manager);
-		LocalDate today = LocalDate.now();
+		String    tenant = getTenantSegment(manager);
+		LocalDate today  = LocalDate.now();
+
+		// Block punch-in on holidays
+		if (holidayRepository.findByDateAndTenantSegment(today.toString(), tenant).isPresent()) {
+			ra.addFlashAttribute("errorMessage", "Today is a holiday. Punch-in is not allowed.");
+			return "redirect:/manager/attendance";
+		}
 
 		// Prevent duplicate punch-in
 		if (attendanceRepository.findByUserAndDate(manager, today).isPresent()) {
@@ -388,9 +425,8 @@ public class ManagerController {
 			return "redirect:/manager/attendance";
 		}
 
-		LocalTime now = LocalTime.now();
-		// Mark "late" if after 09:30
-		String status = now.isAfter(LocalTime.of(9, 30)) ? "late" : "present";
+		LocalTime now    = LocalTime.now();
+		String    status = now.isAfter(LocalTime.of(9, 30)) ? "late" : "present";
 
 		Attendance att = new Attendance();
 		att.setUser(manager);
