@@ -96,8 +96,17 @@
                     <!-- Action area: one prominent button + context -->
                     <div class="att-action-area">
 
-                        <!-- State: not punched in yet -->
-                        <div th:if="${!punchedIn}">
+                        <!-- State: today is a holiday — block all actions -->
+                        <div th:if="${isHolidayToday}" class="att-holiday-banner">
+                            <i data-lucide="sun"></i>
+                            <div>
+                                <p class="att-done-title" th:text="'Holiday: ' + ${todayHolidayName}">Holiday</p>
+                                <p class="att-action-hint">Punch-in is not available on holidays.</p>
+                            </div>
+                        </div>
+
+                        <!-- State: not punched in yet (and not a holiday) -->
+                        <div th:if="${!punchedIn and !isHolidayToday}">
                             <form th:action="@{/employee/attendance/punch-in}" method="post">
                                 <button type="submit" class="att-main-btn btn-punch-in">
                                     <i data-lucide="log-in"></i> Punch In
@@ -278,7 +287,9 @@
                         <option value="all"     th:selected="${filterStatus == 'all'}">All Status</option>
                         <option value="present" th:selected="${filterStatus == 'present'}">Present</option>
                         <option value="late"    th:selected="${filterStatus == 'late'}">Late</option>
+                        <option value="half-day" th:selected="${filterStatus == 'half-day'}">Half Day</option>
                         <option value="absent"  th:selected="${filterStatus == 'absent'}">Absent</option>
+                        <option value="holiday" th:selected="${filterStatus == 'holiday'}">Holiday</option>
                         <option value="weekend" th:selected="${filterStatus == 'weekend'}">Weekend</option>
                     </select>
                     <button type="submit"
@@ -301,12 +312,13 @@
                             <th>Check Out</th>
                             <th>Worked</th>
                             <th>Break</th>
+                            <th>Day Type</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr th:each="day, stat : ${attendanceDays}"
-                            th:classappend="${day.status == 'weekend'} ? 'row-weekend' : (${day.status == 'absent'} ? 'row-absent' : '')">
+                            th:classappend="${day.status == 'weekend'} ? 'row-weekend' : (${day.status == 'absent'} ? 'row-absent' : (${day.status == 'holiday'} ? 'row-holiday' : ''))">
                             <td style="color:#6b7280;font-weight:600;" th:text="${stat.count}">1</td>
                             <td style="font-weight:600;" th:text="${day.date}">2026-01-01</td>
                             <td>
@@ -322,14 +334,22 @@
                             <td style="font-weight:600;color:#17455e;" th:text="${day.workedHours}">—</td>
                             <td style="font-weight:500;color:#b45309;" th:text="${day.breakDuration}">—</td>
                             <td>
+                                <span th:if="${day.real and day.record.checkOut != null}"
+                                      th:class="${day.record.workedMinutes >= 240} ? 'status-badge active' : 'status-badge att-half-day'"
+                                      th:text="${day.record.dayType}">—</span>
+                                <span th:unless="${day.real and day.record.checkOut != null}" style="color:#9ca3af;">—</span>
+                            </td>
+                            <td>
                                 <span class="status-badge active"   th:if="${day.status == 'present'}">Present</span>
                                 <span class="status-badge att-late" th:if="${day.status == 'late'}">Late</span>
                                 <span class="status-badge inactive" th:if="${day.status == 'absent'}">Absent</span>
                                 <span class="status-badge weekend"  th:if="${day.status == 'weekend'}">Weekend</span>
+                                <span class="status-badge att-half-day" th:if="${day.status == 'half-day'}">Half Day</span>
+                                <span class="status-badge att-holiday"  th:if="${day.status == 'holiday'}">Holiday</span>
                             </td>
                         </tr>
                         <tr th:if="${attendanceDays == null or #lists.isEmpty(attendanceDays)}">
-                            <td colspan="7">
+                            <td colspan="8">
                                 <div class="empty-state">
                                     <i data-lucide="calendar" style="width:48px;height:48px;opacity:.3;"></i>
                                     <h3>No Records Found</h3>

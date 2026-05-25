@@ -543,3 +543,28 @@ tbody tr.row-weekend:hover { background:#ede9fe; }
 .info-value { font-weight:700; color:#163647; }
 
 @media (max-width:1200px) { .settings-container { grid-template-columns:1fr; } }
+
+/* ── Half-day badge ── */
+.status-badge.att-half-day { background:#fef3c7; color:#92400e; }
+
+/* ── Holiday badge ── */
+.status-badge.att-holiday { background:#fce7f3; color:#9d174d; }
+
+/* ── Holiday row tinting ── */
+tbody tr.row-holiday { background:#fdf2f8; }
+tbody tr.row-holiday:hover { background:#fce7f3; }
+
+/* ── Holiday banner (replaces punch-in button on holidays) ── */
+.att-holiday-banner {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 20px;
+    background: #fce7f3;
+    border: 1.5px solid #f9a8d4;
+    border-radius: 16px;
+    color: #9d174d;
+}
+.att-holiday-banner i[data-lucide] { width: 28px; height: 28px; flex-shrink: 0; }
+.att-holiday-banner .att-done-title { color: #9d174d; }
+.att-holiday-banner .att-action-hint { color: #be185d; }
