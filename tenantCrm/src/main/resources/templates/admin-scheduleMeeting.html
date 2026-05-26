@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>CRM — Schedule Meeting</title>
+
+	<link rel="stylesheet" th:href="@{/admin-scheduleMeeting.css}">
+
+	<style>
+		.meeting-field-hint {
+			font-size: 12px;
+			color: #6b7280;
+			margin-top: 4px;
+			display: block;
+		}
+
+		.field-error {
+			font-size: 12px;
+			color: #dc2626;
+			margin-top: 4px;
+			display: block;
+		}
+
+		.required {
+			color: #dc2626;
+		}
+
+		.checkbox-row {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			cursor: pointer;
+			font-size: 14px;
+			color: #374151;
+		}
+
+		.checkbox-row input[type="checkbox"] {
+			width: 16px;
+			height: 16px;
+			accent-color: #2563eb;
+			cursor: pointer;
+		}
+
+		.badge-online {
+			background: #dff5ea;
+			color: #15803d;
+		}
+
+		.badge-inperson {
+			background: #fce9d8;
+			color: #b45309;
+		}
+
+		.badge-hybrid {
+			background: #e9e2ff;
+			color: #5b21b6;
+		}
+
+		.delete-btn {
+			background: #dc2626;
+			color: white;
+			border: none;
+			padding: 6px 12px;
+			border-radius: 6px;
+			cursor: pointer;
+		}
+
+		.delete-btn:hover {
+			background: #b91c1c;
+		}
+	</style>
+
+</head>
+
+<body>
+
+	<!-- MOBILE TOPBAR -->
+	<div class="mobile-topbar">
+		<button class="hamburger" id="hamburgerBtn">
+			<span></span>
+			<span></span>
+			<span></span>
+		</button>
+
+		<span class="mobile-title">
+			&#128737; CRM Admin
+		</span>
+	</div>
+
+	<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+	<!-- SIDEBAR -->
+	<div class="sidebar" id="sidebar">
+
+		<div class="sidebar-logo">
+			<div class="logo-icon">&#128737;</div>
+			<h2>Admin</h2>
+		</div>
+
+		<div class="profile-box">
+
+			<div class="profile-avatar" th:text="${#strings.substring(adminName ?: 'Admin', 0, 1).toUpperCase()}">
+				A
+			</div>
+
+			<h3 th:text="${adminName} ?: 'Admin'">
+				Admin
+			</h3>
+
+		</div>
+
+		<ul class="sidebar-menu">
+
+			<li th:classappend="${activePage == 'dashboard'} ? 'active'">
+				<a th:href="@{/admin/dashboard}">
+					&#128202; Dashboard
+				</a>
+			</li>
+
+			<li th:classappend="${activePage == 'add-users'} ? 'active'">
+				<a th:href="@{/admin/add-user}">
+					&#128101; Employees
+				</a>
+			</li>
+
+			<li th:classappend="${activePage == 'schedule-meeting'} ? 'active'">
+				<a th:href="@{/admin/schedule-meeting}">
+					&#128197; Schedule Meeting
+				</a>
+			</li>
+
+			<li th:classappend="${activePage == 'projects'} ? 'active'">
+				<a th:href="@{/admin/projects}">
+					&#128193; Projects
+				</a>
+			</li>
+
+			<li th:classappend="${activePage == 'tasks'} ? 'active'">
+				<a th:href="@{/admin/tasks}">
+					&#9989; Tasks
+				</a>
+			</li>
+
+			<li th:classappend="${activePage == 'reports'} ? 'active'">
+				<a th:href="@{/admin/reports}">
+					&#128196; Reports
+				</a>
+			</li>
+
+			<li th:classappend="${activePage == 'calendar'} ? 'active'">
+				<a th:href="@{/admin/calendar}">
+					&#9884; Calendar
+				</a>
+			</li>
+
+			<li th:classappend="${activePage == 'settings'} ? 'active'">
+				<a th:href="@{/admin/settings}">
+					&#9881; Settings
+				</a>
+			</li>
+
+		</ul>
+
+		<a href="#" data-logout style="text-decoration:none;">
+			<button class="logout-btn">
+				&#128682; Logout
+			</button>
+		</a>
+
+	</div>
+
+	<!-- MAIN WRAPPER -->
+	<div class="main-wrapper">
+
+		<!-- TOPBAR -->
+		<div class="topbar">
+
+			<h1>
+				&#128197; Schedule Meeting
+			</h1>
+
+			<div class="topbar-right">
+
+				<div class="search-box">
+					<input type="text" id="globalSearch" placeholder="Search…">
+				</div>
+
+				<div class="notif-btn" title="Notifications">
+					&#128276;
+
+					<span class="notif-badge" th:text="${notificationCount} ?: '0'"
+						th:if="${notificationCount != null and notificationCount > 0}">
+						0
+					</span>
+				</div>
+
+				<div class="user-badge" th:text="${#strings.substring(adminName ?: 'Admin', 0, 1).toUpperCase()}">
+					A
+				</div>
+
+			</div>
+
+		</div>
+
+		<!-- PAGE CONTENT -->
+		<div class="page-content">
+
+			<!-- SUCCESS -->
+			<div class="toast success" th:if="${successMessage}" th:text="${successMessage}">
+			</div>
+
+			<!-- ERROR -->
+			<div class="toast error" th:if="${errorMessage}" th:text="${errorMessage}">
+			</div>
+
+			<!-- FORM -->
+			<div class="card au-form-card">
+
+				<div class="card-header">
+					<div>
+						<h2>New Meeting Details</h2>
+						<p>Fill in meeting details</p>
+					</div>
+				</div>
+
+				<form th:action="@{/admin/schedule-meeting}" th:object="${meetingForm}" method="post">
+
+					<div class="au-form-grid">
+
+						<!-- TITLE -->
+						<div class="form-group" style="grid-column:1/-1;">
+
+							<label>
+								Meeting Title
+								<span class="required">*</span>
+							</label>
+
+							<div class="input-wrap">
+								<input type="text" th:field="*{title}" placeholder="Enter meeting title" required>
+							</div>
+
+							<span th:if="${#fields.hasErrors('title')}" th:errors="*{title}" class="field-error">
+							</span>
+
+						</div>
+
+						<!-- DATE -->
+						<div class="form-group">
+
+							<label>
+								Date
+								<span class="required">*</span>
+							</label>
+
+							<div class="input-wrap">
+								<input type="date" th:field="*{meetingDate}" required>
+							</div>
+
+						</div>
+
+						<!-- TIME -->
+						<div class="form-group">
+
+							<label>
+								Time
+								<span class="required">*</span>
+							</label>
+
+							<div class="input-wrap">
+								<input type="time" th:field="*{meetingTime}" required>
+							</div>
+
+						</div>
+
+						<!-- DURATION -->
+						<div class="form-group">
+
+							<label>Duration</label>
+
+							<div class="input-wrap">
+
+								<select th:field="*{duration}" class="select-input">
+
+									<option value="15">15 Minutes</option>
+									<option value="30">30 Minutes</option>
+									<option value="45">45 Minutes</option>
+									<option value="60">1 Hour</option>
+									<option value="90">1.5 Hours</option>
+
+								</select>
+
+							</div>
+
+						</div>
+
+						<!-- TYPE -->
+						<div class="form-group">
+
+							<label>Meeting Type</label>
+
+							<div class="input-wrap">
+
+								<select th:field="*{meetingType}" class="select-input">
+
+									<option value="ONLINE">Online</option>
+									<option value="IN_PERSON">In Person</option>
+									<option value="HYBRID">Hybrid</option>
+
+								</select>
+
+							</div>
+
+						</div>
+
+						<!-- LOCATION -->
+						<div class="form-group" style="grid-column:1/-1;">
+
+							<label>Location / Meeting Link</label>
+
+							<div class="input-wrap">
+
+								<input type="text" th:field="*{location}" placeholder="Meeting link or room">
+
+							</div>
+
+						</div>
+
+						<!-- PARTICIPANTS -->
+						<div class="form-group" style="grid-column:1/-1;">
+
+							<label>
+								Participants
+								<span class="required">*</span>
+							</label>
+
+							<div class="input-wrap">
+
+								<input type="text" th:field="*{participants}"
+									placeholder="john@gmail.com, alex@gmail.com" required>
+
+							</div>
+
+							<span class="meeting-field-hint">
+								Separate emails using commas
+							</span>
+
+						</div>
+
+						<!-- AGENDA -->
+						<div class="form-group" style="grid-column:1/-1;">
+
+							<label>Agenda</label>
+
+							<div class="input-wrap">
+
+								<textarea th:field="*{agenda}" rows="4"
+									style="height:auto;padding:12px 16px;resize:vertical;"
+									placeholder="Meeting agenda...">
+                                </textarea>
+
+							</div>
+
+						</div>
+
+						<!-- SEND NOTIFICATION -->
+						<div class="form-group" style="grid-column:1/-1;">
+
+							<label class="checkbox-row">
+
+								<input type="checkbox" th:field="*{sendNotification}">
+
+								Send Email Notification
+
+							</label>
+
+						</div>
+
+					</div>
+
+					<!-- BUTTONS -->
+					<div class="form-actions">
+
+						<a th:href="@{/admin/dashboard}" class="btn btn-clear">
+							Cancel
+						</a>
+
+						<button type="reset" class="btn btn-clear">
+							Reset
+						</button>
+
+						<button type="submit" class="btn btn-primary">
+							Schedule Meeting
+						</button>
+
+					</div>
+
+				</form>
+
+			</div>
+
+			<!-- TABLE -->
+			<div class="card" style="margin-top:24px;"
+				th:if="${upcomingMeetings != null and !upcomingMeetings.isEmpty()}">
+
+				<div class="card-header">
+					<div>
+						<h2>Upcoming Meetings</h2>
+					</div>
+				</div>
+
+				<div class="table-wrap">
+
+					<table>
+
+						<thead>
+
+							<tr>
+								<th>#</th>
+								<th>Title</th>
+								<th>Date</th>
+								<th>Time</th>
+								<th>Duration</th>
+								<th>Type</th>
+								<th>Actions</th>
+							</tr>
+
+						</thead>
+
+						<tbody>
+
+							<tr th:each="meeting, stat : ${upcomingMeetings}">
+
+								<td th:text="${stat.index + 1}">1</td>
+
+								<td th:text="${meeting.title}">
+									Meeting
+								</td>
+
+								<td th:text="${#temporals.format(meeting.meetingDate, 'dd MMM yyyy')}">
+									Date
+								</td>
+
+								<td th:text="${meeting.meetingTime}">
+									Time
+								</td>
+
+								<td th:text="${meeting.duration} + ' min'">
+									60 min
+								</td>
+
+								<td>
+
+									<span class="status-badge badge-online" th:if="${meeting.meetingType == 'ONLINE'}">
+										Online
+									</span>
+
+									<span class="status-badge badge-inperson"
+										th:if="${meeting.meetingType == 'IN_PERSON'}">
+										In Person
+									</span>
+
+									<span class="status-badge badge-hybrid" th:if="${meeting.meetingType == 'HYBRID'}">
+										Hybrid
+									</span>
+
+								</td>
+
+								<td>
+
+									<div class="action-btns">
+
+										<!-- EDIT -->
+										<a th:href="@{/admin/schedule-meeting/edit/{id}(id=${meeting.id})}"
+											class="action-btn">
+											Edit
+										</a>
+
+										<!-- DELETE -->
+										<form th:action="@{/admin/schedule-meeting/delete/{id}(id=${meeting.id})}"
+											method="post" style="display:inline;">
+
+											<button type="submit" class="delete-btn"
+												onclick="return confirm('Delete this meeting?')">
+
+												Delete
+
+											</button>
+
+										</form>
+
+									</div>
+
+								</td>
+
+							</tr>
+
+						</tbody>
+
+					</table>
+
+				</div>
+
+			</div>
+
+		</div>
+
+	</div>
+
+	<!-- JS -->
+	<script>
+
+		// Sidebar Toggle
+		var hamburger = document.getElementById('hamburgerBtn');
+		var sidebar = document.getElementById('sidebar');
+		var overlay = document.getElementById('sidebarOverlay');
+
+		function openSidebar() {
+			sidebar.classList.add('open');
+			overlay.classList.add('active');
+			document.body.style.overflow = 'hidden';
+		}
+
+		function closeSidebar() {
+			sidebar.classList.remove('open');
+			overlay.classList.remove('active');
+			document.body.style.overflow = '';
+		}
+
+		if (hamburger) {
+			hamburger.addEventListener('click', openSidebar);
+		}
+
+		if (overlay) {
+			overlay.addEventListener('click', closeSidebar);
+		}
+
+		// Search
+		var gs = document.getElementById('globalSearch');
+
+		if (gs) {
+
+			gs.addEventListener('input', function () {
+
+				var q = this.value.toLowerCase();
+
+				document.querySelectorAll('table tbody tr').forEach(function (row) {
+
+					row.style.display =
+						row.textContent.toLowerCase().indexOf(q) > -1
+							? ''
+							: 'none';
+
+				});
+
+			});
+
+		}
+
+	</script>
+
+	<script th:src="@{/auth.js}"></script>
+
+</body>
+
+</html>

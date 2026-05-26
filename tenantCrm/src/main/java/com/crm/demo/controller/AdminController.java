@@ -1,528 +1,454 @@
 package com.crm.demo.controller;
 
-import com.crm.demo.model.Project;
-import com.crm.demo.model.Task;
-import com.crm.demo.model.User;
-import com.crm.demo.repository.ProjectRepository;
-import com.crm.demo.repository.TaskRepository;
-import com.crm.demo.repository.UserRepository;
-import jakarta.servlet.http.HttpServletRequest;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.Collections;
-import java.util.List;
+import com.crm.demo.model.Meeting;
+import com.crm.demo.model.Project;
+import com.crm.demo.model.Task;
+import com.crm.demo.model.User;
+import com.crm.demo.repository.MeetingRepository;
+import com.crm.demo.repository.ProjectRepository;
+import com.crm.demo.repository.TaskRepository;
+import com.crm.demo.repository.UserRepository;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 
 @Controller
 @RequestMapping("/admin")
 public class AdminController {
 
-    @Autowired private UserRepository    userRepository;
-    @Autowired private ProjectRepository projectRepository;
-    @Autowired private TaskRepository    taskRepository;
-    @Autowired private BCryptPasswordEncoder passwordEncoder;
+	@Autowired
+	private MeetingRepository meetingRepository;
 
-    // ── Shared helper: inject logged-in user info ─────────────────────────
-    private void injectUser(HttpServletRequest request, Model model) {
-        String username = (String) request.getAttribute("loggedInUser");
-        String role     = (String) request.getAttribute("loggedInRole");
-        model.addAttribute("adminName", username != null ? username : "Admin");
-        model.addAttribute("adminRole", role     != null ? role     : "ADMIN");
-    }
+	@Autowired
+	private ProjectRepository projectRepository;
 
-    /**
-     * Derive the tenant segment from the logged-in admin's email.
-     *
-     * Email format:  <prefix>.<tenant>@<domain>
-     * Example:       admin.tcs@crm.com  →  "tcs"
-     *                admin.amazon@crm.com → "amazon"
-     *
-     * The segment is the part between the last dot before '@' and the '@'.
-     * Falls back to the full local-part if no dot is found.
-     *
-     * SUPER_ADMIN (whose email has no tenant segment) gets null → sees everyone.
-     */
-    private String getTenantSegment(HttpServletRequest request) {
-        String username = (String) request.getAttribute("loggedInUser");
-        String role     = (String) request.getAttribute("loggedInRole");
+	@Autowired
+	private TaskRepository taskRepository;
 
-        // Super-admin sees all tenants
-        if ("SUPER_ADMIN".equalsIgnoreCase(role)) return null;
+	@Autowired
+	private UserRepository userRepository;
 
-        if (username == null) return null;
-        User admin = userRepository.findByUsername(username);
-        if (admin == null || admin.getEmail() == null) return null;
+	@Autowired
+	private BCryptPasswordEncoder passwordEncoder;
 
-        String email     = admin.getEmail();                  // e.g. admin.tcs@crm.com
-        String localPart = email.contains("@")
-                           ? email.substring(0, email.indexOf('@'))
-                           : email;                           // e.g. admin.tcs
-        int lastDot = localPart.lastIndexOf('.');
-        return lastDot >= 0
-               ? localPart.substring(lastDot + 1)            // e.g. "tcs"
-               : localPart;
-    }
+	// =========================================================
+	// COMMON USER DETAILS
+	// =========================================================
 
-    /** Return tenant-scoped user list (or all users for SUPER_ADMIN). */
-    private List<User> getTenantUsers(HttpServletRequest request) {
-        String segment = getTenantSegment(request);
-        return segment != null
-               ? userRepository.findByTenantSegment(segment)
-               : userRepository.findAll();
-    }
+	private void injectUser(HttpServletRequest request, Model model) {
+		String username = (String) request.getAttribute("loggedInUser");
+		String role     = (String) request.getAttribute("loggedInRole");
+		model.addAttribute("adminName", username != null ? username : "Admin");
+		model.addAttribute("adminRole", role     != null ? role     : "ADMIN");
+	}
 
-    // ═══════════════════════════════════════════════════════════════════════
-    //  DASHBOARD
-    // ═══════════════════════════════════════════════════════════════════════
-    @GetMapping("/dashboard")
-    public String dashboard(HttpServletRequest request, Model model) {
-        injectUser(request, model);
+	/** Resolve the current admin's tenant segment from their email. */
+	private String getTenantSegment(String username) {
+		if (username == null) return "";
+		User user = userRepository.findByUsername(username);
+		if (user == null || user.getEmail() == null) return "";
+		String email = user.getEmail();
+		try {
+			String local = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
+			int dot = local.lastIndexOf('.');
+			return dot >= 0 ? local.substring(dot + 1) : local;
+		} catch (Exception e) {
+			return "";
+		}
+	}
 
-        String username = (String) request.getAttribute("loggedInUser");
-        List<User> allUsers = getTenantUsers(request);
-        List<Project> allProjects = projectRepository.findAll();
-        List<Task> allTasks = taskRepository.findAll();
+	// =========================================================
+	// DASHBOARD
+	// =========================================================
 
-        long employees = allUsers.stream().filter(u -> "EMPLOYEE".equalsIgnoreCase(u.getRole())).count();
-        long activeProj = allProjects.stream().filter(p -> "active".equalsIgnoreCase(p.getStatus())).count();
-        long doneTasks  = allTasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
-        long overdue    = allTasks.stream().filter(t -> "pending".equalsIgnoreCase(t.getStatus())).count();
+	@GetMapping("/dashboard")
+	public String dashboard(HttpServletRequest request, Model model) {
+		injectUser(request, model);
 
-        model.addAttribute("pageTitle",    "CRM — Admin Dashboard");
-        model.addAttribute("pageHeading",  "Dashboard");
-        model.addAttribute("pageSubtitle", "Welcome back, " + (username != null ? username : "Admin") + "!");
-        model.addAttribute("activePage",   "dashboard");
+		String username = (String) request.getAttribute("loggedInUser");
+		String tenant   = getTenantSegment(username);
 
-        model.addAttribute("totalEmployees", employees);
-        model.addAttribute("employeeGrowth", "+0%");
-        model.addAttribute("activeProjects",  activeProj);
-        model.addAttribute("projectGrowth",  "+0%");
-        model.addAttribute("tasksDone",       doneTasks);
-        model.addAttribute("taskGrowth",     "+0%");
-        model.addAttribute("overdueTasks",    overdue);
-        model.addAttribute("overdueChange",  "0%");
+		List<User>    employees = userRepository.findEmployeesByTenant(tenant);
+		List<Project> projects  = projectRepository.findAll();
+		List<Task>    tasks     = taskRepository.findAll();
 
-        model.addAttribute("employeeCount", employees);
-        model.addAttribute("projectCount",  allProjects.size());
-        model.addAttribute("pendingTasks",  overdue);
+		long activeProjects = projects.stream().filter(p -> "active".equalsIgnoreCase(p.getStatus())).count();
+		long tasksDone      = tasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
+		long pendingTasks   = tasks.stream().filter(t -> "pending".equalsIgnoreCase(t.getStatus())).count();
 
-        model.addAttribute("notificationCount", 0);
-        model.addAttribute("recentActivities", Collections.emptyList());
-        return "admin-dashboard";
-    }
+		model.addAttribute("totalEmployees",  employees.size());
+		model.addAttribute("employeeCount",   employees.size());
+		model.addAttribute("employeeGrowth",  "+0%");
+		model.addAttribute("activeProjects",  activeProjects);
+		model.addAttribute("projectCount",    activeProjects);
+		model.addAttribute("projectGrowth",   "+0%");
+		model.addAttribute("tasksDone",       tasksDone);
+		model.addAttribute("taskGrowth",      "+0%");
+		model.addAttribute("overdueTasks",    pendingTasks);
+		model.addAttribute("overdueChange",   "0%");
+		model.addAttribute("pendingTasks",    pendingTasks);
+		model.addAttribute("recentActivities", java.util.Collections.emptyList());
 
-    // ═══════════════════════════════════════════════════════════════════════
-    //  EMPLOYEES
-    // ═══════════════════════════════════════════════════════════════════════
-    @GetMapping("/employees")
-    public String employeesPage(HttpServletRequest request, Model model) {
-        injectUser(request, model);
-        List<User> employees = getTenantUsers(request).stream()
-                .filter(u -> "EMPLOYEE".equalsIgnoreCase(u.getRole())).toList();
-        long active   = employees.stream().filter(User::isActive).count();
-        long inactive = employees.size() - active;
+		return "admin-dashboard";
+	}
 
-        model.addAttribute("pageTitle",   "CRM — Employees");
-        model.addAttribute("pageHeading", "Employees");
-        model.addAttribute("activePage",  "employees");
-        model.addAttribute("employees",        employees);
-        model.addAttribute("totalEmployees",   employees.size());
-        model.addAttribute("activeEmployees",  active);
-        model.addAttribute("inactiveEmployees",inactive);
-        return "add-users";
-    }
+	// =========================================================
+	// EMPLOYEES (ADD USER)
+	// =========================================================
 
-    @PostMapping("/employees")
-    public String addEmployee(@RequestParam String username,
-                              @RequestParam String email,
-                              @RequestParam String password,
-                              @RequestParam String confirmPassword,
-                              HttpServletRequest request,
-                              RedirectAttributes ra) {
-        if (!password.equals(confirmPassword)) {
-            ra.addFlashAttribute("errorMessage", "Passwords do not match.");
-            ra.addFlashAttribute("showAddForm", true);
-            return "redirect:/admin/employees";
-        }
-        if (userRepository.findByUsernameOrEmail(username, email) != null) {
-            ra.addFlashAttribute("errorMessage", "Username or email already exists.");
-            ra.addFlashAttribute("showAddForm", true);
-            return "redirect:/admin/employees";
-        }
-        User emp = new User();
-        emp.setUsername(username);
-        emp.setEmail(email);
-        emp.setPassword(passwordEncoder.encode(password));
-        emp.setRole("EMPLOYEE");
-        emp.setStatus("active");
-        userRepository.save(emp);
-        ra.addFlashAttribute("successMessage", "Employee '" + username + "' added successfully.");
-        return "redirect:/admin/employees";
-    }
+	@GetMapping("/add-user")
+	public String addUserPage(HttpServletRequest request, Model model) {
+		injectUser(request, model);
 
-    @PostMapping("/employees/toggle/{id}")
-    public String toggleEmployee(@PathVariable Long id, RedirectAttributes ra) {
-        User emp = userRepository.findById(id).orElse(null);
-        if (emp != null && "EMPLOYEE".equalsIgnoreCase(emp.getRole())) {
-            String newStatus = "active".equalsIgnoreCase(emp.getStatus()) ? "inactive" : "active";
-            emp.setStatus(newStatus);
-            userRepository.save(emp);
-            ra.addFlashAttribute("successMessage", "Employee '" + emp.getUsername() + "' is now " + newStatus + ".");
-        }
-        return "redirect:/admin/employees";
-    }
+		String username = (String) request.getAttribute("loggedInUser");
+		String tenant   = getTenantSegment(username);
 
-    @PostMapping("/employees/delete/{id}")
-    public String deleteEmployee(@PathVariable Long id, RedirectAttributes ra) {
-        User emp = userRepository.findById(id).orElse(null);
-        if (emp != null && "EMPLOYEE".equalsIgnoreCase(emp.getRole())) {
-            String name = emp.getUsername();
-            userRepository.delete(emp);
-            ra.addFlashAttribute("successMessage", "Employee '" + name + "' deleted.");
-        }
-        return "redirect:/admin/employees";
-    }
+		model.addAttribute("employees", userRepository.findByTenantSegment(tenant));
+		return "admin-add-employee";
+	}
 
-    // ═══════════════════════════════════════════════════════════════════════
-    //  EDIT EMPLOYEE (for add-users page)
-    // ═══════════════════════════════════════════════════════════════════════
-    @GetMapping("/edit-employee/{id}")
-    public String editEmployeePage(@PathVariable Long id, HttpServletRequest request, Model model) {
-        injectUser(request, model);
-        User emp = userRepository.findById(id).orElse(null);
-        // Block editing ADMIN or SUPER_ADMIN accounts
-        if (emp == null
-                || "ADMIN".equalsIgnoreCase(emp.getRole())
-                || "SUPER_ADMIN".equalsIgnoreCase(emp.getRole())) {
-            return "redirect:/admin/add-user";
-        }
-        model.addAttribute("employee", emp);
-        model.addAttribute("pageTitle", "CRM — Edit Employee");
-        model.addAttribute("pageHeading", "Edit Employee");
-        return "edit-employee";
-    }
+	@PostMapping("/add-user")
+	public String addUser(@RequestParam String email,
+	                      @RequestParam String username,
+	                      @RequestParam String password,
+	                      @RequestParam String confirmPassword,
+	                      @RequestParam String role,
+	                      HttpServletRequest request,
+	                      RedirectAttributes ra) {
 
-    @PostMapping("/edit-employee/{id}")
-    public String updateEmployee(@PathVariable Long id,
-                                 @RequestParam String username,
-                                 @RequestParam String email,
-                                 @RequestParam String role,
-                                 @RequestParam(required = false) String password,
-                                 @RequestParam(required = false) String confirmPassword,
-                                 HttpServletRequest request,
-                                 RedirectAttributes ra) {
-        User emp = userRepository.findById(id).orElse(null);
-        if (emp == null
-                || "ADMIN".equalsIgnoreCase(emp.getRole())
-                || "SUPER_ADMIN".equalsIgnoreCase(emp.getRole())) {
-            ra.addFlashAttribute("errorMessage", "User not found or cannot be edited.");
-            return "redirect:/admin/add-user";
-        }
+		if (!password.equals(confirmPassword)) {
+			ra.addFlashAttribute("errorMessage", "Passwords do not match.");
+			return "redirect:/admin/add-user";
+		}
 
-        // Check duplicate (excluding self)
-        User existing = userRepository.findByUsernameOrEmail(username, email);
-        if (existing != null && !existing.getId().equals(emp.getId())) {
-            ra.addFlashAttribute("errorMessage", "Username or email already exists.");
-            return "redirect:/admin/edit-employee/" + id;
-        }
+		if (userRepository.findByEmail(email) != null) {
+			ra.addFlashAttribute("errorMessage", "Email already in use.");
+			return "redirect:/admin/add-user";
+		}
 
-        // Enforce tenant domain
-        String segment = getTenantSegment(request);
-        if (segment != null && !email.contains("." + segment + "@")) {
-            ra.addFlashAttribute("errorMessage",
-                    "Email must belong to your tenant domain (e.g. user." + segment + "@crm.com).");
-            return "redirect:/admin/edit-employee/" + id;
-        }
+		if (userRepository.findByUsername(username) != null) {
+			ra.addFlashAttribute("errorMessage", "Username already in use.");
+			return "redirect:/admin/add-user";
+		}
 
-        emp.setUsername(username);
-        emp.setEmail(email);
-        emp.setRole(role);
-        if (password != null && !password.isBlank()) {
-            if (!password.equals(confirmPassword)) {
-                ra.addFlashAttribute("errorMessage", "Passwords do not match.");
-                return "redirect:/admin/edit-employee/" + id;
-            }
-            emp.setPassword(passwordEncoder.encode(password));
-        }
-        userRepository.save(emp);
-        ra.addFlashAttribute("successMessage", "Employee '" + username + "' updated successfully.");
-        return "redirect:/admin/add-user";
-    }
+		User user = new User();
+		user.setEmail(email);
+		user.setUsername(username);
+		user.setPassword(passwordEncoder.encode(password));
+		user.setRole(role.toUpperCase());
+		user.setStatus("active");
+		userRepository.save(user);
 
-    // ═══════════════════════════════════════════════════════════════════════
-    //  DELETE EMPLOYEE (for add-users page)
-    // ═══════════════════════════════════════════════════════════════════════
-    @PostMapping("/delete-employee/{id}")
-    public String deleteEmployeeFromAddUsers(@PathVariable Long id, RedirectAttributes ra) {
-        User emp = userRepository.findById(id).orElse(null);
-        if (emp != null
-                && !"ADMIN".equalsIgnoreCase(emp.getRole())
-                && !"SUPER_ADMIN".equalsIgnoreCase(emp.getRole())) {
-            String name = emp.getUsername();
-            userRepository.delete(emp);
-            ra.addFlashAttribute("successMessage", "User '" + name + "' deleted.");
-        }
-        return "redirect:/admin/add-user";
-    }
+		ra.addFlashAttribute("successMessage", "Employee added successfully.");
+		return "redirect:/admin/add-user";
+	}
 
-    // ═══════════════════════════════════════════════════════════════════════
-    //  TOGGLE USER STATUS (for add-users page)
-    // ═══════════════════════════════════════════════════════════════════════
-    @PostMapping("/toggle-user/{id}")
-    public String toggleUserStatus(@PathVariable Long id, RedirectAttributes ra) {
-        User user = userRepository.findById(id).orElse(null);
-        if (user != null
-                && !"ADMIN".equalsIgnoreCase(user.getRole())
-                && !"SUPER_ADMIN".equalsIgnoreCase(user.getRole())) {
-            String newStatus = "active".equalsIgnoreCase(user.getStatus()) ? "inactive" : "active";
-            user.setStatus(newStatus);
-            userRepository.save(user);
-            ra.addFlashAttribute("successMessage",
-                    user.getUsername() + " is now " + newStatus + ".");
-        }
-        return "redirect:/admin/add-user";
-    }
+	// =========================================================
+	// PROJECTS
+	// =========================================================
 
-    // ═══════════════════════════════════════════════════════════════════════
-    //  PROJECTS
-    // ═══════════════════════════════════════════════════════════════════════
-    @GetMapping("/projects")
-    public String projectsPage(HttpServletRequest request, Model model) {
-        injectUser(request, model);
-        List<Project> projects = projectRepository.findAll();
-        long active    = projects.stream().filter(p -> "active".equalsIgnoreCase(p.getStatus())).count();
-        long completed = projects.stream().filter(p -> "completed".equalsIgnoreCase(p.getStatus())).count();
+	@GetMapping("/projects")
+	public String projectsPage(HttpServletRequest request, Model model) {
+		injectUser(request, model);
 
-        model.addAttribute("pageTitle",   "CRM — Projects");
-        model.addAttribute("pageHeading", "Projects");
-        model.addAttribute("activePage",  "projects");
-        model.addAttribute("projects",          projects);
-        model.addAttribute("totalProjects",     projects.size());
-        model.addAttribute("activeProjects",    active);
-        model.addAttribute("completedProjects", completed);
-        return "admin-projects";
-    }
+		List<Project> projects = projectRepository.findAll();
+		long active    = projects.stream().filter(p -> "active".equalsIgnoreCase(p.getStatus())).count();
+		long completed = projects.stream().filter(p -> "completed".equalsIgnoreCase(p.getStatus())).count();
 
-    @PostMapping("/projects")
-    public String addProject(@RequestParam String name,
-                             @RequestParam(required = false) String description,
-                             @RequestParam String status,
-                             RedirectAttributes ra) {
-        Project p = new Project();
-        p.setName(name);
-        p.setDescription(description);
-        p.setStatus(status);
-        projectRepository.save(p);
-        ra.addFlashAttribute("successMessage", "Project '" + name + "' created.");
-        return "redirect:/admin/projects";
-    }
+		model.addAttribute("projects",          projects);
+		model.addAttribute("totalProjects",     projects.size());
+		model.addAttribute("activeProjects",    active);
+		model.addAttribute("completedProjects", completed);
 
-    @PostMapping("/projects/delete/{id}")
-    public String deleteProject(@PathVariable Long id, RedirectAttributes ra) {
-        projectRepository.findById(id).ifPresent(p -> {
-            ra.addFlashAttribute("successMessage", "Project '" + p.getName() + "' deleted.");
-            projectRepository.delete(p);
-        });
-        return "redirect:/admin/projects";
-    }
+		return "admin-projects";
+	}
 
-    // ═══════════════════════════════════════════════════════════════════════
-    //  TASKS
-    // ═══════════════════════════════════════════════════════════════════════
-    @GetMapping("/tasks")
-    public String tasksPage(HttpServletRequest request, Model model) {
-        injectUser(request, model);
-        List<Task> tasks = taskRepository.findAll();
-        long done    = tasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
-        long pending = tasks.stream().filter(t -> "pending".equalsIgnoreCase(t.getStatus())).count();
+	@PostMapping("/projects")
+	public String createProject(@RequestParam String name,
+	                            @RequestParam(required = false) String description,
+	                            @RequestParam String status,
+	                            RedirectAttributes ra) {
+		Project p = new Project();
+		p.setName(name);
+		p.setDescription(description);
+		p.setStatus(status);
+		projectRepository.save(p);
+		ra.addFlashAttribute("successMessage", "Project created successfully.");
+		return "redirect:/admin/projects";
+	}
 
-        model.addAttribute("pageTitle",   "CRM — Tasks");
-        model.addAttribute("pageHeading", "Tasks");
-        model.addAttribute("activePage",  "tasks");
-        model.addAttribute("tasks",          tasks);
-        model.addAttribute("totalTasks",     tasks.size());
-        model.addAttribute("doneTasks",      done);
-        model.addAttribute("pendingTaskCount", pending);
-        return "admin-tasks";
-    }
+	@PostMapping("/projects/delete/{id}")
+	public String deleteProject(@PathVariable Long id, RedirectAttributes ra) {
+		projectRepository.deleteById(id);
+		ra.addFlashAttribute("successMessage", "Project deleted.");
+		return "redirect:/admin/projects";
+	}
 
-    @PostMapping("/tasks")
-    public String addTask(@RequestParam String title,
-                          @RequestParam(required = false) String description,
-                          @RequestParam String status,
-                          @RequestParam String priority,
-                          @RequestParam(required = false) String dueDate,
-                          RedirectAttributes ra) {
-        Task t = new Task();
-        t.setTitle(title);
-        t.setDescription(description);
-        t.setStatus(status);
-        t.setPriority(priority);
-        t.setDueDate(dueDate != null && !dueDate.isBlank() ? dueDate : null);
-        taskRepository.save(t);
-        ra.addFlashAttribute("successMessage", "Task '" + title + "' created.");
-        return "redirect:/admin/tasks";
-    }
+	// =========================================================
+	// TASKS
+	// =========================================================
 
-    @PostMapping("/tasks/delete/{id}")
-    public String deleteTask(@PathVariable Long id, RedirectAttributes ra) {
-        taskRepository.findById(id).ifPresent(t -> {
-            ra.addFlashAttribute("successMessage", "Task '" + t.getTitle() + "' deleted.");
-            taskRepository.delete(t);
-        });
-        return "redirect:/admin/tasks";
-    }
+	@GetMapping("/tasks")
+	public String tasksPage(HttpServletRequest request, Model model) {
+		injectUser(request, model);
 
-    // ═══════════════════════════════════════════════════════════════════════
-    //  REPORTS
-    // ═══════════════════════════════════════════════════════════════════════
-    @GetMapping("/reports")
-    public String reportsPage(HttpServletRequest request, Model model) {
-        injectUser(request, model);
-        List<User> allUsers = getTenantUsers(request);
-        List<Project> allProjects = projectRepository.findAll();
-        List<Task> allTasks = taskRepository.findAll();
+		List<Task> tasks = taskRepository.findAll();
+		long done    = tasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
+		long pending = tasks.stream().filter(t -> "pending".equalsIgnoreCase(t.getStatus())).count();
 
-        model.addAttribute("pageTitle",   "CRM — Reports");
-        model.addAttribute("pageHeading", "Reports");
-        model.addAttribute("activePage",  "reports");
+		model.addAttribute("tasks",            tasks);
+		model.addAttribute("totalTasks",       tasks.size());
+		model.addAttribute("doneTasks",        done);
+		model.addAttribute("pendingTaskCount", pending);
 
-        model.addAttribute("reportUsers",    allUsers);
-        model.addAttribute("reportEmployees",allUsers.stream().filter(u -> "EMPLOYEE".equalsIgnoreCase(u.getRole())).count());
-        model.addAttribute("reportProjects", allProjects.size());
-        model.addAttribute("reportTasks",    allTasks.size());
+		return "admin-tasks";
+	}
 
-        model.addAttribute("roleAdmin",    allUsers.stream().filter(u -> "ADMIN".equalsIgnoreCase(u.getRole())).count());
-        model.addAttribute("roleEmployee", allUsers.stream().filter(u -> "EMPLOYEE".equalsIgnoreCase(u.getRole())).count());
-        model.addAttribute("roleManager",  allUsers.stream().filter(u -> "MANAGER".equalsIgnoreCase(u.getRole())).count());
-        model.addAttribute("roleHr",       allUsers.stream().filter(u -> "HR".equalsIgnoreCase(u.getRole())).count());
-        return "admin-reports";
-    }
+	@PostMapping("/tasks")
+	public String createTask(@RequestParam String title,
+	                         @RequestParam(required = false) String description,
+	                         @RequestParam String priority,
+	                         @RequestParam String status,
+	                         @RequestParam(required = false) String dueDate,
+	                         RedirectAttributes ra) {
+		Task t = new Task();
+		t.setTitle(title);
+		t.setDescription(description);
+		t.setPriority(priority);
+		t.setStatus(status);
+		t.setDueDate(dueDate);
+		taskRepository.save(t);
+		ra.addFlashAttribute("successMessage", "Task created successfully.");
+		return "redirect:/admin/tasks";
+	}
 
-    // ═══════════════════════════════════════════════════════════════════════
-    //  ADD USER (existing page — now part of sidebar)
-    // ═══════════════════════════════════════════════════════════════════════
-    @GetMapping("/add-user")
-    public String addUserPage(HttpServletRequest request, Model model) {
-        injectUser(request, model);
-        // Exclude ADMIN and SUPER_ADMIN — only show manageable users
-        List<User> users = getTenantUsers(request).stream()
-                .filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
-                          && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
-                .toList();
-        model.addAttribute("managers",      users);
-        model.addAttribute("totalManagers", users.size());
-        model.addAttribute("activeCount",   users.stream().filter(u -> "active".equalsIgnoreCase(u.getStatus()) || u.getStatus() == null).count());
-        model.addAttribute("roleCount",     users.stream().map(User::getRole).filter(r -> r != null && !r.isBlank()).distinct().count());
-        return "add-users";
-    }
+	@PostMapping("/tasks/delete/{id}")
+	public String deleteTask(@PathVariable Long id, RedirectAttributes ra) {
+		taskRepository.deleteById(id);
+		ra.addFlashAttribute("successMessage", "Task deleted.");
+		return "redirect:/admin/tasks";
+	}
 
-    @GetMapping("/add-employee")
-    public String addEmployeePage(HttpServletRequest request, Model model) {
-        injectUser(request, model);
-        return "admin-add-employee";
-    }
+	// =========================================================
+	// REPORTS
+	// =========================================================
 
-    @PostMapping("/add-user")
-    public String addUser(@RequestParam String email,
-                          @RequestParam String username,
-                          @RequestParam String password,
-                          @RequestParam String confirmPassword,
-                          @RequestParam String role,
-                          HttpServletRequest request,
-                          RedirectAttributes ra) {
-        if (!password.equals(confirmPassword)) {
-            ra.addFlashAttribute("errorMessage", "Passwords do not match.");
-            return "redirect:/admin/add-employee";
-        }
+	@GetMapping("/reports")
+	public String reportsPage(HttpServletRequest request, Model model) {
+		injectUser(request, model);
 
-        // Enforce tenant domain: new user's email must contain the admin's tenant segment
-        String segment = getTenantSegment(request);
-        if (segment != null && !email.contains("." + segment + "@")) {
-            ra.addFlashAttribute("errorMessage",
-                    "Email must belong to your tenant domain (e.g. user." + segment + "@crm.com).");
-            return "redirect:/admin/add-employee";
-        }
+		String username = (String) request.getAttribute("loggedInUser");
+		String tenant   = getTenantSegment(username);
 
-        if (userRepository.findByUsernameOrEmail(username, email) != null) {
-            ra.addFlashAttribute("errorMessage", "Username or email already exists.");
-            return "redirect:/admin/add-employee";
-        }
-        User user = new User();
-        user.setUsername(username);
-        user.setEmail(email);
-        user.setPassword(passwordEncoder.encode(password));
-        user.setRole(role);
-        user.setStatus("active");
-        userRepository.save(user);
-        ra.addFlashAttribute("successMessage", "User '" + username + "' added successfully.");
-        return "redirect:/admin/add-user";
-    }
+		List<User>    allUsers  = userRepository.findByTenantSegment(tenant);
+		List<Project> projects  = projectRepository.findAll();
+		List<Task>    tasks     = taskRepository.findAll();
 
-    // ═══════════════════════════════════════════════════════════════════════
-    //  SETTINGS
-    // ═══════════════════════════════════════════════════════════════════════
-    @GetMapping("/settings")
-    public String settingsPage(HttpServletRequest request, Model model) {
-        injectUser(request, model);
-        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-        User admin = userRepository.findByUsername(currentUsername);
+		long roleAdmin    = allUsers.stream().filter(u -> "ADMIN".equalsIgnoreCase(u.getRole())).count();
+		long roleEmployee = allUsers.stream().filter(u -> "EMPLOYEE".equalsIgnoreCase(u.getRole())).count();
+		long roleManager  = allUsers.stream().filter(u -> "MANAGER".equalsIgnoreCase(u.getRole())).count();
+		long roleHr       = allUsers.stream().filter(u -> "HR".equalsIgnoreCase(u.getRole())).count();
 
-        model.addAttribute("pageTitle",   "CRM — Settings");
-        model.addAttribute("pageHeading", "Settings");
-        model.addAttribute("activePage",  "settings");
-        model.addAttribute("adminEmail",  admin != null ? admin.getEmail() : "");
-        model.addAttribute("settingsTotalUsers", getTenantUsers(request).size());
-        return "admin-settings";
-    }
+		model.addAttribute("reportUsers",     allUsers);
+		model.addAttribute("reportEmployees", allUsers.size());
+		model.addAttribute("reportProjects",  projects.size());
+		model.addAttribute("reportTasks",     tasks.size());
+		model.addAttribute("roleAdmin",       roleAdmin);
+		model.addAttribute("roleEmployee",    roleEmployee);
+		model.addAttribute("roleManager",     roleManager);
+		model.addAttribute("roleHr",          roleHr);
 
-    @PostMapping("/settings/profile")
-    public String updateProfile(@RequestParam String username,
-                                @RequestParam String email,
-                                @RequestParam(required = false) String password,
-                                @RequestParam(required = false) String confirmPassword,
-                                RedirectAttributes ra) {
-        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-        User admin = userRepository.findByUsername(currentUsername);
-        if (admin == null) return "redirect:/admin/settings";
+		return "admin-reports";
+	}
 
-        // Check duplicate (excluding self)
-        User existing = userRepository.findByUsernameOrEmail(username, email);
-        if (existing != null && !existing.getId().equals(admin.getId())) {
-            ra.addFlashAttribute("errorMessage", "Username or email already in use.");
-            return "redirect:/admin/settings";
-        }
+	// =========================================================
+	// CALENDAR
+	// =========================================================
 
-        admin.setUsername(username);
-        admin.setEmail(email);
-        if (password != null && !password.isBlank()) {
-            if (!password.equals(confirmPassword)) {
-                ra.addFlashAttribute("errorMessage", "Passwords do not match.");
-                return "redirect:/admin/settings";
-            }
-            admin.setPassword(passwordEncoder.encode(password));
-        }
-        userRepository.save(admin);
-        ra.addFlashAttribute("successMessage", "Profile updated successfully.");
-        return "redirect:/admin/settings";
-    }
-    
-    //calender
+	@GetMapping("/calendar")
+	public String calendarPage(HttpServletRequest request, Model model) {
+		injectUser(request, model);
+		return "calendar";
+	}
 
- @GetMapping("/calendar")
- public String calendarPage(HttpServletRequest request, Model model) {
+	// =========================================================
+	// SETTINGS
+	// =========================================================
 
-     injectUser(request, model);
+	@GetMapping("/settings")
+	public String settingsPage(HttpServletRequest request, Model model) {
+		injectUser(request, model);
 
-     model.addAttribute("pageTitle", "CRM — Calendar");
-     model.addAttribute("pageHeading", "Calendar");
-     model.addAttribute("activePage", "calendar");
+		String username = (String) request.getAttribute("loggedInUser");
+		User admin = userRepository.findByUsername(username);
 
-     return "calendar";
- }
+		model.addAttribute("adminEmail",         admin != null ? admin.getEmail() : "");
+		model.addAttribute("settingsTotalUsers", userRepository.count());
+
+		return "admin-settings";
+	}
+
+	@PostMapping("/settings/profile")
+	public String updateProfile(@RequestParam String username,
+	                            @RequestParam String email,
+	                            @RequestParam(required = false) String password,
+	                            @RequestParam(required = false) String confirmPassword,
+	                            HttpServletRequest request,
+	                            RedirectAttributes ra) {
+
+		String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+		User admin = userRepository.findByUsername(currentUsername);
+
+		if (admin == null) {
+			return "redirect:/admin/settings";
+		}
+
+		User existing = userRepository.findByUsernameOrEmail(username, email);
+		if (existing != null && !existing.getId().equals(admin.getId())) {
+			ra.addFlashAttribute("errorMessage", "Username or email already in use.");
+			return "redirect:/admin/settings";
+		}
+
+		admin.setUsername(username);
+		admin.setEmail(email);
+
+		if (password != null && !password.isBlank()) {
+			if (!password.equals(confirmPassword)) {
+				ra.addFlashAttribute("errorMessage", "Passwords do not match.");
+				return "redirect:/admin/settings";
+			}
+			admin.setPassword(passwordEncoder.encode(password));
+		}
+
+		userRepository.save(admin);
+		ra.addFlashAttribute("successMessage", "Profile updated successfully.");
+		return "redirect:/admin/settings";
+	}
+
+	// =========================================================
+	// SCHEDULE MEETING — GET PAGE
+	// =========================================================
+
+	@GetMapping("/schedule-meeting")
+	public String scheduleMeetingPage(HttpServletRequest request, Model model) {
+		injectUser(request, model);
+		model.addAttribute("meetingForm", new Meeting());
+		model.addAttribute("upcomingMeetings", meetingRepository.findAll(Sort.by(Sort.Direction.ASC, "meetingDate")));
+		return "admin-scheduleMeeting";
+	}
+
+	// =========================================================
+	// SCHEDULE MEETING — SAVE
+	// =========================================================
+
+	@PostMapping("/schedule-meeting")
+	public String scheduleMeeting(@Valid @ModelAttribute("meetingForm") Meeting meetingForm,
+	                              BindingResult result,
+	                              HttpServletRequest request,
+	                              Model model,
+	                              RedirectAttributes ra) {
+
+		if (result.hasErrors()) {
+			injectUser(request, model);
+			model.addAttribute("upcomingMeetings",
+					meetingRepository.findAll(Sort.by(Sort.Direction.ASC, "meetingDate")));
+			model.addAttribute("errorMessage", "Please fix the errors.");
+			return "admin-scheduleMeeting";
+		}
+
+		meetingRepository.save(meetingForm);
+		ra.addFlashAttribute("successMessage", "Meeting scheduled successfully.");
+		return "redirect:/admin/schedule-meeting";
+	}
+
+	// =========================================================
+	// SCHEDULE MEETING — EDIT PAGE
+	// =========================================================
+
+	@GetMapping("/schedule-meeting/edit/{id}")
+	public String editMeetingPage(@PathVariable Long id,
+	                              HttpServletRequest request,
+	                              Model model,
+	                              RedirectAttributes ra) {
+
+		injectUser(request, model);
+
+		Meeting meeting = meetingRepository.findById(id).orElse(null);
+		if (meeting == null) {
+			ra.addFlashAttribute("errorMessage", "Meeting not found.");
+			return "redirect:/admin/schedule-meeting";
+		}
+
+		model.addAttribute("meetingForm", meeting);
+		model.addAttribute("upcomingMeetings", meetingRepository.findAll(Sort.by(Sort.Direction.ASC, "meetingDate")));
+		return "admin-scheduleMeeting";
+	}
+
+	// =========================================================
+	// SCHEDULE MEETING — UPDATE
+	// =========================================================
+
+	@PostMapping("/schedule-meeting/edit/{id}")
+	public String updateMeeting(@PathVariable Long id,
+	                            @Valid @ModelAttribute("meetingForm") Meeting meetingForm,
+	                            BindingResult result,
+	                            HttpServletRequest request,
+	                            Model model,
+	                            RedirectAttributes ra) {
+
+		if (result.hasErrors()) {
+			injectUser(request, model);
+			model.addAttribute("upcomingMeetings",
+					meetingRepository.findAll(Sort.by(Sort.Direction.ASC, "meetingDate")));
+			return "admin-scheduleMeeting";
+		}
+
+		Meeting existing = meetingRepository.findById(id).orElse(null);
+		if (existing == null) {
+			ra.addFlashAttribute("errorMessage", "Meeting not found.");
+			return "redirect:/admin/schedule-meeting";
+		}
+
+		existing.setTitle(meetingForm.getTitle());
+		existing.setMeetingDate(meetingForm.getMeetingDate());
+		existing.setMeetingTime(meetingForm.getMeetingTime());
+		existing.setDuration(meetingForm.getDuration());
+		existing.setMeetingType(meetingForm.getMeetingType());
+		existing.setLocation(meetingForm.getLocation());
+		existing.setParticipants(meetingForm.getParticipants());
+		existing.setAgenda(meetingForm.getAgenda());
+		existing.setSendNotification(meetingForm.isSendNotification());
+		meetingRepository.save(existing);
+
+		ra.addFlashAttribute("successMessage", "Meeting updated successfully.");
+		return "redirect:/admin/schedule-meeting";
+	}
+
+	// =========================================================
+	// SCHEDULE MEETING — DELETE
+	// =========================================================
+
+	@PostMapping("/schedule-meeting/delete/{id}")
+	public String deleteMeeting(@PathVariable Long id, RedirectAttributes ra) {
+		Meeting meeting = meetingRepository.findById(id).orElse(null);
+		if (meeting == null) {
+			ra.addFlashAttribute("errorMessage", "Meeting not found.");
+		} else {
+			meetingRepository.delete(meeting);
+			ra.addFlashAttribute("successMessage", "Meeting deleted successfully.");
+		}
+		return "redirect:/admin/schedule-meeting";
+	}
 }
