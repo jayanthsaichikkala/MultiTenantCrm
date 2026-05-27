@@ -32,7 +32,7 @@
             <a th:href="@{/admin/dashboard}"><i data-lucide="layout-dashboard"></i> Dashboard</a>
         </li>
         <li class="active">
-            <a th:href="@{/admin/add-user}"><i data-lucide="users"></i> Employees</a>
+            <a th:href="@{/admin/employees}"><i data-lucide="users"></i> Employees</a>
         </li>
         <li>
             <a th:href="@{/admin/projects}"><i data-lucide="folder-open"></i> Projects</a>
@@ -42,6 +42,9 @@
         </li>
         <li>
             <a th:href="@{/admin/reports}"><i data-lucide="file-bar-chart"></i> Reports</a>
+        </li>
+        <li>
+            <a th:href="@{/admin/schedule-meeting}"><i data-lucide="calendar-clock"></i> Meetings</a>
         </li>
         <li>
             <a th:href="@{/admin/settings}"><i data-lucide="settings"></i> Settings</a>
@@ -63,7 +66,7 @@
             <div class="breadcrumb">
                 <a th:href="@{/admin/dashboard}"><i data-lucide="home"></i> Home</a>
                 <span>&#8250;</span>
-                <a th:href="@{/admin/add-user}">Employees</a>
+                <a th:href="@{/admin/employees}">Employees</a>
                 <span>&#8250;</span>
                 <span th:text="${employee.username}">Employee</span>
             </div>
@@ -87,7 +90,7 @@
                     <h2>Update Employee</h2>
                     <p th:text="'Modify the details for ' + ${employee.username}">Modify employee details</p>
                 </div>
-                <a th:href="@{/admin/add-user}" class="btn-icon-close" title="Cancel"><i data-lucide="x"></i></a>
+                <a th:href="@{/admin/employees}" class="btn-icon-close" title="Cancel"><i data-lucide="x"></i></a>
             </div>
             <div class="card-body">
                 <form th:action="@{/admin/edit-employee/{id}(id=${employee.id})}" method="post">
@@ -129,7 +132,7 @@
                         </div>
                     </div>
                     <div class="form-actions">
-                        <a th:href="@{/admin/add-user}" class="btn btn-clear" style="display:inline-flex;align-items:center;">Cancel</a>
+                        <a th:href="@{/admin/employees}" class="btn btn-clear" style="display:inline-flex;align-items:center;">Cancel</a>
                         <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Save Changes</button>
                     </div>
                 </form>

@@ -18,10 +18,11 @@
     </div>
     <ul class="sidebar-menu">
         <li class="active"><a th:href="@{/admin/dashboard}"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
-        <li><a th:href="@{/admin/add-user}"><i data-lucide="users"></i> Employees</a></li>
+        <li><a th:href="@{/admin/employees}"><i data-lucide="users"></i> Employees</a></li>
         <li><a th:href="@{/admin/projects}"><i data-lucide="folder-open"></i> Projects</a></li>
         <li><a th:href="@{/admin/tasks}"><i data-lucide="check-square"></i> Tasks</a></li>
         <li><a th:href="@{/admin/reports}"><i data-lucide="file-bar-chart"></i> Reports</a></li>
+        <li><a th:href="@{/admin/schedule-meeting}"><i data-lucide="calendar-clock"></i> Meetings</a></li>
         <li><a th:href="@{/admin/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
         <li><a th:href="@{/admin/settings}"><i data-lucide="settings"></i> Settings</a></li>
     </ul>
@@ -52,7 +53,7 @@
                 <div class="card">
                     <div class="card-header"><div><h2>Quick Actions</h2></div></div>
                     <div class="quick-actions">
-                        <a th:href="@{/admin/add-user}" class="quick-action-btn"><div class="qa-icon" style="background:#dff5ea;color:#1b7a46;"><i data-lucide="users"></i></div> Employees</a>
+                        <a th:href="@{/admin/employees}" class="quick-action-btn"><div class="qa-icon" style="background:#dff5ea;color:#1b7a46;"><i data-lucide="users"></i></div> Employees</a>
                         <a th:href="@{/admin/projects}" class="quick-action-btn"><div class="qa-icon" style="background:#dcecf5;color:#17455e;"><i data-lucide="folder-open"></i></div> New Project</a>
                         <a th:href="@{/admin/tasks}" class="quick-action-btn"><div class="qa-icon" style="background:#fce9d8;color:#b45309;"><i data-lucide="check-square"></i></div> Create Task</a>
                         <a th:href="@{/admin/reports}" class="quick-action-btn"><div class="qa-icon" style="background:#e9e2ff;color:#5b21b6;"><i data-lucide="file-bar-chart"></i></div> View Reports</a>

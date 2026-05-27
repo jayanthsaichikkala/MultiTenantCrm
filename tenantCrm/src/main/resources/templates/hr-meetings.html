@@ -2,8 +2,8 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin — Meetings</title>
-    <link rel="stylesheet" th:href="@{/admin.css}">
+    <title>HR — Meetings</title>
+    <link rel="stylesheet" th:href="@{/hr.css}">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <style>
         /* ── Side-by-side layout ── */
@@ -17,17 +17,13 @@
 
         /* ── Form card ── */
         .form-card {
-            background: white;
-            border-radius: 22px;
+            background: white; border-radius: 22px;
             box-shadow: 0 6px 18px rgba(0,0,0,0.07);
-            overflow: hidden;
-            position: sticky;
-            top: 0;
+            overflow: hidden; position: sticky; top: 0;
         }
         .form-card-header {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 20px 22px 16px;
-            border-bottom: 1px solid #edf3f6;
+            padding: 20px 22px 16px; border-bottom: 1px solid #edf3f6;
         }
         .form-card-header h2 { font-size: 17px; font-weight: 700; color: #163647; }
         .form-card-header p  { font-size: 12px; color: #6b7280; margin-top: 2px; }
@@ -36,11 +32,10 @@
             background: #dcecf5; color: #17455e;
             display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
-        .form-card-body { padding: 18px 22px; }
+        .form-card-body   { padding: 18px 22px; }
         .form-card-footer {
             display: flex; justify-content: flex-end; gap: 10px;
-            padding: 14px 22px 20px;
-            border-top: 1px solid #edf3f6;
+            padding: 14px 22px 20px; border-top: 1px solid #edf3f6;
         }
 
         /* ── Form fields ── */
@@ -61,21 +56,19 @@
         .fg-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .field-err { font-size: 11px; color: #d11a2a; margin-top: 3px; }
 
-        /* ── Participant picker (compact) ── */
+        /* ── Participant picker ── */
         .participant-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
             gap: 6px; max-height: 180px; overflow-y: auto;
             border: 1.5px solid #e5edf2; border-radius: 11px;
             padding: 10px; background: #f5f9fb;
         }
         .participant-item {
-            display: flex; align-items: center; gap: 8px;
-            padding: 7px 10px; border-radius: 9px;
-            background: white; border: 1.5px solid #e5edf2;
+            display: flex; align-items: center; gap: 8px; padding: 7px 10px;
+            border-radius: 9px; background: white; border: 1.5px solid #e5edf2;
             cursor: pointer; transition: border-color .18s, background .18s; user-select: none;
         }
-        .participant-item:hover   { border-color: #17455e; background: #f0f7fb; }
+        .participant-item:hover    { border-color: #17455e; background: #f0f7fb; }
         .participant-item.selected { border-color: #17455e; background: #dcecf5; }
         .p-avatar {
             width: 26px; height: 26px; border-radius: 50%;
@@ -139,34 +132,66 @@
         }
         .btn-join-disabled i[data-lucide] { width: 12px; height: 12px; }
 
-        /* ── Table tweaks for right panel ── */
-        #meetingsTable thead th { padding: 10px 12px; font-size: 11px; }
-        #meetingsTable tbody td { padding: 12px 12px; font-size: 13px; }
+        /* ── Table action buttons ── */
+        .action-btns { display: flex; align-items: center; gap: 8px; }
+        .btn-action {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 5px 12px; border-radius: 9px; font-size: 12px; font-weight: 600;
+            font-family: 'Poppins', sans-serif; cursor: pointer; border: none;
+            text-decoration: none; transition: background .18s, transform .15s; white-space: nowrap;
+        }
+        .btn-action i[data-lucide] { width: 13px; height: 13px; }
+        .btn-action.edit   { background: #dcecf5; color: #17455e; }
+        .btn-action.edit:hover   { background: #c5dce8; transform: translateY(-1px); }
+        .btn-action.delete { background: #fdecec; color: #d11a2a; }
+        .btn-action.delete:hover { background: #fcd9d9; transform: translateY(-1px); }
+
+        /* ── Participants cell ── */
         .participants-cell {
             max-width: 140px; overflow: hidden; text-overflow: ellipsis;
             white-space: nowrap; font-size: 12px; color: #6b7280;
         }
+
+        /* ── Table tweaks ── */
+        #meetingsTable thead th { padding: 10px 12px; font-size: 11px; }
+        #meetingsTable tbody td { padding: 12px 12px; font-size: 13px; }
+
+        /* ── Modal ── */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+        .modal-overlay.hidden { display: none; }
+        .modal { background: white; border-radius: 22px; padding: 36px 32px 28px; max-width: 420px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.18); text-align: center; }
+        .modal-icon { margin-bottom: 14px; }
+        .modal-title { font-size: 19px; font-weight: 700; color: #163647; margin-bottom: 10px; }
+        .modal-msg { font-size: 14px; color: #6b7280; line-height: 1.6; margin-bottom: 24px; }
+        .modal-actions { display: flex; justify-content: center; gap: 12px; }
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: none; height: 46px; padding: 0 22px; border-radius: 12px; font-size: 14px; font-weight: 600; font-family: 'Poppins', sans-serif; cursor: pointer; transition: background .2s, transform .15s; white-space: nowrap; text-decoration: none; }
+        .btn-clear { background: #f3f8fb; color: #4b6a7a; border: 1.5px solid #e5edf2; }
+        .btn-clear:hover { background: #e8f2f8; }
+        .btn-danger { background: #d11a2a; color: white; box-shadow: 0 4px 14px rgba(209,26,42,0.22); }
+        .btn-danger:hover { background: #b91c1c; transform: translateY(-1px); }
+        .btn i[data-lucide] { width: 14px; height: 14px; }
     </style>
 </head>
 <body>
-<div class="mobile-topbar"><button class="hamburger" id="hamburgerBtn"><span></span><span></span><span></span></button><span class="mobile-title">CRM Admin</span></div>
+<div class="mobile-topbar"><button class="hamburger" id="hamburgerBtn"><span></span><span></span><span></span></button><span class="mobile-title">HR</span></div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <div class="sidebar" id="sidebar">
-    <div class="sidebar-logo"><div class="logo-icon"><i data-lucide="layout-dashboard"></i></div><h2>Admin</h2></div>
+    <div class="sidebar-logo"><div class="logo-icon"><i data-lucide="users"></i></div><h2>HR</h2></div>
     <div class="profile-box">
-        <div class="profile-avatar" th:text="${#strings.substring(adminName ?: 'Admin', 0, 1).toUpperCase()}">A</div>
-        <h3 th:text="${adminName} ?: 'Admin'">Admin</h3>
-        <p th:text="${adminRole} ?: 'ADMIN'">ADMIN</p>
+        <div class="profile-avatar" th:text="${#strings.substring(adminName ?: 'H', 0, 1).toUpperCase()}">H</div>
+        <h3 th:text="${adminName} ?: 'HR User'">HR User</h3>
+        <p th:text="${adminRole} ?: 'HR'">HR</p>
     </div>
     <ul class="sidebar-menu">
-        <li><a th:href="@{/admin/dashboard}"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
-        <li><a th:href="@{/admin/employees}"><i data-lucide="users"></i> Employees</a></li>
-        <li><a th:href="@{/admin/projects}"><i data-lucide="folder-open"></i> Projects</a></li>
-        <li><a th:href="@{/admin/tasks}"><i data-lucide="check-square"></i> Tasks</a></li>
-        <li><a th:href="@{/admin/reports}"><i data-lucide="file-bar-chart"></i> Reports</a></li>
-        <li class="active"><a th:href="@{/admin/schedule-meeting}"><i data-lucide="calendar-clock"></i> Meetings</a></li>
-        <li><a th:href="@{/admin/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
-        <li><a th:href="@{/admin/settings}"><i data-lucide="settings"></i> Settings</a></li>
+        <li><a th:href="@{/hr/dashboard}"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
+        <li><a th:href="@{/hr/employees}"><i data-lucide="users"></i> Employees</a></li>
+        <li><a th:href="@{/hr/recruitment}"><i data-lucide="briefcase"></i> Recruitment</a></li>
+        <li><a th:href="@{/hr/attendance}"><i data-lucide="calendar-check"></i> Attendance</a></li>
+        <li><a th:href="@{/hr/leaves}"><i data-lucide="file-text"></i> Leave Requests</a></li>
+        <li><a th:href="@{/hr/teams}"><i data-lucide="users-round"></i> Teams</a></li>
+        <li class="active"><a th:href="@{/hr/meetings}"><i data-lucide="calendar-clock"></i> Meetings</a></li>
+        <li><a th:href="@{/hr/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
+        <li><a th:href="@{/hr/settings}"><i data-lucide="settings"></i> Settings</a></li>
     </ul>
     <a href="#" data-logout style="text-decoration:none;"><button class="logout-btn"><i data-lucide="log-out"></i> Logout</button></a>
 </div>
@@ -175,11 +200,11 @@
     <div class="topbar">
         <div>
             <h1>Meetings</h1>
-            <p class="topbar-subtitle">Schedule and manage meetings with your team</p>
+            <p class="topbar-subtitle">Schedule and manage meetings across your organisation</p>
         </div>
         <div class="topbar-right">
             <div class="search-box"><input type="text" id="meetingSearch" placeholder="Search meetings…"></div>
-            <div class="user-badge" th:text="${#strings.substring(adminName ?: 'Admin', 0, 1).toUpperCase()}">A</div>
+            <div class="user-badge" th:text="${#strings.substring(adminName ?: 'H', 0, 1).toUpperCase()}">H</div>
         </div>
     </div>
 
@@ -202,8 +227,8 @@
                 </div>
 
                 <form th:action="${meetingForm.id != null}
-                                  ? @{/admin/schedule-meeting/edit/{id}(id=${meetingForm.id})}
-                                  : @{/admin/schedule-meeting}"
+                                  ? @{/hr/meetings/edit/{id}(id=${meetingForm.id})}
+                                  : @{/hr/meetings}"
                       th:object="${meetingForm}" method="post">
                     <div class="form-card-body">
 
@@ -278,7 +303,7 @@
                                 </div>
                                 <div th:if="${tenantUsers == null or #lists.isEmpty(tenantUsers)}"
                                      style="grid-column:1/-1;text-align:center;padding:16px;color:#6b7280;font-size:12px;">
-                                    No team members found.
+                                    No users found in this tenant.
                                 </div>
                             </div>
                             <div class="p-count" id="participantCount">0 participant(s) selected</div>
@@ -302,7 +327,7 @@
                     </div><!-- /form-card-body -->
 
                     <div class="form-card-footer">
-                        <a th:href="@{/admin/schedule-meeting}" class="btn-cancel">Cancel</a>
+                        <a th:href="@{/hr/meetings}" class="btn-cancel">Cancel</a>
                         <button type="submit" class="btn-save">
                             <i data-lucide="calendar-check"></i>
                             <span th:text="${meetingForm.id != null} ? 'Update Meeting' : 'Schedule Meeting'">Schedule Meeting</span>
@@ -372,7 +397,7 @@
                                 </td>
                                 <td>
                                     <div class="action-btns">
-                                        <a th:href="@{/admin/schedule-meeting/edit/{id}(id=${m.id})}" class="btn-action edit">
+                                        <a th:href="@{/hr/meetings/edit/{id}(id=${m.id})}" class="btn-action edit">
                                             <i data-lucide="pencil"></i> Edit
                                         </a>
                                         <button type="button" class="btn-action delete"
@@ -461,7 +486,7 @@
     // ── Delete modal ──
     function openDeleteModal(btn) {
         document.getElementById('deleteMeetingTitle').textContent = btn.getAttribute('data-title');
-        document.getElementById('deleteMeetingForm').action = '/admin/schedule-meeting/delete/' + btn.getAttribute('data-id');
+        document.getElementById('deleteMeetingForm').action = '/hr/meetings/delete/' + btn.getAttribute('data-id');
         document.getElementById('deleteModalOverlay').classList.remove('hidden');
         document.body.style.overflow = 'hidden';
     }

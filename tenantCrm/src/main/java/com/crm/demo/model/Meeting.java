@@ -36,6 +36,8 @@ public class Meeting {
 
 	private boolean sendNotification;
 
+	private String tenantSegment;
+
 	// Getters & Setters
 	public Long getId() {
 		return id;
@@ -115,5 +117,13 @@ public class Meeting {
 
 	public void setSendNotification(boolean b) {
 		this.sendNotification = b;
+	}
+
+	public String getTenantSegment() {
+		return tenantSegment;
+	}
+
+	public void setTenantSegment(String tenantSegment) {
+		this.tenantSegment = tenantSegment;
 	}
 }

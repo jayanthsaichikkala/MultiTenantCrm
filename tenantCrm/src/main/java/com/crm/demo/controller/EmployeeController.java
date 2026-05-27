@@ -24,10 +24,12 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.crm.demo.model.Attendance;
 import com.crm.demo.model.AttendanceDay;
 import com.crm.demo.model.Holiday;
+import com.crm.demo.model.Meeting;
 import com.crm.demo.model.Team;
 import com.crm.demo.model.User;
 import com.crm.demo.repository.AttendanceRepository;
 import com.crm.demo.repository.HolidayRepository;
+import com.crm.demo.repository.MeetingRepository;
 import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
 
@@ -39,6 +41,7 @@ public class EmployeeController {
     @Autowired private AttendanceRepository  attendanceRepository;
     @Autowired private HolidayRepository     holidayRepository;
     @Autowired private TeamRepository        teamRepository;
+    @Autowired private MeetingRepository     meetingRepository;
     @Autowired private BCryptPasswordEncoder passwordEncoder;
 
     // ── helpers ───────────────────────────────────────────────────────────
@@ -411,6 +414,23 @@ public class EmployeeController {
         injectUser(model);
         injectStats(model);
         return "employee-calendar";
+    }
+
+    @GetMapping("/meetings")
+    public String meetingsPage(Model model) {
+        injectUser(model);
+        injectStats(model);
+        User emp = getCurrentEmployee();
+        if (emp != null) {
+            String tenant   = getTenantSegment(emp);
+            String username = emp.getUsername();
+            List<Meeting> meetings = meetingRepository
+                    .findByTenantAndParticipantUsername(tenant, username);
+            model.addAttribute("meetings", meetings);
+        } else {
+            model.addAttribute("meetings", Collections.emptyList());
+        }
+        return "employee-meetings";
     }
 
     @GetMapping("/leaves")

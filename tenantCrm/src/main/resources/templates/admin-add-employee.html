@@ -42,10 +42,11 @@
     </div>
     <ul class="sidebar-menu">
         <li><a th:href="@{/admin/dashboard}"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
-        <li class="active"><a th:href="@{/admin/add-user}"><i data-lucide="users"></i> Employees</a></li>
+        <li class="active"><a th:href="@{/admin/employees}"><i data-lucide="users"></i> Employees</a></li>
         <li><a th:href="@{/admin/projects}"><i data-lucide="folder-open"></i> Projects</a></li>
         <li><a th:href="@{/admin/tasks}"><i data-lucide="check-square"></i> Tasks</a></li>
         <li><a th:href="@{/admin/reports}"><i data-lucide="file-bar-chart"></i> Reports</a></li>
+        <li><a th:href="@{/admin/schedule-meeting}"><i data-lucide="calendar-clock"></i> Meetings</a></li>
         <li><a th:href="@{/admin/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
         <li><a th:href="@{/admin/settings}"><i data-lucide="settings"></i> Settings</a></li>
     </ul>
@@ -57,7 +58,7 @@
 <div class="main-wrapper">
     <div class="topbar">
         <div style="display:flex;align-items:center;gap:14px;">
-            <a th:href="@{/admin/add-user}" class="btn btn-clear" style="height:40px;padding:0 16px;font-size:13px;">
+            <a th:href="@{/admin/employees}" class="btn btn-clear" style="height:40px;padding:0 16px;font-size:13px;">
                 <i data-lucide="arrow-left" style="width:15px;height:15px;"></i> Back
             </a>
             <div>
@@ -131,7 +132,7 @@
                     </div>
                 </div>
                 <div class="form-actions">
-                    <a th:href="@{/admin/add-user}" class="btn btn-clear">Cancel</a>
+                    <a th:href="@{/admin/employees}" class="btn btn-clear">Cancel</a>
                     <button type="submit" class="btn btn-primary">
                         <i data-lucide="user-plus"></i> Add Employee
                     </button>

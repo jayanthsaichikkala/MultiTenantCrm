@@ -15,6 +15,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,19 +23,25 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import org.springframework.validation.BindingResult;
+
 import com.crm.demo.model.Attendance;
 import com.crm.demo.model.AttendanceDay;
 import com.crm.demo.model.Holiday;
+import com.crm.demo.model.Meeting;
 import com.crm.demo.model.Project;
 import com.crm.demo.model.Task;
 import com.crm.demo.model.Team;
 import com.crm.demo.model.User;
 import com.crm.demo.repository.AttendanceRepository;
 import com.crm.demo.repository.HolidayRepository;
+import com.crm.demo.repository.MeetingRepository;
 import com.crm.demo.repository.ProjectRepository;
 import com.crm.demo.repository.TaskRepository;
 import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
+
+import jakarta.validation.Valid;
 
 @Controller
 @RequestMapping("/manager")
@@ -57,6 +64,9 @@ public class ManagerController {
 
 	@Autowired
 	private TeamRepository teamRepository;
+
+	@Autowired
+	private MeetingRepository meetingRepository;
 
 	@Autowired
 	private BCryptPasswordEncoder passwordEncoder;
@@ -259,6 +269,144 @@ public class ManagerController {
 	public String calendarPage(Model model) {
 		injectStats(model);
 		return "manager-calendar";
+	}
+
+	// =========================
+	// MEETINGS PAGE
+	// =========================
+
+	/** GET /manager/meetings — show schedule form + list of tenant meetings */
+	@GetMapping("/meetings")
+	public String meetingsPage(Model model) {
+		injectStats(model);
+		User manager = getCurrentManager();
+		if (manager != null) {
+			String tenant = getTenantSegment(manager);
+			// All meetings in this tenant (manager can see all they scheduled + ones they're in)
+			List<Meeting> meetings = meetingRepository
+					.findByTenantSegmentOrderByMeetingDateAscMeetingTimeAsc(tenant);
+			model.addAttribute("meetings", meetings);
+			// Team members available as participants (exclude manager themselves if desired)
+			Team myTeam = teamRepository.findByManagerWithMembers(manager).orElse(null);
+			List<User> teamMembers = myTeam != null ? myTeam.getMembers() : Collections.emptyList();
+			model.addAttribute("teamMembers", teamMembers);
+		} else {
+			model.addAttribute("meetings", Collections.emptyList());
+			model.addAttribute("teamMembers", Collections.emptyList());
+		}
+		if (!model.containsAttribute("meetingForm")) {
+			model.addAttribute("meetingForm", new Meeting());
+		}
+		return "manager-meetings";
+	}
+
+	/** POST /manager/meetings — create a new meeting */
+	@PostMapping("/meetings")
+	public String scheduleMeeting(@Valid @ModelAttribute("meetingForm") Meeting meetingForm,
+	                              BindingResult result,
+	                              Model model,
+	                              RedirectAttributes ra) {
+		User manager = getCurrentManager();
+		String tenant = manager != null ? getTenantSegment(manager) : "";
+
+		if (result.hasErrors()) {
+			injectStats(model);
+			if (manager != null) {
+				model.addAttribute("meetings",
+						meetingRepository.findByTenantSegmentOrderByMeetingDateAscMeetingTimeAsc(tenant));
+				Team myTeam = teamRepository.findByManagerWithMembers(manager).orElse(null);
+				model.addAttribute("teamMembers",
+						myTeam != null ? myTeam.getMembers() : Collections.emptyList());
+			} else {
+				model.addAttribute("meetings", Collections.emptyList());
+				model.addAttribute("teamMembers", Collections.emptyList());
+			}
+			model.addAttribute("errorMessage", "Please fix the errors below.");
+			return "manager-meetings";
+		}
+
+		meetingForm.setTenantSegment(tenant);
+		meetingRepository.save(meetingForm);
+		ra.addFlashAttribute("successMessage", "Meeting scheduled successfully.");
+		return "redirect:/manager/meetings";
+	}
+
+	/** GET /manager/meetings/edit/{id} — load meeting into form */
+	@GetMapping("/meetings/edit/{id}")
+	public String editMeetingPage(@PathVariable Long id, Model model, RedirectAttributes ra) {
+		User manager = getCurrentManager();
+		String tenant = manager != null ? getTenantSegment(manager) : "";
+
+		Meeting meeting = meetingRepository.findById(id).orElse(null);
+		if (meeting == null || !tenant.equals(meeting.getTenantSegment())) {
+			ra.addFlashAttribute("errorMessage", "Meeting not found.");
+			return "redirect:/manager/meetings";
+		}
+
+		injectStats(model);
+		model.addAttribute("meetingForm", meeting);
+		model.addAttribute("meetings",
+				meetingRepository.findByTenantSegmentOrderByMeetingDateAscMeetingTimeAsc(tenant));
+		Team myTeam = manager != null ? teamRepository.findByManagerWithMembers(manager).orElse(null) : null;
+		model.addAttribute("teamMembers", myTeam != null ? myTeam.getMembers() : Collections.emptyList());
+		return "manager-meetings";
+	}
+
+	/** POST /manager/meetings/edit/{id} — update existing meeting */
+	@PostMapping("/meetings/edit/{id}")
+	public String updateMeeting(@PathVariable Long id,
+	                            @Valid @ModelAttribute("meetingForm") Meeting meetingForm,
+	                            BindingResult result,
+	                            Model model,
+	                            RedirectAttributes ra) {
+		User manager = getCurrentManager();
+		String tenant = manager != null ? getTenantSegment(manager) : "";
+
+		if (result.hasErrors()) {
+			injectStats(model);
+			model.addAttribute("meetings",
+					meetingRepository.findByTenantSegmentOrderByMeetingDateAscMeetingTimeAsc(tenant));
+			Team myTeam = manager != null ? teamRepository.findByManagerWithMembers(manager).orElse(null) : null;
+			model.addAttribute("teamMembers", myTeam != null ? myTeam.getMembers() : Collections.emptyList());
+			model.addAttribute("errorMessage", "Please fix the errors below.");
+			return "manager-meetings";
+		}
+
+		Meeting existing = meetingRepository.findById(id).orElse(null);
+		if (existing == null || !tenant.equals(existing.getTenantSegment())) {
+			ra.addFlashAttribute("errorMessage", "Meeting not found.");
+			return "redirect:/manager/meetings";
+		}
+
+		existing.setTitle(meetingForm.getTitle());
+		existing.setMeetingDate(meetingForm.getMeetingDate());
+		existing.setMeetingTime(meetingForm.getMeetingTime());
+		existing.setDuration(meetingForm.getDuration());
+		existing.setMeetingType(meetingForm.getMeetingType());
+		existing.setLocation(meetingForm.getLocation());
+		existing.setParticipants(meetingForm.getParticipants());
+		existing.setAgenda(meetingForm.getAgenda());
+		existing.setSendNotification(meetingForm.isSendNotification());
+		meetingRepository.save(existing);
+
+		ra.addFlashAttribute("successMessage", "Meeting updated successfully.");
+		return "redirect:/manager/meetings";
+	}
+
+	/** POST /manager/meetings/delete/{id} — delete a meeting */
+	@PostMapping("/meetings/delete/{id}")
+	public String deleteMeeting(@PathVariable Long id, RedirectAttributes ra) {
+		User manager = getCurrentManager();
+		String tenant = manager != null ? getTenantSegment(manager) : "";
+
+		Meeting meeting = meetingRepository.findById(id).orElse(null);
+		if (meeting == null || !tenant.equals(meeting.getTenantSegment())) {
+			ra.addFlashAttribute("errorMessage", "Meeting not found.");
+		} else {
+			meetingRepository.delete(meeting);
+			ra.addFlashAttribute("successMessage", "Meeting deleted successfully.");
+		}
+		return "redirect:/manager/meetings";
 	}
 
 	// =========================

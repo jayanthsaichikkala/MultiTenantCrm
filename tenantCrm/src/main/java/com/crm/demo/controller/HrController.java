@@ -16,8 +16,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.validation.BindingResult;
+
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -26,14 +29,17 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.crm.demo.model.Attendance;
 import com.crm.demo.model.AttendanceDay;
 import com.crm.demo.model.Holiday;
+import com.crm.demo.model.Meeting;
 import com.crm.demo.model.Team;
 import com.crm.demo.model.User;
 import com.crm.demo.repository.AttendanceRepository;
 import com.crm.demo.repository.HolidayRepository;
+import com.crm.demo.repository.MeetingRepository;
 import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 
 @Controller
 @RequestMapping("/hr")
@@ -43,6 +49,7 @@ public class HrController {
     @Autowired private TeamRepository        teamRepository;
     @Autowired private AttendanceRepository  attendanceRepository;
     @Autowired private HolidayRepository     holidayRepository;
+    @Autowired private MeetingRepository     meetingRepository;
     @Autowired private BCryptPasswordEncoder passwordEncoder;
 
     // ── Helpers ───────────────────────────────────────────────────────────
@@ -789,5 +796,153 @@ public class HrController {
         teamRepository.delete(team);
         ra.addFlashAttribute("successMessage", "Team '" + name + "' deleted.");
         return "redirect:/hr/teams";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  MEETINGS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /** GET /hr/meetings — side-by-side schedule form + meetings list */
+    @GetMapping("/meetings")
+    public String meetingsPage(HttpServletRequest request, Model model) {
+        injectUser(request, model);
+        String tenant = getTenantSegment(request);
+
+        model.addAttribute("upcomingMeetings",
+                meetingRepository.findByTenantSegmentOrderByMeetingDateAscMeetingTimeAsc(tenant));
+
+        // All non-admin users in this tenant as potential participants
+        List<User> tenantUsers = tenant.isEmpty()
+                ? userRepository.findAll()
+                : userRepository.findByTenantSegment(tenant);
+        model.addAttribute("tenantUsers", tenantUsers.stream()
+                .filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
+                          && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
+                .toList());
+
+        if (!model.containsAttribute("meetingForm")) {
+            model.addAttribute("meetingForm", new Meeting());
+        }
+        return "hr-meetings";
+    }
+
+    /** POST /hr/meetings — create a new meeting */
+    @PostMapping("/meetings")
+    public String scheduleMeeting(@Valid @ModelAttribute("meetingForm") Meeting meetingForm,
+                                  BindingResult result,
+                                  HttpServletRequest request,
+                                  Model model,
+                                  RedirectAttributes ra) {
+        String tenant = getTenantSegment(request);
+
+        if (result.hasErrors()) {
+            injectUser(request, model);
+            model.addAttribute("upcomingMeetings",
+                    meetingRepository.findByTenantSegmentOrderByMeetingDateAscMeetingTimeAsc(tenant));
+            List<User> tenantUsers = tenant.isEmpty()
+                    ? userRepository.findAll()
+                    : userRepository.findByTenantSegment(tenant);
+            model.addAttribute("tenantUsers", tenantUsers.stream()
+                    .filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
+                              && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
+                    .toList());
+            model.addAttribute("errorMessage", "Please fix the errors below.");
+            return "hr-meetings";
+        }
+
+        meetingForm.setTenantSegment(tenant);
+        meetingRepository.save(meetingForm);
+        ra.addFlashAttribute("successMessage", "Meeting scheduled successfully.");
+        return "redirect:/hr/meetings";
+    }
+
+    /** GET /hr/meetings/edit/{id} — load meeting into form */
+    @GetMapping("/meetings/edit/{id}")
+    public String editMeetingPage(@PathVariable Long id,
+                                  HttpServletRequest request,
+                                  Model model,
+                                  RedirectAttributes ra) {
+        injectUser(request, model);
+        String tenant = getTenantSegment(request);
+
+        Meeting meeting = meetingRepository.findById(id).orElse(null);
+        if (meeting == null || !tenant.equals(meeting.getTenantSegment())) {
+            ra.addFlashAttribute("errorMessage", "Meeting not found.");
+            return "redirect:/hr/meetings";
+        }
+
+        model.addAttribute("meetingForm", meeting);
+        model.addAttribute("upcomingMeetings",
+                meetingRepository.findByTenantSegmentOrderByMeetingDateAscMeetingTimeAsc(tenant));
+        List<User> tenantUsers = tenant.isEmpty()
+                ? userRepository.findAll()
+                : userRepository.findByTenantSegment(tenant);
+        model.addAttribute("tenantUsers", tenantUsers.stream()
+                .filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
+                          && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
+                .toList());
+        return "hr-meetings";
+    }
+
+    /** POST /hr/meetings/edit/{id} — update existing meeting */
+    @PostMapping("/meetings/edit/{id}")
+    public String updateMeeting(@PathVariable Long id,
+                                @Valid @ModelAttribute("meetingForm") Meeting meetingForm,
+                                BindingResult result,
+                                HttpServletRequest request,
+                                Model model,
+                                RedirectAttributes ra) {
+        String tenant = getTenantSegment(request);
+
+        if (result.hasErrors()) {
+            injectUser(request, model);
+            model.addAttribute("upcomingMeetings",
+                    meetingRepository.findByTenantSegmentOrderByMeetingDateAscMeetingTimeAsc(tenant));
+            List<User> tenantUsers = tenant.isEmpty()
+                    ? userRepository.findAll()
+                    : userRepository.findByTenantSegment(tenant);
+            model.addAttribute("tenantUsers", tenantUsers.stream()
+                    .filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
+                              && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
+                    .toList());
+            model.addAttribute("errorMessage", "Please fix the errors below.");
+            return "hr-meetings";
+        }
+
+        Meeting existing = meetingRepository.findById(id).orElse(null);
+        if (existing == null || !tenant.equals(existing.getTenantSegment())) {
+            ra.addFlashAttribute("errorMessage", "Meeting not found.");
+            return "redirect:/hr/meetings";
+        }
+
+        existing.setTitle(meetingForm.getTitle());
+        existing.setMeetingDate(meetingForm.getMeetingDate());
+        existing.setMeetingTime(meetingForm.getMeetingTime());
+        existing.setDuration(meetingForm.getDuration());
+        existing.setMeetingType(meetingForm.getMeetingType());
+        existing.setLocation(meetingForm.getLocation());
+        existing.setParticipants(meetingForm.getParticipants());
+        existing.setAgenda(meetingForm.getAgenda());
+        existing.setSendNotification(meetingForm.isSendNotification());
+        meetingRepository.save(existing);
+
+        ra.addFlashAttribute("successMessage", "Meeting updated successfully.");
+        return "redirect:/hr/meetings";
+    }
+
+    /** POST /hr/meetings/delete/{id} — delete a meeting */
+    @PostMapping("/meetings/delete/{id}")
+    public String deleteMeeting(@PathVariable Long id,
+                                HttpServletRequest request,
+                                RedirectAttributes ra) {
+        String tenant = getTenantSegment(request);
+        Meeting meeting = meetingRepository.findById(id).orElse(null);
+        if (meeting == null || !tenant.equals(meeting.getTenantSegment())) {
+            ra.addFlashAttribute("errorMessage", "Meeting not found.");
+        } else {
+            meetingRepository.delete(meeting);
+            ra.addFlashAttribute("successMessage", "Meeting deleted successfully.");
+        }
+        return "redirect:/hr/meetings";
     }
 }
