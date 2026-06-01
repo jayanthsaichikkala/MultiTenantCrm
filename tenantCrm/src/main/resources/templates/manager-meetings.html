@@ -1243,6 +1243,20 @@
 		</div>
 	</div>
 
+	<!-- Participants Modal -->
+	<div class="modal-overlay hidden" id="participantsModalOverlay">
+		<div class="modal" style="max-width:520px;">
+			<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px;">
+				<h3 class="modal-title" style="margin:0;">Participants</h3>
+				<button type="button" style="border:none;background:transparent;color:#6b7280;font-size:22px;cursor:pointer;" onclick="closeParticipantsModal()">&times;</button>
+			</div>
+			<pre id="participantsModalText" style="white-space:pre-wrap;word-wrap:break-word;font-size:13px;color:#334155;margin:0;">No participants</pre>
+			<div class="modal-actions" style="margin-top:24px;justify-content:flex-end;">
+				<button type="button" class="btn btn-clear" onclick="closeParticipantsModal()">Close</button>
+			</div>
+		</div>
+	</div>
+
 	<script>
 		/* ── Sidebar ── */
 		var hamburger = document.getElementById('hamburgerBtn');
@@ -1447,9 +1461,23 @@
 			document.getElementById('deleteModalOverlay').classList.add('hidden');
 			document.body.style.overflow = '';
 		}
+
+		function openParticipantsModal(btn) {
+			var participants = btn.getAttribute('data-participants') || 'No participants';
+			document.getElementById('participantsModalText').textContent = participants;
+			document.getElementById('participantsModalOverlay').classList.remove('hidden');
+			document.body.style.overflow = 'hidden';
+		}
+
+		function closeParticipantsModal() {
+			document.getElementById('participantsModalOverlay').classList.add('hidden');
+			document.body.style.overflow = '';
+		}
 		var delOverlay = document.getElementById('deleteModalOverlay');
 		if (delOverlay) delOverlay.addEventListener('click', function (e) {if (e.target === delOverlay) closeDeleteModal();});
-		document.addEventListener('keydown', function (e) {if (e.key === 'Escape') closeDeleteModal();});
+		var participantsOverlay = document.getElementById('participantsModalOverlay');
+		if (participantsOverlay) participantsOverlay.addEventListener('click', function (e) {if (e.target === participantsOverlay) closeParticipantsModal();});
+		document.addEventListener('keydown', function (e) {if (e.key === 'Escape') {closeDeleteModal(); closeParticipantsModal();}});
 
 		/* ── Toast auto-dismiss ── */
 		document.querySelectorAll('.toast').forEach(function (t) {

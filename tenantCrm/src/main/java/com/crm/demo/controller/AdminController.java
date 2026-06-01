@@ -471,8 +471,8 @@ public class AdminController {
 
 	/**
 	 * Returns upcoming meetings (today + future) where the admin is a participant
-	 * or the host who scheduled the meeting, excluding today's meetings that have
-	 * already ended.
+	 * or the creator/host who scheduled the meeting.
+	 * Excludes today's meetings that have already ended.
 	 */
 	private List<Meeting> getUpcomingMeetingsForUser(String tenant, String username) {
 		List<Meeting> all = meetingRepository
@@ -531,9 +531,7 @@ public class AdminController {
 			return "admin-scheduleMeeting";
 		}
 
-		meetingForm.setTenantSegment(tenant);
-		meetingForm.setScheduledBy(username != null ? username : "");
-		meetingRepository.save(meetingForm);
+		meetingForm.setTenantSegment(tenant);		meetingForm.setScheduledBy(username != null ? username : "");		meetingRepository.save(meetingForm);
 		ra.addFlashAttribute("successMessage", "Meeting scheduled successfully.");
 		return "redirect:/admin/schedule-meeting";
 	}

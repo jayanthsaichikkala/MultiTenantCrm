@@ -38,7 +38,7 @@ public class Meeting {
 
 	private String tenantSegment;
 
-	/** Username of the person who created or scheduled this meeting. */
+	/** Username of the person who scheduled this meeting. */
 	@Column(name = "created_by")
 	private String scheduledBy;
 

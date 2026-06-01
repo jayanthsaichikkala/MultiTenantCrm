@@ -424,10 +424,9 @@ public class EmployeeController {
         if (emp != null) {
             String tenant   = getTenantSegment(emp);
             String username = emp.getUsername();
-            // All upcoming meetings (today + future) for this participant or host,
-            // excluding ended ones.
+            // All upcoming meetings (today + future) for this participant, excluding ended ones
             List<Meeting> all = meetingRepository
-                    .findUpcomingMeetingsForUserOrHost(tenant, username, LocalDate.now());
+                    .findByTenantAndParticipantUsernameAndMeetingDateGreaterThanEqual(tenant, username, LocalDate.now());
             LocalDate today = LocalDate.now();
             LocalTime now   = LocalTime.now();
             List<Meeting> active = all.stream().filter(m -> {

@@ -1131,17 +1131,17 @@
 										<span class="status-badge badge-hybrid"
 											th:if="${m.meetingType == 'HYBRID'}">Hybrid</span>
 									</td>
-									<td>
-										<span class="participants-cell" th:text="${m.participants} ?: '—'"
-											th:title="${m.participants}">—</span>
-									</td>
-									<td>
-										<!--
-										  Join logic:
-										  - If meeting is today AND time has started (meetingTime <= now) AND has a URL → active Join button
-										  - If meeting is today AND time has started AND in-person → In Person badge
-										  - Otherwise (future date OR not yet started) → Scheduled badge
-										-->
+\t\t\t\t\t\t\t\t\t<td>
+\t\t\t\t\t\t\t\t\t\t<div class="participants-cell">
+\t\t\t\t\t\t\t\t\t\t\t<button type="button" class="btn-view-participants"
+\t\t\t\t\t\t\t\t\t\t\t\tth:if="${m.participants != null and !#strings.isEmpty(m.participants)}"
+\t\t\t\t\t\t\t\t\t\t\t\tth:attr="data-participants=${m.participants}"
+\t\t\t\t\t\t\t\t\t\t\t\tonclick="openParticipantsModal(this)">
+\t\t\t\t\t\t\t\t\t\t\t\tView Participants
+\t\t\t\t\t\t\t\t\t\t\t</button>
+\t\t\t\t\t\t\t\t\t\t\t<span th:if="${m.participants == null or #strings.isEmpty(m.participants)}">�</span>
+\t\t\t\t\t\t\t\t\t\t</div>
+\t\t\t\t\t\t\t\t\t</td>
 										<th:block th:with="
 											isToday=${m.meetingDate != null and m.meetingDate.equals(T(java.time.LocalDate).now())},
 											hasStarted=${m.meetingTime != null and !m.meetingTime.isAfter(T(java.time.LocalTime).now())},
@@ -1214,6 +1214,20 @@
 						<i data-lucide="trash-2"></i> Yes, Delete
 					</button>
 				</form>
+			</div>
+		</div>
+	</div>
+
+	<!-- Participants Modal -->
+	<div class="modal-overlay hidden" id="participantsModalOverlay">
+		<div class="modal" style="max-width:520px;">
+			<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px;">
+				<h3 class="modal-title" style="margin:0;">Participants</h3>
+				<button type="button" style="border:none;background:transparent;color:#6b7280;font-size:22px;cursor:pointer;" onclick="closeParticipantsModal()">&times;</button>
+			</div>
+			<pre id="participantsModalText" style="white-space:pre-wrap;word-wrap:break-word;font-size:13px;color:#334155;margin:0;">No participants</pre>
+			<div class="modal-actions" style="margin-top:24px;justify-content:flex-end;">
+				<button type="button" class="btn btn-clear" onclick="closeParticipantsModal()">Close</button>
 			</div>
 		</div>
 	</div>
@@ -1328,9 +1342,23 @@
 			document.getElementById('deleteModalOverlay').classList.add('hidden');
 			document.body.style.overflow = '';
 		}
+
+		function openParticipantsModal(btn) {
+			var participants = btn.getAttribute('data-participants') || 'No participants';
+			document.getElementById('participantsModalText').textContent = participants;
+			document.getElementById('participantsModalOverlay').classList.remove('hidden');
+			document.body.style.overflow = 'hidden';
+		}
+
+		function closeParticipantsModal() {
+			document.getElementById('participantsModalOverlay').classList.add('hidden');
+			document.body.style.overflow = '';
+		}
 		var delOverlay = document.getElementById('deleteModalOverlay');
 		if (delOverlay) delOverlay.addEventListener('click', function (e) {if (e.target === delOverlay) closeDeleteModal();});
-		document.addEventListener('keydown', function (e) {if (e.key === 'Escape') closeDeleteModal();});
+		var participantsOverlay = document.getElementById('participantsModalOverlay');
+		if (participantsOverlay) participantsOverlay.addEventListener('click', function (e) {if (e.target === participantsOverlay) closeParticipantsModal();});
+		document.addEventListener('keydown', function (e) {if (e.key === 'Escape') {closeDeleteModal(); closeParticipantsModal();}});
 
 		/* ── Toast auto-dismiss ── */
 		document.querySelectorAll('.toast').forEach(function (t) {
