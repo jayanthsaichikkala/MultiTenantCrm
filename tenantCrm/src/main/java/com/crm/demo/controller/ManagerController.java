@@ -275,18 +275,45 @@ public class ManagerController {
 	// MEETINGS PAGE
 	// =========================
 
-	/** GET /manager/meetings — show schedule form + list of tenant meetings */
+	/**
+	 * Filter a list of today's meetings to only those that have not yet ended.
+	 * A meeting ends at meetingTime + duration minutes. Meetings with no time are always shown.
+	 */
+	private List<Meeting> filterActiveMeetings(List<Meeting> meetings) {
+		LocalTime now = LocalTime.now();
+		return meetings.stream().filter(m -> {
+			if (m.getMeetingTime() == null) return true;
+			int durationMins = (m.getDuration() != null) ? m.getDuration() : 0;
+			LocalTime endTime = m.getMeetingTime().plusMinutes(durationMins);
+			return !endTime.isBefore(now);
+		}).toList();
+	}
+
+	/** Returns upcoming meetings (today + future) where the user is a participant OR the host,
+	 *  excluding today's meetings that have already ended. */
+	private List<Meeting> getUpcomingMeetings(String tenant, String username) {
+		List<Meeting> all = meetingRepository
+				.findUpcomingMeetingsForUserOrHost(tenant, username, LocalDate.now());
+		LocalDate today = LocalDate.now();
+		LocalTime now   = LocalTime.now();
+		return all.stream().filter(m -> {
+			if (!m.getMeetingDate().equals(today)) return true;
+			if (m.getMeetingTime() == null) return true;
+			int dur = (m.getDuration() != null) ? m.getDuration() : 0;
+			return !m.getMeetingTime().plusMinutes(dur).isBefore(now);
+		}).toList();
+	}
+
+	/** GET /manager/meetings — show schedule form + list of meetings where manager is a participant */
 	@GetMapping("/meetings")
 	public String meetingsPage(Model model) {
 		injectStats(model);
 		User manager = getCurrentManager();
 		if (manager != null) {
-			String tenant = getTenantSegment(manager);
-			// All meetings in this tenant (manager can see all they scheduled + ones they're in)
-			List<Meeting> meetings = meetingRepository
-					.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now());
-			model.addAttribute("meetings", meetings);
-			// Team members available as participants (exclude manager themselves if desired)
+			String tenant   = getTenantSegment(manager);
+			String username = manager.getUsername();
+			model.addAttribute("meetings", getUpcomingMeetings(tenant, username));
+			// Team members available as participants
 			Team myTeam = teamRepository.findByManagerWithMembers(manager).orElse(null);
 			List<User> teamMembers = myTeam != null ? myTeam.getMembers() : Collections.emptyList();
 			model.addAttribute("teamMembers", teamMembers);
@@ -307,13 +334,13 @@ public class ManagerController {
 	                              Model model,
 	                              RedirectAttributes ra) {
 		User manager = getCurrentManager();
-		String tenant = manager != null ? getTenantSegment(manager) : "";
+		String tenant   = manager != null ? getTenantSegment(manager) : "";
+		String username = manager != null ? manager.getUsername() : "";
 
 		if (result.hasErrors()) {
 			injectStats(model);
 			if (manager != null) {
-				model.addAttribute("meetings",
-						meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
+				model.addAttribute("meetings", getUpcomingMeetings(tenant, username));
 				Team myTeam = teamRepository.findByManagerWithMembers(manager).orElse(null);
 				model.addAttribute("teamMembers",
 						myTeam != null ? myTeam.getMembers() : Collections.emptyList());
@@ -326,6 +353,7 @@ public class ManagerController {
 		}
 
 		meetingForm.setTenantSegment(tenant);
+		meetingForm.setScheduledBy(username);
 		meetingRepository.save(meetingForm);
 		ra.addFlashAttribute("successMessage", "Meeting scheduled successfully.");
 		return "redirect:/manager/meetings";
@@ -335,7 +363,8 @@ public class ManagerController {
 	@GetMapping("/meetings/edit/{id}")
 	public String editMeetingPage(@PathVariable Long id, Model model, RedirectAttributes ra) {
 		User manager = getCurrentManager();
-		String tenant = manager != null ? getTenantSegment(manager) : "";
+		String tenant   = manager != null ? getTenantSegment(manager) : "";
+		String username = manager != null ? manager.getUsername() : "";
 
 		Meeting meeting = meetingRepository.findById(id).orElse(null);
 		if (meeting == null || !tenant.equals(meeting.getTenantSegment())) {
@@ -345,8 +374,7 @@ public class ManagerController {
 
 		injectStats(model);
 		model.addAttribute("meetingForm", meeting);
-		model.addAttribute("meetings",
-				meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
+		model.addAttribute("meetings", getUpcomingMeetings(tenant, username));
 		Team myTeam = manager != null ? teamRepository.findByManagerWithMembers(manager).orElse(null) : null;
 		model.addAttribute("teamMembers", myTeam != null ? myTeam.getMembers() : Collections.emptyList());
 		return "manager-meetings";
@@ -360,12 +388,12 @@ public class ManagerController {
 	                            Model model,
 	                            RedirectAttributes ra) {
 		User manager = getCurrentManager();
-		String tenant = manager != null ? getTenantSegment(manager) : "";
+		String tenant   = manager != null ? getTenantSegment(manager) : "";
+		String username = manager != null ? manager.getUsername() : "";
 
 		if (result.hasErrors()) {
 			injectStats(model);
-			model.addAttribute("meetings",
-					meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
+			model.addAttribute("meetings", getUpcomingMeetings(tenant, username));
 			Team myTeam = manager != null ? teamRepository.findByManagerWithMembers(manager).orElse(null) : null;
 			model.addAttribute("teamMembers", myTeam != null ? myTeam.getMembers() : Collections.emptyList());
 			model.addAttribute("errorMessage", "Please fix the errors below.");

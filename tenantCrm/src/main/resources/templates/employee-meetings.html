@@ -167,17 +167,30 @@
                             <span class="status-badge badge-inperson" th:if="${m.meetingType == 'IN_PERSON'}">In Person</span>
                             <span class="status-badge badge-hybrid"   th:if="${m.meetingType == 'HYBRID'}">Hybrid</span>
 
-                            <!-- Join button -->
-                            <a th:if="${m.location != null and (#strings.startsWith(m.location,'http://') or #strings.startsWith(m.location,'https://'))}"
-                               th:href="${m.location}" target="_blank" rel="noopener noreferrer"
-                               class="btn-join">
-                                <i data-lucide="video"></i> Join Meeting
-                            </a>
-                            <span th:unless="${m.location != null and (#strings.startsWith(m.location,'http://') or #strings.startsWith(m.location,'https://'))}"
-                                  class="btn-join-disabled">
-                                <i data-lucide="map-pin"></i>
-                                <span th:text="${m.location != null and !#strings.isEmpty(m.location)} ? 'In Person' : 'No Link'">No Link</span>
-                            </span>
+                            <!-- Join button: active only when meeting is today AND has started -->
+                            <th:block th:with="
+                                isToday=${m.meetingDate != null and m.meetingDate.equals(T(java.time.LocalDate).now())},
+                                hasStarted=${m.meetingTime != null and !m.meetingTime.isAfter(T(java.time.LocalTime).now())},
+                                hasUrl=${m.location != null and (#strings.startsWith(m.location,'http://') or #strings.startsWith(m.location,'https://'))}">
+                                <!-- Active: today + started + has URL -->
+                                <a th:if="${isToday and hasStarted and hasUrl}"
+                                   th:href="${m.location}" target="_blank" rel="noopener noreferrer"
+                                   class="btn-join">
+                                    <i data-lucide="video"></i> Join Meeting
+                                </a>
+                                <!-- Active: today + started + in-person -->
+                                <span th:if="${isToday and hasStarted and !hasUrl}"
+                                      class="btn-join-disabled">
+                                    <i data-lucide="map-pin"></i>
+                                    <span th:text="${m.location != null and !#strings.isEmpty(m.location)} ? 'In Person' : 'No Link'">No Link</span>
+                                </span>
+                                <!-- Not yet started or future → Scheduled badge -->
+                                <span th:if="${!isToday or !hasStarted}"
+                                      style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;background:#fef3c7;color:#92400e;">
+                                    <i data-lucide="clock" style="width:13px;height:13px;"></i>
+                                    <span th:text="${isToday} ? 'Starting Soon' : 'Scheduled'">Scheduled</span>
+                                </span>
+                            </th:block>
                         </div>
                     </div>
 

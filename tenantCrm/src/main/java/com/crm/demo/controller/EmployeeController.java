@@ -424,9 +424,19 @@ public class EmployeeController {
         if (emp != null) {
             String tenant   = getTenantSegment(emp);
             String username = emp.getUsername();
-            List<Meeting> meetings = meetingRepository
-                    .findByTenantAndParticipantUsernameAndMeetingDateGreaterThanEqual(tenant, username, LocalDate.now());
-            model.addAttribute("meetings", meetings);
+            // All upcoming meetings (today + future) for this participant or host,
+            // excluding ended ones.
+            List<Meeting> all = meetingRepository
+                    .findUpcomingMeetingsForUserOrHost(tenant, username, LocalDate.now());
+            LocalDate today = LocalDate.now();
+            LocalTime now   = LocalTime.now();
+            List<Meeting> active = all.stream().filter(m -> {
+                if (!m.getMeetingDate().equals(today)) return true;
+                if (m.getMeetingTime() == null) return true;
+                int dur = (m.getDuration() != null) ? m.getDuration() : 0;
+                return !m.getMeetingTime().plusMinutes(dur).isBefore(now);
+            }).toList();
+            model.addAttribute("meetings", active);
         } else {
             model.addAttribute("meetings", Collections.emptyList());
         }

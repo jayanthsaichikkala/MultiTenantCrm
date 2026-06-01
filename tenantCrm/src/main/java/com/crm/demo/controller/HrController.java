@@ -802,14 +802,43 @@ public class HrController {
     //  MEETINGS
     // ═══════════════════════════════════════════════════════════════════════
 
+    /**
+     * Filter a list of today's meetings to only those that have not yet ended.
+     * A meeting ends at meetingTime + duration minutes. Meetings with no time are always shown.
+     */
+    private List<Meeting> filterActiveMeetings(List<Meeting> meetings) {
+        LocalTime now = LocalTime.now();
+        return meetings.stream().filter(m -> {
+            if (m.getMeetingTime() == null) return true;
+            int durationMins = (m.getDuration() != null) ? m.getDuration() : 0;
+            LocalTime endTime = m.getMeetingTime().plusMinutes(durationMins);
+            return !endTime.isBefore(now);
+        }).toList();
+    }
+
+    /** Returns upcoming meetings (today + future) where the user is a participant OR the host,
+     *  excluding today's meetings that have already ended. */
+    private List<Meeting> getUpcomingMeetings(String tenant, String username) {
+        List<Meeting> all = meetingRepository
+                .findUpcomingMeetingsForUserOrHost(tenant, username, LocalDate.now());
+        LocalDate today = LocalDate.now();
+        LocalTime now   = LocalTime.now();
+        return all.stream().filter(m -> {
+            if (!m.getMeetingDate().equals(today)) return true;
+            if (m.getMeetingTime() == null) return true;
+            int dur = (m.getDuration() != null) ? m.getDuration() : 0;
+            return !m.getMeetingTime().plusMinutes(dur).isBefore(now);
+        }).toList();
+    }
+
     /** GET /hr/meetings — side-by-side schedule form + meetings list */
     @GetMapping("/meetings")
     public String meetingsPage(HttpServletRequest request, Model model) {
         injectUser(request, model);
-        String tenant = getTenantSegment(request);
+        String tenant   = getTenantSegment(request);
+        String username = (String) request.getAttribute("loggedInUser");
 
-        model.addAttribute("upcomingMeetings",
-                meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
+        model.addAttribute("upcomingMeetings", getUpcomingMeetings(tenant, username != null ? username : ""));
 
         // All non-admin users in this tenant as potential participants
         List<User> tenantUsers = tenant.isEmpty()
@@ -833,12 +862,12 @@ public class HrController {
                                   HttpServletRequest request,
                                   Model model,
                                   RedirectAttributes ra) {
-        String tenant = getTenantSegment(request);
+        String tenant   = getTenantSegment(request);
+        String username = (String) request.getAttribute("loggedInUser");
 
         if (result.hasErrors()) {
             injectUser(request, model);
-            model.addAttribute("upcomingMeetings",
-                    meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
+            model.addAttribute("upcomingMeetings", getUpcomingMeetings(tenant, username != null ? username : ""));
             List<User> tenantUsers = tenant.isEmpty()
                     ? userRepository.findAll()
                     : userRepository.findByTenantSegment(tenant);
@@ -851,6 +880,7 @@ public class HrController {
         }
 
         meetingForm.setTenantSegment(tenant);
+        meetingForm.setScheduledBy(username != null ? username : "");
         meetingRepository.save(meetingForm);
         ra.addFlashAttribute("successMessage", "Meeting scheduled successfully.");
         return "redirect:/hr/meetings";
@@ -863,7 +893,8 @@ public class HrController {
                                   Model model,
                                   RedirectAttributes ra) {
         injectUser(request, model);
-        String tenant = getTenantSegment(request);
+        String tenant   = getTenantSegment(request);
+        String username = (String) request.getAttribute("loggedInUser");
 
         Meeting meeting = meetingRepository.findById(id).orElse(null);
         if (meeting == null || !tenant.equals(meeting.getTenantSegment())) {
@@ -872,8 +903,7 @@ public class HrController {
         }
 
         model.addAttribute("meetingForm", meeting);
-        model.addAttribute("upcomingMeetings",
-                meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
+        model.addAttribute("upcomingMeetings", getUpcomingMeetings(tenant, username != null ? username : ""));
         List<User> tenantUsers = tenant.isEmpty()
                 ? userRepository.findAll()
                 : userRepository.findByTenantSegment(tenant);
@@ -892,12 +922,12 @@ public class HrController {
                                 HttpServletRequest request,
                                 Model model,
                                 RedirectAttributes ra) {
-        String tenant = getTenantSegment(request);
+        String tenant   = getTenantSegment(request);
+        String username = (String) request.getAttribute("loggedInUser");
 
         if (result.hasErrors()) {
             injectUser(request, model);
-            model.addAttribute("upcomingMeetings",
-                    meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
+            model.addAttribute("upcomingMeetings", getUpcomingMeetings(tenant, username != null ? username : ""));
             List<User> tenantUsers = tenant.isEmpty()
                     ? userRepository.findAll()
                     : userRepository.findByTenantSegment(tenant);

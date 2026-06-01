@@ -1173,19 +1173,27 @@
 											th:title="${m.participants}">—</span>
 									</td>
 									<td>
-										<a th:if="${m.location != null and (#strings.startsWith(m.location,'http://') or #strings.startsWith(m.location,'https://'))}"
-											th:href="${m.location}" target="_blank" rel="noopener noreferrer"
-											class="btn-join">
-											<i data-lucide="video"></i> Join
-										</a>
-										<span
-											th:unless="${m.location != null and (#strings.startsWith(m.location,'http://') or #strings.startsWith(m.location,'https://'))}"
-											class="btn-join-disabled" th:title="${m.location ?: 'No link provided'}">
-											<i data-lucide="map-pin"></i>
-											<span
-												th:text="${m.location != null and !#strings.isEmpty(m.location)} ? 'In Person' : 'No Link'">No
-												Link</span>
-										</span>
+										<th:block th:with="
+											isToday=${m.meetingDate != null and m.meetingDate.equals(T(java.time.LocalDate).now())},
+											hasStarted=${m.meetingTime != null and !m.meetingTime.isAfter(T(java.time.LocalTime).now())},
+											hasUrl=${m.location != null and (#strings.startsWith(m.location,'http://') or #strings.startsWith(m.location,'https://'))}">
+											<a th:if="${isToday and hasStarted and hasUrl}"
+											   th:href="${m.location}" target="_blank" rel="noopener noreferrer"
+											   class="btn-join">
+												<i data-lucide="video"></i> Join
+											</a>
+											<span th:if="${isToday and hasStarted and !hasUrl}"
+											      class="btn-join-disabled"
+											      th:title="${m.location ?: 'No link provided'}">
+												<i data-lucide="map-pin"></i>
+												<span th:text="${m.location != null and !#strings.isEmpty(m.location)} ? 'In Person' : 'No Link'">No Link</span>
+											</span>
+											<span th:if="${!isToday or !hasStarted}"
+											      style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;background:#fef3c7;color:#92400e;white-space:nowrap;">
+												<i data-lucide="clock" style="width:13px;height:13px;"></i>
+												<span th:text="${isToday} ? 'Starting Soon' : 'Scheduled'">Scheduled</span>
+											</span>
+										</th:block>
 									</td>
 									<td>
 										<div class="action-btns">

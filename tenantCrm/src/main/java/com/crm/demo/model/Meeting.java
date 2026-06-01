@@ -38,6 +38,10 @@ public class Meeting {
 
 	private String tenantSegment;
 
+	/** Username of the person who created or scheduled this meeting. */
+	@Column(name = "created_by")
+	private String scheduledBy;
+
 	// Getters & Setters
 	public Long getId() {
 		return id;
@@ -125,5 +129,13 @@ public class Meeting {
 
 	public void setTenantSegment(String tenantSegment) {
 		this.tenantSegment = tenantSegment;
+	}
+
+	public String getScheduledBy() {
+		return scheduledBy;
+	}
+
+	public void setScheduledBy(String scheduledBy) {
+		this.scheduledBy = scheduledBy;
 	}
 }

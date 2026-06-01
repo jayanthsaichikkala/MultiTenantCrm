@@ -14,9 +14,38 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long> {
 	List<Meeting> findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(
 			String tenantSegment, LocalDate date);
 
+	/** All meetings for a tenant on a specific date, ordered by time. */
+	List<Meeting> findByTenantSegmentAndMeetingDateOrderByMeetingTimeAsc(
+			String tenantSegment, LocalDate date);
+
+	/** All meetings for a tenant on a specific date where the participant username appears. */
+	@Query("SELECT m FROM Meeting m WHERE m.tenantSegment = :tenant " +
+	       "AND m.participants LIKE %:username% " +
+	       "AND m.meetingDate = :date " +
+	       "ORDER BY m.meetingTime ASC")
+	List<Meeting> findTodayMeetingsForParticipant(
+			@Param("tenant") String tenant,
+			@Param("username") String username,
+			@Param("date") LocalDate date);
+
 	/** Find all meetings in a tenant where the given username appears in the participants field. */
 	@Query("SELECT m FROM Meeting m WHERE m.tenantSegment = :tenant AND m.participants LIKE %:username% AND m.meetingDate >= :date")
 	List<Meeting> findByTenantAndParticipantUsernameAndMeetingDateGreaterThanEqual(
+			@Param("tenant") String tenant,
+			@Param("username") String username,
+			@Param("date") LocalDate date);
+
+	/**
+	 * Find all upcoming meetings in a tenant where the user is either:
+	 *  - a participant (username appears in the participants field), OR
+	 *  - the host who scheduled the meeting (scheduledBy = username)
+	 * Results are ordered by date then time ascending.
+	 */
+	@Query("SELECT m FROM Meeting m WHERE m.tenantSegment = :tenant " +
+	       "AND m.meetingDate >= :date " +
+	       "AND (m.participants LIKE %:username% OR m.scheduledBy = :username) " +
+	       "ORDER BY m.meetingDate ASC, m.meetingTime ASC")
+	List<Meeting> findUpcomingMeetingsForUserOrHost(
 			@Param("tenant") String tenant,
 			@Param("username") String username,
 			@Param("date") LocalDate date);

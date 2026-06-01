@@ -1,6 +1,7 @@
 package com.crm.demo.controller;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -468,6 +469,24 @@ public class AdminController {
 	// SCHEDULE MEETING — GET PAGE
 	// =========================================================
 
+	/**
+	 * Returns upcoming meetings (today + future) where the admin is a participant
+	 * or the host who scheduled the meeting, excluding today's meetings that have
+	 * already ended.
+	 */
+	private List<Meeting> getUpcomingMeetingsForUser(String tenant, String username) {
+		List<Meeting> all = meetingRepository
+				.findUpcomingMeetingsForUserOrHost(tenant, username, LocalDate.now());
+		LocalDate today = LocalDate.now();
+		LocalTime now   = LocalTime.now();
+		return all.stream().filter(m -> {
+			if (!m.getMeetingDate().equals(today)) return true;
+			if (m.getMeetingTime() == null) return true;
+			int dur = (m.getDuration() != null) ? m.getDuration() : 0;
+			return !m.getMeetingTime().plusMinutes(dur).isBefore(now);
+		}).toList();
+	}
+
 	@GetMapping("/schedule-meeting")
 	public String scheduleMeetingPage(HttpServletRequest request, Model model) {
 		injectUser(request, model);
@@ -475,8 +494,7 @@ public class AdminController {
 		String tenant   = getTenantSegment(username);
 
 		model.addAttribute("meetingForm", new Meeting());
-		model.addAttribute("upcomingMeetings",
-				meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
+		model.addAttribute("upcomingMeetings", getUpcomingMeetingsForUser(tenant, username != null ? username : ""));
 		model.addAttribute("tenantUsers",
 				userRepository.findByTenantSegment(tenant).stream()
 						.filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
@@ -502,8 +520,7 @@ public class AdminController {
 
 		if (result.hasErrors()) {
 			injectUser(request, model);
-			model.addAttribute("upcomingMeetings",
-					meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
+			model.addAttribute("upcomingMeetings", getUpcomingMeetingsForUser(tenant, username != null ? username : ""));
 			model.addAttribute("tenantUsers",
 					userRepository.findByTenantSegment(tenant).stream()
 							.filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
@@ -515,6 +532,7 @@ public class AdminController {
 		}
 
 		meetingForm.setTenantSegment(tenant);
+		meetingForm.setScheduledBy(username != null ? username : "");
 		meetingRepository.save(meetingForm);
 		ra.addFlashAttribute("successMessage", "Meeting scheduled successfully.");
 		return "redirect:/admin/schedule-meeting";
@@ -541,8 +559,7 @@ public class AdminController {
 		}
 
 		model.addAttribute("meetingForm", meeting);
-		model.addAttribute("upcomingMeetings",
-				meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
+		model.addAttribute("upcomingMeetings", getUpcomingMeetingsForUser(tenant, username != null ? username : ""));
 		model.addAttribute("tenantUsers",
 				userRepository.findByTenantSegment(tenant).stream()
 						.filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
@@ -569,8 +586,7 @@ public class AdminController {
 
 		if (result.hasErrors()) {
 			injectUser(request, model);
-			model.addAttribute("upcomingMeetings",
-					meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
+			model.addAttribute("upcomingMeetings", getUpcomingMeetingsForUser(tenant, username != null ? username : ""));
 			model.addAttribute("tenantUsers",
 					userRepository.findByTenantSegment(tenant).stream()
 						.filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
