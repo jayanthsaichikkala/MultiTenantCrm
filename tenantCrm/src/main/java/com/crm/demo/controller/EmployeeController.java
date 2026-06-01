@@ -425,7 +425,7 @@ public class EmployeeController {
             String tenant   = getTenantSegment(emp);
             String username = emp.getUsername();
             List<Meeting> meetings = meetingRepository
-                    .findByTenantAndParticipantUsername(tenant, username);
+                    .findByTenantAndParticipantUsernameAndMeetingDateGreaterThanEqual(tenant, username, LocalDate.now());
             model.addAttribute("meetings", meetings);
         } else {
             model.addAttribute("meetings", Collections.emptyList());

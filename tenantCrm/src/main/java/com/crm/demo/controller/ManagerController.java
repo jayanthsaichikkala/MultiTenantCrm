@@ -284,7 +284,7 @@ public class ManagerController {
 			String tenant = getTenantSegment(manager);
 			// All meetings in this tenant (manager can see all they scheduled + ones they're in)
 			List<Meeting> meetings = meetingRepository
-					.findByTenantSegmentOrderByMeetingDateAscMeetingTimeAsc(tenant);
+					.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now());
 			model.addAttribute("meetings", meetings);
 			// Team members available as participants (exclude manager themselves if desired)
 			Team myTeam = teamRepository.findByManagerWithMembers(manager).orElse(null);
@@ -313,7 +313,7 @@ public class ManagerController {
 			injectStats(model);
 			if (manager != null) {
 				model.addAttribute("meetings",
-						meetingRepository.findByTenantSegmentOrderByMeetingDateAscMeetingTimeAsc(tenant));
+						meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
 				Team myTeam = teamRepository.findByManagerWithMembers(manager).orElse(null);
 				model.addAttribute("teamMembers",
 						myTeam != null ? myTeam.getMembers() : Collections.emptyList());
@@ -346,7 +346,7 @@ public class ManagerController {
 		injectStats(model);
 		model.addAttribute("meetingForm", meeting);
 		model.addAttribute("meetings",
-				meetingRepository.findByTenantSegmentOrderByMeetingDateAscMeetingTimeAsc(tenant));
+				meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
 		Team myTeam = manager != null ? teamRepository.findByManagerWithMembers(manager).orElse(null) : null;
 		model.addAttribute("teamMembers", myTeam != null ? myTeam.getMembers() : Collections.emptyList());
 		return "manager-meetings";
@@ -365,7 +365,7 @@ public class ManagerController {
 		if (result.hasErrors()) {
 			injectStats(model);
 			model.addAttribute("meetings",
-					meetingRepository.findByTenantSegmentOrderByMeetingDateAscMeetingTimeAsc(tenant));
+					meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
 			Team myTeam = manager != null ? teamRepository.findByManagerWithMembers(manager).orElse(null) : null;
 			model.addAttribute("teamMembers", myTeam != null ? myTeam.getMembers() : Collections.emptyList());
 			model.addAttribute("errorMessage", "Please fix the errors below.");

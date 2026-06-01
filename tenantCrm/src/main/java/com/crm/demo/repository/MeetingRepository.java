@@ -1,5 +1,6 @@
 package com.crm.demo.repository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,11 +11,13 @@ import com.crm.demo.model.Meeting;
 
 public interface MeetingRepository extends JpaRepository<Meeting, Long> {
 
-	List<Meeting> findByTenantSegmentOrderByMeetingDateAscMeetingTimeAsc(String tenantSegment);
+	List<Meeting> findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(
+			String tenantSegment, LocalDate date);
 
 	/** Find all meetings in a tenant where the given username appears in the participants field. */
-	@Query("SELECT m FROM Meeting m WHERE m.tenantSegment = :tenant AND m.participants LIKE %:username%")
-	List<Meeting> findByTenantAndParticipantUsername(
+	@Query("SELECT m FROM Meeting m WHERE m.tenantSegment = :tenant AND m.participants LIKE %:username% AND m.meetingDate >= :date")
+	List<Meeting> findByTenantAndParticipantUsernameAndMeetingDateGreaterThanEqual(
 			@Param("tenant") String tenant,
-			@Param("username") String username);
+			@Param("username") String username,
+			@Param("date") LocalDate date);
 }

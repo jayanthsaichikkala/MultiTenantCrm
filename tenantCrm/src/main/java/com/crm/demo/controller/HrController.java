@@ -809,7 +809,7 @@ public class HrController {
         String tenant = getTenantSegment(request);
 
         model.addAttribute("upcomingMeetings",
-                meetingRepository.findByTenantSegmentOrderByMeetingDateAscMeetingTimeAsc(tenant));
+                meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
 
         // All non-admin users in this tenant as potential participants
         List<User> tenantUsers = tenant.isEmpty()
@@ -838,7 +838,7 @@ public class HrController {
         if (result.hasErrors()) {
             injectUser(request, model);
             model.addAttribute("upcomingMeetings",
-                    meetingRepository.findByTenantSegmentOrderByMeetingDateAscMeetingTimeAsc(tenant));
+                    meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
             List<User> tenantUsers = tenant.isEmpty()
                     ? userRepository.findAll()
                     : userRepository.findByTenantSegment(tenant);
@@ -873,7 +873,7 @@ public class HrController {
 
         model.addAttribute("meetingForm", meeting);
         model.addAttribute("upcomingMeetings",
-                meetingRepository.findByTenantSegmentOrderByMeetingDateAscMeetingTimeAsc(tenant));
+                meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
         List<User> tenantUsers = tenant.isEmpty()
                 ? userRepository.findAll()
                 : userRepository.findByTenantSegment(tenant);
@@ -897,7 +897,7 @@ public class HrController {
         if (result.hasErrors()) {
             injectUser(request, model);
             model.addAttribute("upcomingMeetings",
-                    meetingRepository.findByTenantSegmentOrderByMeetingDateAscMeetingTimeAsc(tenant));
+                    meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
             List<User> tenantUsers = tenant.isEmpty()
                     ? userRepository.findAll()
                     : userRepository.findByTenantSegment(tenant);

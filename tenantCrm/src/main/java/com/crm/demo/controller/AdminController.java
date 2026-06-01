@@ -1,5 +1,6 @@
 package com.crm.demo.controller;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -475,7 +476,7 @@ public class AdminController {
 
 		model.addAttribute("meetingForm", new Meeting());
 		model.addAttribute("upcomingMeetings",
-				meetingRepository.findByTenantSegmentOrderByMeetingDateAscMeetingTimeAsc(tenant));
+				meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
 		model.addAttribute("tenantUsers",
 				userRepository.findByTenantSegment(tenant).stream()
 						.filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
@@ -502,7 +503,7 @@ public class AdminController {
 		if (result.hasErrors()) {
 			injectUser(request, model);
 			model.addAttribute("upcomingMeetings",
-					meetingRepository.findByTenantSegmentOrderByMeetingDateAscMeetingTimeAsc(tenant));
+					meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
 			model.addAttribute("tenantUsers",
 					userRepository.findByTenantSegment(tenant).stream()
 							.filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
@@ -541,7 +542,7 @@ public class AdminController {
 
 		model.addAttribute("meetingForm", meeting);
 		model.addAttribute("upcomingMeetings",
-				meetingRepository.findByTenantSegmentOrderByMeetingDateAscMeetingTimeAsc(tenant));
+				meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
 		model.addAttribute("tenantUsers",
 				userRepository.findByTenantSegment(tenant).stream()
 						.filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
@@ -569,12 +570,12 @@ public class AdminController {
 		if (result.hasErrors()) {
 			injectUser(request, model);
 			model.addAttribute("upcomingMeetings",
-					meetingRepository.findByTenantSegmentOrderByMeetingDateAscMeetingTimeAsc(tenant));
+					meetingRepository.findByTenantSegmentAndMeetingDateGreaterThanEqualOrderByMeetingDateAscMeetingTimeAsc(tenant, LocalDate.now()));
 			model.addAttribute("tenantUsers",
 					userRepository.findByTenantSegment(tenant).stream()
-							.filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
-									  && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
-							.toList());
+						.filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
+							&& !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
+						.toList());
 			model.addAttribute("activePage", "schedule-meeting");
 			return "admin-scheduleMeeting";
 		}
