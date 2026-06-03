@@ -43,6 +43,7 @@ import com.crm.demo.model.Holiday;
 import com.crm.demo.model.Meeting;
 import com.crm.demo.model.Project;
 import com.crm.demo.model.Task;
+import com.crm.demo.model.TaskAttachment;
 import com.crm.demo.model.Team;
 import com.crm.demo.model.User;
 import com.crm.demo.repository.AttendanceRepository;
@@ -50,6 +51,7 @@ import com.crm.demo.repository.HolidayRepository;
 import com.crm.demo.repository.MeetingRepository;
 import com.crm.demo.repository.ProjectRepository;
 import com.crm.demo.repository.TaskRepository;
+import com.crm.demo.repository.TaskAttachmentRepository;
 import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
 
@@ -81,6 +83,9 @@ public class ManagerController {
 
 	@Autowired
 	private MeetingRepository meetingRepository;
+
+	@Autowired
+	private TaskAttachmentRepository taskAttachmentRepository;
 
 	@Autowired
 	private BCryptPasswordEncoder passwordEncoder;
@@ -353,31 +358,6 @@ public class ManagerController {
 			return "redirect:/manager/tasks";
 		}
 
-		// Save uploaded files
-		List<String> savedPaths = new ArrayList<>();
-		if (attachments != null) {
-			for (MultipartFile file : attachments) {
-				if (file == null || file.isEmpty()) continue;
-				try {
-					Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
-					Files.createDirectories(uploadPath);
-					String ext = "";
-					String original = file.getOriginalFilename();
-					if (original != null && original.contains(".")) {
-						ext = original.substring(original.lastIndexOf('.'));
-					}
-					String storedName = UUID.randomUUID().toString() + ext;
-					Path target = uploadPath.resolve(storedName);
-					Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
-					// Store as "originalName::storedName" so we can show the original name
-					savedPaths.add(original + "::" + storedName);
-				} catch (IOException e) {
-					ra.addFlashAttribute("errorMessage", "File upload failed: " + e.getMessage());
-					return "redirect:/manager/tasks";
-				}
-			}
-		}
-
 		Task task = new Task();
 		task.setTitle(title.trim());
 		task.setDescription(description);
@@ -389,11 +369,43 @@ public class ManagerController {
 		task.setAssignedToId(assignedUser.getId());
 		task.setTenantSegment(tenant);
 		task.setCreatedBy(manager.getUsername());
-		if (!savedPaths.isEmpty()) {
-			task.setAttachmentPaths(String.join(",", savedPaths));
-		}
-
 		taskRepository.save(task);
+
+// Save uploaded files to database and update task metadata
+        if (attachments != null) {
+            List<String> uploadedNames = new ArrayList<>();
+            for (MultipartFile file : attachments) {
+                if (file == null || file.isEmpty()) continue;
+                try {
+                    byte[] fileData = file.getBytes();
+                    String contentType = file.getContentType();
+                    if (contentType == null) contentType = "application/octet-stream";
+                    
+                    // Create and save attachment in database
+                    TaskAttachment taskAttachment = new TaskAttachment(
+                        task,
+                        file.getOriginalFilename(),
+                        fileData,
+                        contentType,
+                        "manager"
+                    );
+                    taskAttachmentRepository.save(taskAttachment);
+                    uploadedNames.add(file.getOriginalFilename());
+                } catch (IOException e) {
+                    ra.addFlashAttribute("errorMessage", "File upload failed: " + e.getMessage());
+                    return "redirect:/manager/tasks";
+                }
+            }
+            if (!uploadedNames.isEmpty()) {
+                List<String> existingNames = new ArrayList<>();
+                if (task.getAttachmentPaths() != null && !task.getAttachmentPaths().isBlank()) {
+                    existingNames.addAll(java.util.Arrays.asList(task.getAttachmentPaths().split(",")));
+                }
+                existingNames.addAll(uploadedNames);
+                task.setAttachmentPaths(String.join(",", existingNames));
+                taskRepository.save(task);
+			}
+		}
 
 		ra.addFlashAttribute("successMessage", "Task assigned to " + assignedUser.getUsername() + " successfully.");
 		return "redirect:/manager/tasks";
@@ -402,23 +414,63 @@ public class ManagerController {
 	// =========================
 	// DOWNLOAD TASK ATTACHMENT
 	// =========================
-	@GetMapping("/tasks/download/{storedName}")
-	public ResponseEntity<Resource> downloadAttachment(@PathVariable String storedName) {
-		try {
-			Path filePath = Paths.get(uploadDir).toAbsolutePath().normalize().resolve(storedName);
-			Resource resource = new UrlResource(filePath.toUri());
-			if (!resource.exists()) {
-				return ResponseEntity.notFound().build();
-			}
-			String contentType = Files.probeContentType(filePath);
-			if (contentType == null) contentType = "application/octet-stream";
-			return ResponseEntity.ok()
-					.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + storedName + "\"")
-					.header(HttpHeaders.CONTENT_TYPE, contentType)
-					.body(resource);
-		} catch (Exception e) {
-			return ResponseEntity.internalServerError().build();
+	@GetMapping("/tasks/download/{attachmentId}")
+	public ResponseEntity<?> downloadAttachment(@PathVariable Long attachmentId) {
+		TaskAttachment attachment = taskAttachmentRepository.findById(attachmentId).orElse(null);
+		if (attachment == null) {
+			return ResponseEntity.notFound().build();
 		}
+
+		return ResponseEntity.ok()
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + attachment.getOriginalFilename() + "\"")
+				.header(HttpHeaders.CONTENT_TYPE, attachment.getContentType() != null ? attachment.getContentType() : "application/octet-stream")
+				.body(attachment.getFileData());
+	}
+
+	// =========================
+	// VERIFY TASK - APPROVE/REJECT (POST)
+	// =========================
+	@PostMapping("/tasks/verify/{id}")
+	public String verifyTask(@PathVariable Long id,
+                            @RequestParam String action,
+                            @RequestParam(required = false) String reason,
+                            RedirectAttributes ra) {
+		User manager = getCurrentManager();
+		if (manager == null) {
+			ra.addFlashAttribute("errorMessage", "Session expired. Please log in again.");
+			return "redirect:/manager/tasks";
+		}
+
+		String tenant = getTenantSegment(manager);
+		Task task = taskRepository.findById(id).orElse(null);
+		if (task == null || !tenant.equals(task.getTenantSegment())) {
+			ra.addFlashAttribute("errorMessage", "Task not found.");
+			return "redirect:/manager/tasks";
+		}
+
+		// Get current timestamp
+		java.time.LocalDateTime now = java.time.LocalDateTime.now();
+		java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+		String timestamp = now.format(formatter);
+
+		if ("approve".equalsIgnoreCase(action)) {
+			task.setStatus("done");
+			task.setVerificationStatus("approved");
+			task.setLastVerifiedBy(manager.getUsername());
+			task.setLastVerifiedAt(timestamp);
+			task.setVerificationReason(null); // Clear any previous rejection reason
+			ra.addFlashAttribute("successMessage", "Task approved and marked as completed.");
+		} else if ("reject".equalsIgnoreCase(action)) {
+			task.setStatus("in-progress");
+			task.setVerificationStatus("rejected");
+			task.setLastVerifiedBy(manager.getUsername());
+			task.setLastVerifiedAt(timestamp);
+			task.setVerificationReason(reason); // Store rejection reason
+			ra.addFlashAttribute("successMessage", "Task rejected and returned to employee for rework.");
+		}
+
+		taskRepository.save(task);
+		return "redirect:/manager/tasks";
 	}
 
 	// =========================

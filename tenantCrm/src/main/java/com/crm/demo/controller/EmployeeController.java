@@ -28,12 +28,14 @@ import com.crm.demo.model.AttendanceDay;
 import com.crm.demo.model.Holiday;
 import com.crm.demo.model.Meeting;
 import com.crm.demo.model.Task;
+import com.crm.demo.model.TaskAttachment;
 import com.crm.demo.model.Team;
 import com.crm.demo.model.User;
 import com.crm.demo.repository.AttendanceRepository;
 import com.crm.demo.repository.HolidayRepository;
 import com.crm.demo.repository.MeetingRepository;
 import com.crm.demo.repository.TaskRepository;
+import com.crm.demo.repository.TaskAttachmentRepository;
 import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
 
@@ -63,6 +65,7 @@ public class EmployeeController {
     @Autowired private TeamRepository        teamRepository;
     @Autowired private MeetingRepository     meetingRepository;
     @Autowired private TaskRepository        taskRepository;
+    @Autowired private TaskAttachmentRepository taskAttachmentRepository;
     @Autowired private BCryptPasswordEncoder passwordEncoder;
 
     // ── helpers ───────────────────────────────────────────────────────────
@@ -249,41 +252,52 @@ public class EmployeeController {
             return "redirect:/employee/tasks";
         }
 
-        if ("waiting-for-approval".equalsIgnoreCase(status)) {
-            if (attachment == null || attachment.isEmpty()) {
-                ra.addFlashAttribute("errorMessage", "Please upload a file before submitting the task for approval.");
-                return "redirect:/employee/tasks";
-            }
+        // Handle file attachment if provided (optional now)
+        if (attachment != null && !attachment.isEmpty()) {
             try {
-                Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
-                Files.createDirectories(uploadPath);
-                String original = attachment.getOriginalFilename();
-                String ext = original != null && original.contains(".") ? original.substring(original.lastIndexOf('.')) : "";
-                String storedName = UUID.randomUUID() + ext;
-                Files.copy(attachment.getInputStream(), uploadPath.resolve(storedName), StandardCopyOption.REPLACE_EXISTING);
-                String newPath = (original != null ? original : "file") + "::" + storedName;
-                String existing = task.getAttachmentPaths();
-                task.setAttachmentPaths(existing == null || existing.isBlank() ? newPath : existing + "," + newPath);
+                byte[] fileData = attachment.getBytes();
+                String contentType = attachment.getContentType();
+                if (contentType == null) contentType = "application/octet-stream";
+                
+                // Create and save attachment in database
+                TaskAttachment taskAttachment = new TaskAttachment(
+                    task,
+                    attachment.getOriginalFilename(),
+                    fileData,
+                    contentType,
+                    "employee"
+                );
+                taskAttachmentRepository.save(taskAttachment);
+
+                List<String> existingNames = new ArrayList<>();
+                if (task.getAttachmentPaths() != null && !task.getAttachmentPaths().isBlank()) {
+                    existingNames.addAll(java.util.Arrays.asList(task.getAttachmentPaths().split(",")));
+                }
+                existingNames.add(attachment.getOriginalFilename());
+                task.setAttachmentPaths(String.join(",", existingNames));
             } catch (IOException e) {
                 ra.addFlashAttribute("errorMessage", "File upload failed: " + e.getMessage());
                 return "redirect:/employee/tasks";
             }
-            task.setStatus("waiting-for-approval");
-            taskRepository.save(task);
-            ra.addFlashAttribute("successMessage", "Task submitted for manager approval.");
-            return "redirect:/employee/tasks";
         }
 
-        if ("waiting-for-approval".equalsIgnoreCase(task.getStatus())) {
-            ra.addFlashAttribute("errorMessage", "This task is already waiting for approval. Manager approval is required.");
-            return "redirect:/employee/tasks";
+        // Update task status
+        String normalizedStatus = "done".equalsIgnoreCase(status) ? "done" : 
+                                  "in-progress".equalsIgnoreCase(status) ? "in-progress" : "pending";
+        task.setStatus(normalizedStatus);
+        
+        // If employee marks as done, set verification status to waiting-for-review
+        if ("done".equalsIgnoreCase(normalizedStatus)) {
+            task.setVerificationStatus("waiting-for-review");
+        } else {
+            // If marking as in-progress or pending, reset verification to pending
+            task.setVerificationStatus("pending");
         }
-
-        String normalized = "in-progress".equalsIgnoreCase(status) ? "in-progress" : "pending";
-        task.setStatus(normalized);
+        
         taskRepository.save(task);
 
-        ra.addFlashAttribute("successMessage", "Task status updated to " + normalized + ".");
+        String message = "Task status updated to " + normalizedStatus + ".";
+        ra.addFlashAttribute("successMessage", message);
         return "redirect:/employee/tasks";
     }
 
@@ -538,9 +552,9 @@ public class EmployeeController {
         if (emp != null) {
             String tenant   = getTenantSegment(emp);
             String username = emp.getUsername();
-            // All upcoming meetings (today + future) for this participant, excluding ended ones
+            // All upcoming meetings (today + future) where user is a participant OR the host, excluding ended ones
             List<Meeting> all = meetingRepository
-                    .findByTenantAndParticipantUsernameAndMeetingDateGreaterThanEqual(tenant, username, LocalDate.now());
+                    .findUpcomingMeetingsForUserOrHost(tenant, username, LocalDate.now());
             LocalDate today = LocalDate.now();
             LocalTime now   = LocalTime.now();
             List<Meeting> active = all.stream().filter(m -> {
@@ -601,20 +615,16 @@ public class EmployeeController {
     }
 
     // ── DOWNLOAD TASK ATTACHMENT ──────────────────────────────────────────
-    @GetMapping("/tasks/download/{storedName}")
-    public ResponseEntity<Resource> downloadAttachment(@PathVariable String storedName) {
-        try {
-            Path filePath = Paths.get(uploadDir).toAbsolutePath().normalize().resolve(storedName);
-            Resource resource = new UrlResource(filePath.toUri());
-            if (!resource.exists()) return ResponseEntity.notFound().build();
-            String contentType = Files.probeContentType(filePath);
-            if (contentType == null) contentType = "application/octet-stream";
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + storedName + "\"")
-                    .header(HttpHeaders.CONTENT_TYPE, contentType)
-                    .body(resource);
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+    @GetMapping("/tasks/download/{attachmentId}")
+    public ResponseEntity<?> downloadAttachment(@PathVariable Long attachmentId) {
+        TaskAttachment attachment = taskAttachmentRepository.findById(attachmentId).orElse(null);
+        if (attachment == null) {
+            return ResponseEntity.notFound().build();
         }
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + attachment.getOriginalFilename() + "\"")
+                .header(HttpHeaders.CONTENT_TYPE, attachment.getContentType() != null ? attachment.getContentType() : "application/octet-stream")
+                .body(attachment.getFileData());
     }
 }

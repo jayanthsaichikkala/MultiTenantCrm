@@ -604,7 +604,16 @@
 								</td>
 								<td style="color:#6b7280;font-size:13px;" th:text="${task.dueDate} ?: '—'">—</td>
 								<td>
-									<th:block th:if="${!#lists.isEmpty(task.attachmentList)}">
+									<th:block th:if="${task.attachments != null and !#lists.isEmpty(task.attachments)}">
+										<div th:each="att : ${task.attachments}" style="margin-bottom:3px;">
+											<a th:href="@{/manager/tasks/download/{id}(id=${att.id})}"
+											   style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#1a6b8a;text-decoration:none;font-weight:500;">
+												<i data-lucide="paperclip" style="width:12px;height:12px;"></i>
+												<span th:text="${att.originalFilename}" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle;"></span>
+											</a>
+										</div>
+									</th:block>
+									<th:block th:if="${(task.attachments == null or #lists.isEmpty(task.attachments)) and !#lists.isEmpty(task.attachmentList)}">
 										<div th:each="att : ${task.attachmentList}" style="margin-bottom:3px;">
 											<a th:href="@{/manager/tasks/download/{s}(s=${#strings.substringAfter(att,'::')})}"
 											   style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#1a6b8a;text-decoration:none;font-weight:500;">
@@ -613,7 +622,7 @@
 											</a>
 										</div>
 									</th:block>
-									<span th:if="${#lists.isEmpty(task.attachmentList)}"
+									<span th:if="${(task.attachments == null or #lists.isEmpty(task.attachments)) and #lists.isEmpty(task.attachmentList)}"
 										style="color:#cbd5e1;font-size:13px;">—</span>
 								</td>
 								<td>

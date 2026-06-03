@@ -129,11 +129,11 @@
                             <th>#</th>
                             <th>Title</th>
                             <th>Priority</th>
-                            <th>Status</th>
                             <th>Start Date</th>
                             <th>Due Date</th>
                             <th>Attachments</th>
                             <th>Assigned By</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -150,24 +150,20 @@
                                     th:classappend="${task.priority == 'High'} ? 'high' : (${task.priority == 'Low'} ? 'low' : 'medium')"
                                     th:text="${task.priority}">Medium</span>
                             </td>
-                            <td>
-                                <span class="status-badge badge-done"       th:if="${task.status == 'done'}">
-                                    <i data-lucide="check-circle" style="width:12px;height:12px;"></i> Done
-                                </span>
-                                <span class="status-badge badge-inprogress" th:if="${task.status == 'in-progress'}">
-                                    <i data-lucide="clock" style="width:12px;height:12px;"></i> In Progress
-                                </span>
-                                <span class="status-badge badge-pending"    th:if="${task.status == 'pending'}">
-                                    <i data-lucide="circle" style="width:12px;height:12px;"></i> Pending
-                                </span>
-                                <span class="status-badge badge-waiting"    th:if="${task.status == 'waiting-for-approval'}">
-                                    <i data-lucide="clock-3" style="width:12px;height:12px;"></i> Waiting for Approval
-                                </span>
-                            </td>
                             <td style="color:#6b7280;font-size:13px;" th:text="${task.startDate} ?: '—'">—</td>
                             <td style="color:#6b7280;font-size:13px;" th:text="${task.dueDate} ?: '—'">—</td>
                             <td>
-                                <th:block th:if="${!#lists.isEmpty(task.attachmentList)}">
+                                <th:block th:if="${task.attachments != null and !#lists.isEmpty(task.attachments)}">
+                                    <div th:each="att : ${task.attachments}" style="margin-bottom:3px;">
+                                        <a th:href="@{/employee/tasks/download/{id}(id=${att.id})}"
+                                           style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#1a6b8a;text-decoration:none;font-weight:500;">
+                                            <i data-lucide="paperclip" style="width:12px;height:12px;"></i>
+                                            <span th:text="${att.originalFilename}"
+                                                  style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle;"></span>
+                                        </a>
+                                    </div>
+                                </th:block>
+                                <th:block th:if="${!#lists.isEmpty(task.attachmentList) and (task.attachments == null or #lists.isEmpty(task.attachments))}">
                                     <div th:each="att : ${task.attachmentList}" style="margin-bottom:3px;">
                                         <a th:href="@{/employee/tasks/download/{s}(s=${#strings.substringAfter(att,'::')})}"
                                            style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#1a6b8a;text-decoration:none;font-weight:500;">
@@ -177,33 +173,53 @@
                                         </a>
                                     </div>
                                 </th:block>
-                                <span th:if="${#lists.isEmpty(task.attachmentList)}"
+                                <span th:if="${(task.attachments == null or #lists.isEmpty(task.attachments)) and #lists.isEmpty(task.attachmentList)}"
                                       style="color:#cbd5e1;font-size:13px;">—</span>
                             </td>
                             <td>
-                                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                                    <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#4b6a7a;font-weight:500;"
-                                          th:if="${task.createdBy != null}">
-                                        <i data-lucide="user" style="width:12px;height:12px;"></i>
-                                        <span th:text="${task.createdBy}">Manager</span>
-                                    </span>
-                                    <span th:if="${task.createdBy == null}" style="color:#9ca3af;font-size:13px;">—</span>
+                                <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:#4b6a7a;font-weight:500;"
+                                      th:if="${task.createdBy != null}">
+                                    <i data-lucide="user" style="width:12px;height:12px;"></i>
+                                    <span th:text="${task.createdBy}">Manager</span>
+                                </div>
+                                <span th:if="${task.createdBy == null}" style="color:#9ca3af;font-size:13px;">—</span>
+                            </td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                    <!-- Status Update Form (visible unless task is approved) -->
                                     <form th:action="@{/employee/tasks/update-status/{id}(id=${task.id})}" method="post" enctype="multipart/form-data"
                                           style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"
-                                          th:if="${task.status != 'waiting-for-approval'}">
-                                        <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#4b6a7a;font-weight:500;">
-                                            <i data-lucide="activity" style="width:12px;height:12px;"></i>
-                                            Status
-                                        </span>
+                                          th:if="${task.verificationStatus != 'approved'}">
                                         <select name="status" style="padding:6px 8px;border:1px solid #dbe7ee;border-radius:8px;font-size:12px;background:#fff;min-width:110px;">
                                             <option value="pending" th:selected="${task.status == 'pending'}">Pending</option>
                                             <option value="in-progress" th:selected="${task.status == 'in-progress'}">In Progress</option>
-                                            <option value="waiting-for-approval">Waiting for Approval</option>
+                                            <option value="done" th:selected="${task.status == 'done'}">Done</option>
                                         </select>
-                                        <input type="file" name="attachment" required style="font-size:12px;max-width:180px;" />
-                                        <button type="submit" style="border:none;border-radius:8px;background:#17455e;color:#fff;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;">Update</button>
+                                        <input type="file" name="attachment" style="font-size:12px;max-width:180px;" />
+                                        <button type="submit" style="border:none;border-radius:8px;background:#17455e;color:#fff;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;transition:background .18s;">Update</button>
                                     </form>
-                                    <span th:if="${task.status == 'waiting-for-approval'}" style="font-size:12px;color:#b45309;font-weight:600;">Awaiting manager approval</span>
+
+                                    <!-- Status Badges -->
+                                    <span class="status-badge badge-done" th:if="${task.status == 'done' and task.verificationStatus == 'approved'}">
+                                        <i data-lucide="check-circle" style="width:12px;height:12px;"></i> Done
+                                    </span>
+                                    <span class="status-badge" style="background:#fef3c7;color:#b45309;font-size:11px;" th:if="${task.verificationStatus == 'waiting-for-review'}">
+                                        <i data-lucide="clock" style="width:12px;height:12px;"></i> Waiting for Review
+                                    </span>
+
+                                    <!-- Rejected Status with Feedback Button -->
+                                    <div th:if="${task.verificationStatus == 'rejected'}" style="display:flex;align-items:center;gap:6px;">
+                                        <span class="status-badge" style="background:#fee2e2;color:#991b1b;font-size:11px;display:inline-flex;align-items:center;gap:4px;">
+                                            <i data-lucide="alert-circle" style="width:12px;height:12px;"></i> Rejected
+                                        </span>
+                                        <button type="button" 
+                                            th:data-feedback="${task.verificationReason ?: 'No feedback provided'}"
+                                            th:data-verified-by="${task.lastVerifiedBy ?: 'Manager'}"
+                                            onclick="openFeedbackModal(this)"
+                                            style="display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600;background:#fff4e6;color:#b45309;border:1px solid #fed7aa;cursor:pointer;transition:background .18s;white-space:nowrap;">
+                                            <i data-lucide="message-circle" style="width:12px;height:12px;"></i> View Feedback
+                                        </button>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
@@ -224,6 +240,32 @@
     </div><!-- /page-content -->
 </div><!-- /main-wrapper -->
 
+<!-- ══════════════════════════════════════════
+     REJECTION FEEDBACK MODAL
+     ══════════════════════════════════════════ -->
+<div id="feedbackModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9000;align-items:center;justify-content:center;backdrop-filter:blur(3px);">
+	<div style="background:white;border-radius:16px;padding:28px;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.18);">
+		<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+			<h3 style="margin:0;font-size:18px;font-weight:700;color:#991b1b;display:flex;align-items:center;gap:10px;">
+				<i data-lucide="message-circle" style="width:20px;height:20px;"></i>
+				Manager Feedback
+			</h3>
+			<button type="button" onclick="closeFeedbackModal()" style="border:none;background:transparent;font-size:24px;cursor:pointer;color:#6b7280;">&times;</button>
+		</div>
+
+		<div style="margin-bottom:16px;padding:14px;background:#fee2e2;border-radius:10px;border-left:4px solid #d11a2a;">
+			<p style="margin:0 0 8px;font-size:12px;color:#6b7280;font-weight:500;text-transform:uppercase;">From: <span id="feedbackFrom" style="font-weight:600;color:#163647;">Manager</span></p>
+			<p id="feedbackText" style="margin:0;font-size:13px;line-height:1.6;color:#991b1b;white-space:pre-wrap;word-wrap:break-word;">No feedback</p>
+		</div>
+
+		<p style="margin:0 0 16px;font-size:12px;color:#6b7280;line-height:1.5;">Please review the feedback above and make the necessary improvements. Update your task status once you have addressed the concerns.</p>
+
+		<div style="display:flex;justify-content:flex-end;">
+			<button type="button" onclick="closeFeedbackModal()" style="border:none;border-radius:10px;background:#f3f8fb;color:#4b6a7a;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;transition:background .2s;">Close</button>
+		</div>
+	</div>
+</div>
+
 <script>
     var hamburger = document.getElementById('hamburgerBtn');
     var sidebar   = document.getElementById('sidebar');
@@ -239,6 +281,40 @@
         document.querySelectorAll('#taskTable tbody tr').forEach(function (r) {
             r.style.display = r.textContent.toLowerCase().indexOf(q) > -1 ? '' : 'none';
         });
+    });
+
+    /* ══════════════════════════════════════════
+       FEEDBACK MODAL FUNCTIONS
+       ══════════════════════════════════════════ */
+    function openFeedbackModal(btn) {
+        var feedback = btn.getAttribute('data-feedback');
+        var verifiedBy = btn.getAttribute('data-verified-by');
+        
+        document.getElementById('feedbackText').textContent = feedback || 'No feedback provided.';
+        document.getElementById('feedbackFrom').textContent = verifiedBy || 'Manager';
+        
+        var modal = document.getElementById('feedbackModalOverlay');
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        lucide.createIcons();
+    }
+
+    function closeFeedbackModal() {
+        var modal = document.getElementById('feedbackModalOverlay');
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    /* Close modal on escape key */
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeFeedbackModal();
+        }
+    });
+
+    /* Close modal when clicking overlay */
+    document.getElementById('feedbackModalOverlay').addEventListener('click', function(e) {
+        if (e.target === this) closeFeedbackModal();
     });
 
     lucide.createIcons();
