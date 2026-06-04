@@ -111,27 +111,17 @@ public class Task {
     public void setAttachments(List<TaskAttachment> attachments) { this.attachments = attachments; }
 
     public String getLastVerifiedBy() { return lastVerifiedBy; }
-    public void setLastVerifiedBy(String v) { this.lastVerifiedBy = v; }
+    public void setLastVerifiedBy(String lastVerifiedBy) { this.lastVerifiedBy = lastVerifiedBy; }
 
     public String getLastVerifiedAt() { return lastVerifiedAt; }
-    public void setLastVerifiedAt(String v) { this.lastVerifiedAt = v; }
+    public void setLastVerifiedAt(String lastVerifiedAt) { this.lastVerifiedAt = lastVerifiedAt; }
 
     public String getVerificationReason() { return verificationReason; }
-    public void setVerificationReason(String r) { this.verificationReason = r; }
+    public void setVerificationReason(String verificationReason) { this.verificationReason = verificationReason; }
 
     /** Returns list of individual file paths (never null) */
     public java.util.List<String> getAttachmentList() {
-        java.util.List<String> attachmentsList = new java.util.ArrayList<>();
-        if (attachments != null && !attachments.isEmpty()) {
-            for (TaskAttachment attachment : attachments) {
-                if (attachment.getOriginalFilename() != null && attachment.getId() != null) {
-                    attachmentsList.add(attachment.getOriginalFilename() + "::" + attachment.getId());
-                }
-            }
-        }
-        if (attachmentPaths != null && !attachmentPaths.isBlank()) {
-            attachmentsList.addAll(java.util.Arrays.asList(attachmentPaths.split(",")));
-        }
-        return attachmentsList;
+        if (attachmentPaths == null || attachmentPaths.isBlank()) return java.util.Collections.emptyList();
+        return java.util.Arrays.asList(attachmentPaths.split(","));
     }
 }

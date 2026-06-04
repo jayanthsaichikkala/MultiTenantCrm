@@ -26,6 +26,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.crm.demo.model.Attendance;
 import com.crm.demo.model.AttendanceDay;
 import com.crm.demo.model.Holiday;
+import com.crm.demo.model.LeaveRequest;
 import com.crm.demo.model.Meeting;
 import com.crm.demo.model.Task;
 import com.crm.demo.model.TaskAttachment;
@@ -33,6 +34,7 @@ import com.crm.demo.model.Team;
 import com.crm.demo.model.User;
 import com.crm.demo.repository.AttendanceRepository;
 import com.crm.demo.repository.HolidayRepository;
+import com.crm.demo.repository.LeaveRequestRepository;
 import com.crm.demo.repository.MeetingRepository;
 import com.crm.demo.repository.TaskRepository;
 import com.crm.demo.repository.TaskAttachmentRepository;
@@ -69,6 +71,7 @@ public class EmployeeController {
     @Autowired private MeetingRepository     meetingRepository;
     @Autowired private TaskRepository        taskRepository;
     @Autowired private TaskAttachmentRepository taskAttachmentRepository;
+    @Autowired private LeaveRequestRepository leaveRequestRepository;
     @Autowired private BCryptPasswordEncoder passwordEncoder;
     @Autowired private ProfileUpdateService  profileUpdateService;
 
@@ -141,7 +144,14 @@ public class EmployeeController {
         model.addAttribute("activeProjectsCount", 0);
         model.addAttribute("completedTasks",       0);
         model.addAttribute("attendanceRate",      "0%");
-        model.addAttribute("pendingLeaves",        0);
+        User emp = getCurrentEmployee();
+        long pendingLeaves = emp != null ? leaveRequestRepository.countByEmployeeAndStatus(emp, "Pending") : 0;
+        long approvedLeaves = emp != null ? leaveRequestRepository.countByEmployeeAndStatus(emp, "Approved") : 0;
+        long rejectedLeaves = emp != null ? leaveRequestRepository.countByEmployeeAndStatus(emp, "Rejected") : 0;
+
+        model.addAttribute("pendingLeaves",        pendingLeaves);
+        model.addAttribute("approvedLeaves",       approvedLeaves);
+        model.addAttribute("rejectedLeaves",       rejectedLeaves);
         model.addAttribute("attendanceMonth",     "May 2026");
         model.addAttribute("presentDays",          0);
         model.addAttribute("absentDays",           0);
@@ -150,7 +160,7 @@ public class EmployeeController {
         model.addAttribute("lastCheckin",         "—");
         model.addAttribute("myProjects",           Collections.emptyList());
         model.addAttribute("pendingTasks",         Collections.emptyList());
-        model.addAttribute("leaveRequests",        Collections.emptyList());
+        model.addAttribute("leaveRequests",        emp != null ? leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(emp) : Collections.emptyList());
     }
 
     // ── pages ─────────────────────────────────────────────────────────────
@@ -579,6 +589,56 @@ public class EmployeeController {
         injectUser(model);
         injectStats(model);
         return "employee-leaves";
+    }
+
+    @PostMapping("/leaves")
+    public String submitLeave(@RequestParam String type,
+                              @RequestParam String fromDate,
+                              @RequestParam String toDate,
+                              @RequestParam String reason,
+                              @RequestParam(value = "attachment", required = false) MultipartFile attachment,
+                              RedirectAttributes ra) {
+        User emp = getCurrentEmployee();
+        if (emp == null) {
+            ra.addFlashAttribute("errorMessage", "Session expired. Please log in again.");
+            return "redirect:/employee/leaves";
+        }
+
+        LocalDate from = LocalDate.parse(fromDate);
+        LocalDate to = LocalDate.parse(toDate);
+        if (to.isBefore(from)) {
+            ra.addFlashAttribute("errorMessage", "To date cannot be before from date.");
+            return "redirect:/employee/leaves";
+        }
+        if (type == null || type.isBlank() || reason == null || reason.isBlank()) {
+            ra.addFlashAttribute("errorMessage", "Please fill all required leave details.");
+            return "redirect:/employee/leaves";
+        }
+
+        LeaveRequest leave = new LeaveRequest();
+        leave.setEmployee(emp);
+        leave.setEmployeeName(emp.getUsername());
+        leave.setTenantSegment(getTenantSegment(emp));
+        leave.setType(type.trim());
+        leave.setFromDate(from);
+        leave.setToDate(to);
+        leave.setReason(reason.trim());
+        leave.setStatus("Pending");
+
+        if (attachment != null && !attachment.isEmpty()) {
+            try {
+                leave.setAttachmentName(attachment.getOriginalFilename());
+                leave.setAttachmentContentType(attachment.getContentType() != null ? attachment.getContentType() : "application/octet-stream");
+                leave.setAttachmentData(attachment.getBytes());
+            } catch (IOException e) {
+                ra.addFlashAttribute("errorMessage", "Attachment upload failed: " + e.getMessage());
+                return "redirect:/employee/leaves";
+            }
+        }
+
+        leaveRequestRepository.save(leave);
+        ra.addFlashAttribute("successMessage", "Leave request submitted to HR.");
+        return "redirect:/employee/leaves";
     }
 
     @GetMapping("/settings")

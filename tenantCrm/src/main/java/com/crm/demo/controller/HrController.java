@@ -2,6 +2,7 @@ package com.crm.demo.controller;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,11 +30,13 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.crm.demo.model.Attendance;
 import com.crm.demo.model.AttendanceDay;
 import com.crm.demo.model.Holiday;
+import com.crm.demo.model.LeaveRequest;
 import com.crm.demo.model.Meeting;
 import com.crm.demo.model.Team;
 import com.crm.demo.model.User;
 import com.crm.demo.repository.AttendanceRepository;
 import com.crm.demo.repository.HolidayRepository;
+import com.crm.demo.repository.LeaveRequestRepository;
 import com.crm.demo.repository.MeetingRepository;
 import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
@@ -52,6 +55,7 @@ public class HrController {
     @Autowired private AttendanceRepository  attendanceRepository;
     @Autowired private HolidayRepository     holidayRepository;
     @Autowired private MeetingRepository     meetingRepository;
+    @Autowired private LeaveRequestRepository leaveRequestRepository;
     @Autowired private BCryptPasswordEncoder passwordEncoder;
     @Autowired private ProfileUpdateService  profileUpdateService;
 
@@ -160,9 +164,22 @@ public class HrController {
         model.addAttribute("activeEmployees",   active);
         model.addAttribute("inactiveEmployees", inactive);
         model.addAttribute("newHires",          0);
-        model.addAttribute("onLeaveToday",      0);
+        LocalDate today = LocalDate.now();
+        LocalDate monthStart = today.withDayOfMonth(1);
+        LocalDate monthEnd = today.withDayOfMonth(today.lengthOfMonth());
+        long onLeaveToday = tenant.isEmpty() ? 0
+                : leaveRequestRepository.countByTenantSegmentAndStatusAndFromDateLessThanEqualAndToDateGreaterThanEqual(
+                        tenant, "Approved", today, today);
+        long pendingLeaves = tenant.isEmpty() ? 0 : leaveRequestRepository.countByTenantSegmentAndStatus(tenant, "Pending");
+        long approvedThisMonth = tenant.isEmpty() ? 0
+                : leaveRequestRepository.countByTenantSegmentAndStatusAndFromDateBetween(
+                        tenant, "Approved", monthStart, monthEnd);
+
+        model.addAttribute("onLeaveToday",      onLeaveToday);
+        model.addAttribute("pendingLeaves",     pendingLeaves);
+        model.addAttribute("approvedLeaves",    approvedThisMonth);
         model.addAttribute("openPositions",     0);
-        model.addAttribute("leaveRequests",     Collections.emptyList());
+        model.addAttribute("leaveRequests",     tenant.isEmpty() ? Collections.emptyList() : leaveRequestRepository.findByTenantSegmentAndStatusOrderByCreatedAtDesc(tenant, "Pending"));
         model.addAttribute("attendanceMonth",   "May 2026");
         model.addAttribute("presentPercent",    "0%");
         model.addAttribute("absentPercent",     "0%");
@@ -610,7 +627,41 @@ public class HrController {
     public String leavesPage(HttpServletRequest request, Model model) {
         injectUser(request, model);
         injectStats(request, model);
+        String tenant = getTenantSegment(request);
+        model.addAttribute("leaveRequests", tenant.isEmpty() ? Collections.emptyList() : leaveRequestRepository.findByTenantSegmentOrderByCreatedAtDesc(tenant));
         return "hr-leaves";
+    }
+
+    @PostMapping("/leaves/{id}/review")
+    public String reviewLeave(@PathVariable Long id,
+                              @RequestParam String action,
+                              @RequestParam(required = false) String rejectionMessage,
+                              HttpServletRequest request,
+                              RedirectAttributes ra) {
+        String tenant = getTenantSegment(request);
+        User hr = getCurrentHr();
+        LeaveRequest leave = leaveRequestRepository.findById(id).orElse(null);
+        if (leave == null || !tenant.equals(leave.getTenantSegment())) {
+            ra.addFlashAttribute("errorMessage", "Leave request not found.");
+            return "redirect:/hr/leaves";
+        }
+
+        if ("approve".equalsIgnoreCase(action)) {
+            leave.setStatus("Approved");
+            ra.addFlashAttribute("successMessage", "Leave request approved.");
+        } else if ("reject".equalsIgnoreCase(action)) {
+            leave.setStatus("Rejected");
+            leave.setRejectionMessage(rejectionMessage != null ? rejectionMessage.trim() : null);
+            ra.addFlashAttribute("successMessage", "Leave request rejected.");
+        } else {
+            ra.addFlashAttribute("errorMessage", "Invalid leave action.");
+            return "redirect:/hr/leaves";
+        }
+
+        leave.setReviewedBy(hr != null ? hr.getUsername() : null);
+        leave.setReviewedAt(LocalDateTime.now());
+        leaveRequestRepository.save(leave);
+        return "redirect:/hr/leaves";
     }
 
     @GetMapping("/calendar")

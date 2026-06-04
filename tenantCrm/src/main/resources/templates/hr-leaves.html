@@ -1,20 +1,20 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>HR — Leave Requests</title>
+	<title>HR â€” Leave Requests</title>
 	<link rel="stylesheet" th:href="@{/hr.css}">
 	<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 	<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 	<style>
-		/* ── Override base font ── */
+		/* â”€â”€ Override base font â”€â”€ */
 		body {
 			font-family: 'DM Sans', sans-serif;
 		}
 
-		/* ── Filter Bar ── */
+		/* â”€â”€ Filter Bar â”€â”€ */
 		.lf-filter-bar {
 			display: flex;
 			align-items: center;
@@ -47,7 +47,7 @@
 			min-width: 160px;
 		}
 
-		/* ── Stat Cards ── */
+		/* â”€â”€ Stat Cards â”€â”€ */
 		.stat-card {
 			background: #ffffff;
 			border-radius: 14px;
@@ -89,7 +89,7 @@
 			margin-top: 3px;
 		}
 
-		/* ── Main Card ── */
+		/* â”€â”€ Main Card â”€â”€ */
 		.card {
 			background: #ffffff;
 			border-radius: 16px;
@@ -97,7 +97,7 @@
 			overflow: hidden;
 		}
 
-		/* ── Leave Item Row ── */
+		/* â”€â”€ Leave Item Row â”€â”€ */
 		.leave-item {
 			display: flex;
 			align-items: center;
@@ -172,7 +172,7 @@
 			flex-shrink: 0;
 		}
 
-		/* ── Status Badges ── */
+		/* â”€â”€ Status Badges â”€â”€ */
 		.leave-status-badge {
 			font-size: 11px;
 			font-weight: 600;
@@ -196,24 +196,37 @@
 			color: #b91c1c;
 		}
 
-		/* ── Action Buttons ── */
+		/* â”€â”€ Action Buttons â”€â”€ */
 		.btn-approve,
 		.btn-reject,
 		.btn-view {
-			width: 32px;
-			height: 32px;
-			border-radius: 8px;
-			border: none;
-			cursor: pointer;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			transition: background .15s, transform .1s;
+            min-width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 14px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background .15s, transform .1s, box-shadow .15s;
 		}
 
 		.btn-approve {
 			background: #dcfce7;
 			color: #15803d;
+		}
+
+		.btn-view {
+			background: #f1f5f9;
+			color: #64748b;
+		}
+
+		.btn-view {
+			background: #f1f5f9;
+			color: #64748b;
 		}
 
 		.btn-approve:hover {
@@ -240,7 +253,7 @@
 			background: #e2e8f0;
 		}
 
-		/* ── Modal Overlay ── */
+		/* â”€â”€ Modal Overlay â”€â”€ */
 		.lf-modal-overlay {
 			display: none;
 			position: fixed;
@@ -372,7 +385,7 @@
 			background: #fecaca;
 		}
 
-		/* ── Empty State ── */
+		/* â”€â”€ Empty State â”€â”€ */
 		.empty-state {
 			text-align: center;
 			color: #94a3b8;
@@ -439,7 +452,7 @@
 		<div class="topbar">
 			<h1>Leave Requests</h1>
 			<div class="topbar-right">
-				<div class="search-box"><input type="text" placeholder="Search requests…"></div>
+				<div class="search-box"><input type="text" placeholder="Search requestsâ€¦"></div>
 				<div class="user-badge" th:text="${#strings.substring(adminName ?: 'H', 0, 1).toUpperCase()}">H</div>
 			</div>
 		</div>
@@ -458,14 +471,14 @@
 				<div class="stat-card">
 					<div class="stat-icon blue"><i data-lucide="clock"></i></div>
 					<div class="stat-info">
-						<h3 id="statPending">0</h3>
+						<h3 id="statPending" th:text="${pendingLeaves} ?: '0'">0</h3>
 						<p>Pending Approvals</p>
 					</div>
 				</div>
 				<div class="stat-card">
 					<div class="stat-icon green"><i data-lucide="check-circle"></i></div>
 					<div class="stat-info">
-						<h3 id="statApproved">0</h3>
+						<h3 id="statApproved" th:text="${approvedLeaves} ?: '0'">0</h3>
 						<p>Approved This Month</p>
 					</div>
 				</div>
@@ -473,7 +486,7 @@
 
 			<!-- Filter Bar -->
 			<div class="lf-filter-bar">
-				<input type="text" id="lhSearch" placeholder="Search by name or type…">
+				<input type="text" id="lhSearch" placeholder="Search by name or typeâ€¦">
 				<select id="lhStatusFilter">
 					<option value="all">All Status</option>
 					<option value="Pending">Pending</option>
@@ -504,9 +517,11 @@
 
 				<div id="lhList">
 					<!-- Server-rendered leave requests -->
-					<div th:each="req : ${leaveRequests}" class="leave-item" th:data-name="${req.employeeName}"
+					<div th:each="req : ${leaveRequests}" class="leave-item" th:data-id="${req.id}"
+						th:data-name="${req.employeeName}"
 						th:data-type="${req.type}" th:data-status="${req.status}" th:data-from="${req.fromDate}"
-						th:data-to="${req.toDate}" th:data-reason="${req.reason}">
+						th:data-to="${req.toDate}" th:data-reason="${req.reason}"
+				th:data-rejection-message="${req.rejectionMessage}">
 						<div class="leave-item-left">
 							<div class="leave-avatar"
 								th:text="${#strings.substring(req.employeeName ?: 'E', 0, 1).toUpperCase()}">E</div>
@@ -524,10 +539,12 @@
 								th:text="${req.status}">Pending</span>
 							<button class="btn-view" title="View details" onclick="openModal(this)"><i
 									data-lucide="eye"></i></button>
-							<button class="btn-approve" title="Approve" onclick="changeStatus(this,'Approved')"><i
-									data-lucide="check"></i></button>
-							<button class="btn-reject" title="Reject" onclick="changeStatus(this,'Rejected')"><i
-									data-lucide="x"></i></button>
+							<form th:if="${req.status == 'Pending'}" th:action="@{/hr/leaves/{id}/review(id=${req.id})}"
+								method="post" style="display:inline-flex;">
+								<input type="hidden" name="action" value="approve">
+								<button class="btn-approve" title="Approve" type="submit"><i data-lucide="check" style="margin-right:5px;"></i>Approve</button>
+							</form>
+								<button th:if="${req.status == 'Pending'}" class="btn-reject" title="Reject" type="button" onclick="openModal(this)"><i data-lucide="x" style="margin-right:5px;"></i>Reject</button>
 						</div>
 					</div>
 
@@ -553,28 +570,44 @@
 				</button>
 			</div>
 			<div class="lf-modal-body">
-				<div class="lf-detail-row"><span>Employee</span><span id="mdName">—</span></div>
-				<div class="lf-detail-row"><span>Leave Type</span><span id="mdType">—</span></div>
-				<div class="lf-detail-row"><span>From Date</span><span id="mdFrom">—</span></div>
-				<div class="lf-detail-row"><span>To Date</span><span id="mdTo">—</span></div>
-				<div class="lf-detail-row"><span>Duration</span><span id="mdDuration">—</span></div>
-				<div class="lf-detail-row"><span>Status</span><span id="mdStatus">—</span></div>
+				<div class="lf-detail-row"><span>Employee</span><span id="mdName">â€”</span></div>
+				<div class="lf-detail-row"><span>Leave Type</span><span id="mdType">â€”</span></div>
+				<div class="lf-detail-row"><span>From Date</span><span id="mdFrom">â€”</span></div>
+				<div class="lf-detail-row"><span>To Date</span><span id="mdTo">â€”</span></div>
+				<div class="lf-detail-row"><span>Duration</span><span id="mdDuration">â€”</span></div>
+				<div class="lf-detail-row"><span>Status</span><span id="mdStatus">â€”</span></div>
 				<div class="lf-detail-row" style="flex-direction:column; gap:8px;">
 					<span>Reason</span>
-					<div class="lf-reason-box" id="mdReason">—</div>
+					<div class="lf-reason-box" id="mdReason">â€”</div>
+				</div>
+				<div class="lf-detail-row" style="flex-direction:column; gap:8px;" id="mdRejectionRow">
+					<span>Rejection Note</span>
+					<div class="lf-reason-box" id="mdRejectionNote">â€”</div>
+				</div>
+				<div class="lf-detail-row" style="flex-direction:column; gap:8px;" id="mdRejectMessageRow">
+					<span>Return message (optional)</span>
+					<textarea id="mdRejectMessage" name="rejectionMessage" form="mdRejectForm" rows="4"
+						style="width:100%;border:1px solid #e2e8f0;border-radius:10px;padding:12px;font-family:inherit;font-size:13px;resize:vertical;min-height:100px;outline:none;"
+						placeholder="Optional comment when rejecting this request."></textarea>
 				</div>
 			</div>
 			<div class="lf-modal-footer" id="mdFooter">
-				<button class="lf-btn-reject-modal" onclick="modalAction('Rejected')"><i data-lucide="x"
-						style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Reject</button>
-				<button class="lf-btn-approve-modal" onclick="modalAction('Approved')"><i data-lucide="check"
-						style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Approve</button>
+				<form id="mdRejectForm" method="post">
+					<input type="hidden" name="action" value="reject">
+					<button class="lf-btn-reject-modal" type="submit"><i data-lucide="x"
+							style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Reject</button>
+				</form>
+				<form id="mdApproveForm" method="post">
+					<input type="hidden" name="action" value="approve">
+					<button class="lf-btn-approve-modal" type="submit"><i data-lucide="check"
+							style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"></i>Approve</button>
+				</form>
 			</div>
 		</div>
 	</div>
 
 	<script>
-		/* ── Sidebar ── */
+		/* â”€â”€ Sidebar â”€â”€ */
 		var hamburger = document.getElementById('hamburgerBtn'),
 			sidebar = document.getElementById('sidebar'),
 			overlay = document.getElementById('sidebarOverlay');
@@ -583,15 +616,15 @@
 		if (hamburger) hamburger.addEventListener('click', openSidebar);
 		if (overlay) overlay.addEventListener('click', closeSidebar);
 
-		/* ── Init Lucide ── */
+		/* â”€â”€ Init Lucide â”€â”€ */
 		lucide.createIcons();
 
-		/* ── Status badge class helper ── */
+		/* â”€â”€ Status badge class helper â”€â”€ */
 		function badgeClass(status) {
 			return status === 'Approved' ? 'badge-approved' : status === 'Rejected' ? 'badge-rejected' : 'badge-pending';
 		}
 
-		/* ── Update stat counters ── */
+		/* â”€â”€ Update stat counters â”€â”€ */
 		function updateStats() {
 			var items = document.querySelectorAll('#lhList .leave-item');
 			var pending = 0, approved = 0;
@@ -604,7 +637,7 @@
 			document.getElementById('statApproved').textContent = approved;
 		}
 
-		/* ── Change status (approve / reject) ── */
+		/* â”€â”€ Change status (approve / reject) â”€â”€ */
 		function changeStatus(btn, newStatus) {
 			var item = btn.closest('.leave-item');
 			var badge = item.querySelector('.leave-status-badge');
@@ -616,19 +649,19 @@
 			lucide.createIcons();
 		}
 
-		/* ── Format date ── */
+		/* â”€â”€ Format date â”€â”€ */
 		function fmtDate(str) {
-			if (!str) return '—';
+			if (!str) return 'â€”';
 			var d = new Date(str);
 			return isNaN(d) ? str : d.toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'});
 		}
 		function daysBetween(f, t) {
-			if (!f || !t) return '—';
+			if (!f || !t) return 'â€”';
 			var d = Math.round((new Date(t) - new Date(f)) / 864e5) + 1;
 			return d + ' day' + (d > 1 ? 's' : '');
 		}
 
-		/* ── Modal ── */
+		/* â”€â”€ Modal â”€â”€ */
 		var activeItem = null;
 		function openModal(btn) {
 			activeItem = btn.closest('.leave-item');
@@ -640,8 +673,18 @@
 			document.getElementById('mdDuration').textContent = daysBetween(ds.from, ds.to);
 			document.getElementById('mdStatus').textContent = ds.status || 'Pending';
 			document.getElementById('mdReason').textContent = ds.reason || 'No reason provided.';
-			var footer = document.getElementById('mdFooter');
-			footer.style.display = (ds.status === 'Pending' || !ds.status) ? 'flex' : 'none';
+				var rejectionText = ds.rejectionMessage || '';
+				document.getElementById('mdRejectionNote').textContent = rejectionText || 'No rejection note provided.';
+				document.getElementById('mdRejectMessage').value = '';
+				var isPending = ds.status === 'Pending' || !ds.status;
+				document.getElementById('mdRejectMessageRow').style.display = isPending ? 'block' : 'none';
+				document.getElementById('mdRejectionRow').style.display = rejectionText ? 'block' : 'none';
+				var footer = document.getElementById('mdFooter');
+				footer.style.display = isPending ? 'flex' : 'none';
+			if (ds.id) {
+				document.getElementById('mdRejectForm').action = '/hr/leaves/' + ds.id + '/review';
+				document.getElementById('mdApproveForm').action = '/hr/leaves/' + ds.id + '/review';
+			}
 			document.getElementById('lhModal').classList.add('open');
 			lucide.createIcons();
 		}
@@ -650,17 +693,15 @@
 			activeItem = null;
 		}
 		function modalAction(newStatus) {
-			if (!activeItem) return;
-			var anyBtn = activeItem.querySelector('.btn-approve, .btn-reject');
-			if (anyBtn) changeStatus(anyBtn, newStatus);
-			activeItem.dataset.status = newStatus;
-			closeModal();
+			if (!activeItem || !activeItem.dataset.id) return;
+			var form = document.getElementById(newStatus === 'Approved' ? 'mdApproveForm' : 'mdRejectForm');
+			form.submit();
 		}
 		document.getElementById('lhModal').addEventListener('click', function (e) {
 			if (e.target === this) closeModal();
 		});
 
-		/* ── Filter ── */
+		/* â”€â”€ Filter â”€â”€ */
 		function applyFilters() {
 			var search = document.getElementById('lhSearch').value.toLowerCase();
 			var status = document.getElementById('lhStatusFilter').value;
@@ -685,7 +726,7 @@
 		document.getElementById('lhStatusFilter').addEventListener('change', applyFilters);
 		document.getElementById('lhTypeFilter').addEventListener('change', applyFilters);
 
-		/* ── Init: hide buttons for already-decided items ── */
+		/* â”€â”€ Init: hide buttons for already-decided items â”€â”€ */
 		document.querySelectorAll('#lhList .leave-item').forEach(function (el) {
 			var s = el.dataset.status;
 			if (s === 'Approved' || s === 'Rejected') {
@@ -693,7 +734,7 @@
 			}
 		});
 
-		/* ── Init stats ── */
+		/* â”€â”€ Init stats â”€â”€ */
 		updateStats();
 	</script>
 	<script th:src="@{/auth.js}"></script>
