@@ -30,6 +30,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .requestCache(rc -> rc.disable())
+            .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
             .authorizeHttpRequests(auth -> auth
                 .shouldFilterAllDispatcherTypes(false)
                 // ── Public assets & auth pages ──────────────────────────────

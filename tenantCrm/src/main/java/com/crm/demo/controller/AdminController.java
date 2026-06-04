@@ -474,6 +474,20 @@ public class AdminController {
 		}).toList();
 	}
 
+	private List<Meeting> getPastMeetingsForUser(String tenant, String username) {
+		List<Meeting> all = meetingRepository.findAllMeetingsForUserOrHost(tenant, username);
+		LocalDate today = LocalDate.now();
+		LocalTime now   = LocalTime.now();
+		return all.stream().filter(m -> {
+			if (m.getMeetingDate() == null) return false;
+			if (m.getMeetingDate().isAfter(today)) return false;
+			if (m.getMeetingDate().isBefore(today)) return true;
+			if (m.getMeetingTime() == null) return false;
+			int dur = (m.getDuration() != null) ? m.getDuration() : 0;
+			return m.getMeetingTime().plusMinutes(dur).isBefore(now);
+		}).toList();
+	}
+
 	@GetMapping("/schedule-meeting")
 	public String scheduleMeetingPage(HttpServletRequest request, Model model) {
 		injectUser(request, model);
@@ -482,6 +496,7 @@ public class AdminController {
 
 		model.addAttribute("meetingForm", new Meeting());
 		model.addAttribute("upcomingMeetings", getUpcomingMeetingsForUser(tenant, username != null ? username : ""));
+		model.addAttribute("pastMeetings", getPastMeetingsForUser(tenant, username != null ? username : ""));
 		model.addAttribute("tenantUsers",
 				userRepository.findByTenantSegment(tenant).stream()
 						.filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
@@ -508,6 +523,7 @@ public class AdminController {
 		if (result.hasErrors()) {
 			injectUser(request, model);
 			model.addAttribute("upcomingMeetings", getUpcomingMeetingsForUser(tenant, username != null ? username : ""));
+			model.addAttribute("pastMeetings", getPastMeetingsForUser(tenant, username != null ? username : ""));
 			model.addAttribute("tenantUsers",
 					userRepository.findByTenantSegment(tenant).stream()
 							.filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
@@ -545,6 +561,7 @@ public class AdminController {
 
 		model.addAttribute("meetingForm", meeting);
 		model.addAttribute("upcomingMeetings", getUpcomingMeetingsForUser(tenant, username != null ? username : ""));
+		model.addAttribute("pastMeetings", getPastMeetingsForUser(tenant, username != null ? username : ""));
 		model.addAttribute("tenantUsers",
 				userRepository.findByTenantSegment(tenant).stream()
 						.filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
@@ -571,8 +588,7 @@ public class AdminController {
 
 		if (result.hasErrors()) {
 			injectUser(request, model);
-			model.addAttribute("upcomingMeetings", getUpcomingMeetingsForUser(tenant, username != null ? username : ""));
-			model.addAttribute("tenantUsers",
+			model.addAttribute("upcomingMeetings", getUpcomingMeetingsForUser(tenant, username != null ? username : ""));			model.addAttribute("pastMeetings", getPastMeetingsForUser(tenant, username != null ? username : ""));			model.addAttribute("tenantUsers",
 					userRepository.findByTenantSegment(tenant).stream()
 						.filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
 							&& !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))

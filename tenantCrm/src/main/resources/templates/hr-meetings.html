@@ -990,6 +990,12 @@
 					<span class="tab-badge" id="meetingCountBadge"
 						th:text="${upcomingMeetings != null} ? ${#lists.size(upcomingMeetings)} : '0'">0</span>
 				</button>
+				<button class="tab-btn" id="tabBtnHistory" onclick="switchTab('history')">
+					<i data-lucide="history"></i>
+					Past Meetings
+					<span class="tab-badge" id="historyCountBadge"
+						th:text="${pastMeetings != null} ? ${#lists.size(pastMeetings)} : '0'">0</span>
+				</button>
 			</div>
 
 			<!-- ── TAB PANEL: Schedule / Edit Form ── -->
@@ -1293,6 +1299,44 @@
 				</div>
 			</div><!-- /panelList -->
 
+			<div class="tab-panel" id="panelHistory">
+				<div class="meetings-table-card">
+					<div class="card-header">
+						<div>
+							<h2>Past Meetings / History</h2>
+							<p th:text="${pastMeetings != null} ? (${#lists.size(pastMeetings)} + ' meeting(s)') : '0 meeting(s)'">0 meeting(s)</p>
+						</div>
+						<div class="card-header-icon"><i data-lucide="history" style="width:18px;height:18px;"></i></div>
+					</div>
+					<div class="table-wrap">
+						<table id="historyTable">
+							<thead><tr><th>#</th><th>Title</th><th>Date</th><th>Time</th><th>Type</th><th>Participants</th></tr></thead>
+							<tbody>
+								<tr th:each="m, stat : ${pastMeetings}">
+									<td style="color:#9ca3af;font-weight:600;" th:text="${stat.count}">1</td>
+									<td><div style="font-weight:600;font-size:13px;color:#163647;" th:text="${m.title}">Title</div></td>
+									<td><div style="font-size:12px;font-weight:600;color:#4b6a7a;" th:text="${#temporals.format(m.meetingDate, 'dd MMM yyyy')}">Date</div></td>
+									<td><div style="font-size:11px;color:#9ca3af;margin-top:2px;" th:text="${m.meetingTime != null} ? ${#strings.substring(m.meetingTime.toString(),0,5)} : '—'">Time</div></td>
+									<td><span class="status-badge badge-online" th:if="${m.meetingType == 'ONLINE'}">Online</span><span class="status-badge badge-inperson" th:if="${m.meetingType == 'IN_PERSON'}">In Person</span><span class="status-badge badge-hybrid" th:if="${m.meetingType == 'HYBRID'}">Hybrid</span></td>
+									<td>
+										<th:block th:if="${m.participants != null and !#strings.isEmpty(m.participants)}">
+											<th:block th:with="parts=${#strings.arraySplit(m.participants, ',')}">
+												<div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px;">
+													<span th:each="p, iter : ${parts}" th:if="${iter.index < 2}" style="display:inline-flex; align-items:center; padding:4px 8px; border-radius:999px; background:#eef6ff; color:#1d4ed8; font-size:12px; font-weight:600;">[[${p.trim()}]]</span>
+													<button th:if="${#arrays.length(parts) > 2}" type="button" style="border:none; background:none; color:#2563eb; font-size:12px; font-weight:600; cursor:pointer; padding:0;" th:attr="data-participants=${m.participants}" onclick="openParticipantsModal(this)">View all</button>
+												</div>
+											</th:block>
+										</th:block>
+										<span th:unless="${m.participants != null and !#strings.isEmpty(m.participants)}" style="font-size:12px;color:#6b7280;">—</span>
+									</td>
+								</tr>
+								<tr th:if="${pastMeetings == null or #lists.isEmpty(pastMeetings)}"><td colspan="6"><div class="empty-state"><i data-lucide="history" style="width:48px;height:48px;opacity:.3;"></i><h3>No Past Meetings</h3><p>Completed meetings will appear here.</p></div></td></tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div><!-- /panelHistory -->
+
 		</div><!-- /page-content -->
 	</div><!-- /main-wrapper -->
 
@@ -1355,20 +1399,29 @@
 			if (tab === 'schedule') {
 				document.getElementById('panelSchedule').classList.add('active');
 				document.getElementById('tabBtnSchedule').classList.add('active');
-				sessionStorage.setItem('meetingsTab', 'schedule');
+				sessionStorage.setItem('hr_meetingsTab', 'schedule');
+			} else if (tab === 'history') {
+				document.getElementById('panelHistory').classList.add('active');
+				document.getElementById('tabBtnHistory').classList.add('active');
+				sessionStorage.setItem('hr_meetingsTab', 'history');
 			} else {
 				document.getElementById('panelList').classList.add('active');
 				document.getElementById('tabBtnList').classList.add('active');
-				sessionStorage.setItem('meetingsTab', 'list');
+				sessionStorage.setItem('hr_meetingsTab', 'list');
 			}
 		}
 
 		/* ── Restore last active tab ── */
 		(function restoreTab() {
-			var saved = sessionStorage.getItem('meetingsTab');
+			var saved = sessionStorage.getItem('hr_meetingsTab');
 			var hasEditId = /*[[${meetingForm.id != null}]]*/ false;
-			if (hasEditId) { switchTab('schedule'); }
-			else if (saved === 'list') { switchTab('list'); }
+			if (hasEditId) {
+				switchTab('schedule');
+			} else if (saved === 'history') {
+				switchTab('history');
+			} else if (saved === 'list') {
+				switchTab('list');
+			}
 		})();
 
 		/* ── Date/time validation ── */
@@ -1471,7 +1524,7 @@
 		if (ms) ms.addEventListener('input', function () {
 			var q = this.value.toLowerCase();
 			if (q) switchTab('list');
-			document.querySelectorAll('#meetingsTable tbody tr').forEach(function (r) {
+			document.querySelectorAll('#meetingsTable tbody tr, #historyTable tbody tr').forEach(function (r) {
 				r.style.display = r.textContent.toLowerCase().indexOf(q) > -1 ? '' : 'none';
 			});
 		});
@@ -1479,7 +1532,7 @@
 		/* ── Edit button — switch to schedule tab ── */
 		document.querySelectorAll('.btn-action.edit').forEach(function (btn) {
 			btn.addEventListener('click', function () {
-				sessionStorage.setItem('meetingsTab', 'schedule');
+				sessionStorage.setItem('hr_meetingsTab', 'schedule');
 			});
 		});
 

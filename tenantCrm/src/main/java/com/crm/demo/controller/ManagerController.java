@@ -40,6 +40,7 @@ import org.springframework.validation.BindingResult;
 import com.crm.demo.model.Attendance;
 import com.crm.demo.model.AttendanceDay;
 import com.crm.demo.model.Holiday;
+import com.crm.demo.model.LeaveRequest;
 import com.crm.demo.model.Meeting;
 import com.crm.demo.model.Project;
 import com.crm.demo.model.Task;
@@ -48,6 +49,7 @@ import com.crm.demo.model.Team;
 import com.crm.demo.model.User;
 import com.crm.demo.repository.AttendanceRepository;
 import com.crm.demo.repository.HolidayRepository;
+import com.crm.demo.repository.LeaveRequestRepository;
 import com.crm.demo.repository.MeetingRepository;
 import com.crm.demo.repository.ProjectRepository;
 import com.crm.demo.repository.TaskRepository;
@@ -85,6 +87,9 @@ public class ManagerController {
 
 	@Autowired
 	private MeetingRepository meetingRepository;
+
+	@Autowired
+	private LeaveRequestRepository leaveRequestRepository;
 
 	@Autowired
 	private TaskAttachmentRepository taskAttachmentRepository;
@@ -527,6 +532,99 @@ public class ManagerController {
 	}
 
 	// =========================
+	// LEAVE REQUESTS PAGE
+	// =========================
+	@GetMapping("/leave")
+	public String legacyLeaveRedirect() {
+		return "redirect:/manager/leaves";
+	}
+
+	@GetMapping("/leaves")
+	public String leavesPage(Model model) {
+		injectStats(model);
+
+		User manager = getCurrentManager();
+		if (manager != null) {
+			String tenant = getTenantSegment(manager);
+			List<LeaveRequest> requests = leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(manager);
+			long pending = leaveRequestRepository.countByEmployeeAndStatus(manager, "Pending");
+			long approved = leaveRequestRepository.countByEmployeeAndStatus(manager, "Approved");
+			long rejected = leaveRequestRepository.countByEmployeeAndStatus(manager, "Rejected");
+
+			model.addAttribute("leaveRequests", requests);
+			model.addAttribute("pendingLeaves", pending);
+			model.addAttribute("approvedLeaves", approved);
+			model.addAttribute("rejectedLeaves", rejected);
+			model.addAttribute("casualBalance", 12);
+			model.addAttribute("sickBalance", 6);
+			model.addAttribute("annualBalance", 18);
+			model.addAttribute("compBalance", 3);
+			model.addAttribute("tenantSegment", tenant);
+		} else {
+			model.addAttribute("leaveRequests", Collections.emptyList());
+			model.addAttribute("pendingLeaves", 0);
+			model.addAttribute("approvedLeaves", 0);
+			model.addAttribute("rejectedLeaves", 0);
+			model.addAttribute("casualBalance", 12);
+			model.addAttribute("sickBalance", 6);
+			model.addAttribute("annualBalance", 18);
+			model.addAttribute("compBalance", 3);
+		}
+
+		return "manager-leave";
+	}
+
+	@PostMapping("/leaves")
+	public String submitLeave(@RequestParam String type,
+	                          @RequestParam String fromDate,
+	                          @RequestParam String toDate,
+	                          @RequestParam String reason,
+	                          @RequestParam(value = "attachment", required = false) MultipartFile attachment,
+	                          RedirectAttributes ra) {
+		User manager = getCurrentManager();
+		if (manager == null) {
+			ra.addFlashAttribute("errorMessage", "Session expired. Please log in again.");
+			return "redirect:/manager/leaves";
+		}
+
+		LocalDate from = LocalDate.parse(fromDate);
+		LocalDate to = LocalDate.parse(toDate);
+		if (to.isBefore(from)) {
+			ra.addFlashAttribute("errorMessage", "To date cannot be before from date.");
+			return "redirect:/manager/leaves";
+		}
+		if (type == null || type.isBlank() || reason == null || reason.isBlank()) {
+			ra.addFlashAttribute("errorMessage", "Please fill all required leave details.");
+			return "redirect:/manager/leaves";
+		}
+
+		LeaveRequest leave = new LeaveRequest();
+		leave.setEmployee(manager);
+		leave.setEmployeeName(manager.getUsername());
+		leave.setTenantSegment(getTenantSegment(manager));
+		leave.setType(type.trim());
+		leave.setFromDate(from);
+		leave.setToDate(to);
+		leave.setReason(reason.trim());
+		leave.setStatus("Pending");
+
+		if (attachment != null && !attachment.isEmpty()) {
+			try {
+				leave.setAttachmentName(attachment.getOriginalFilename());
+				leave.setAttachmentContentType(attachment.getContentType() != null ? attachment.getContentType() : "application/octet-stream");
+				leave.setAttachmentData(attachment.getBytes());
+			} catch (IOException e) {
+				ra.addFlashAttribute("errorMessage", "Attachment upload failed: " + e.getMessage());
+				return "redirect:/manager/leaves";
+			}
+		}
+
+		leaveRequestRepository.save(leave);
+		ra.addFlashAttribute("successMessage", "Leave request submitted successfully.");
+		return "redirect:/manager/leaves";
+	}
+
+	// =========================
 	// REPORTS PAGE
 	// =========================
 	@GetMapping("/reports")
@@ -564,6 +662,19 @@ public class ManagerController {
 		}).toList();
 	}
 
+	private List<Meeting> getPastMeetings(String tenant, String username) {
+		List<Meeting> all = meetingRepository.findAllMeetingsForUserOrHost(tenant, username);
+		LocalDate today = LocalDate.now();
+		LocalTime now   = LocalTime.now();
+		return all.stream().filter(m -> {
+			if (m.getMeetingDate().isBefore(today)) return true;
+			if (!m.getMeetingDate().equals(today)) return false;
+			if (m.getMeetingTime() == null) return false;
+			int dur = (m.getDuration() != null) ? m.getDuration() : 0;
+			return m.getMeetingTime().plusMinutes(dur).isBefore(now);
+		}).toList();
+	}
+
 	/** Returns upcoming meetings (today + future) where the user is a participant OR the host,
 	 *  excluding today's meetings that have already ended. */
 	private List<Meeting> getUpcomingMeetings(String tenant, String username) {
@@ -588,6 +699,7 @@ public class ManagerController {
 			String tenant   = getTenantSegment(manager);
 			String username = manager.getUsername();
 			model.addAttribute("meetings", getUpcomingMeetings(tenant, username));
+			model.addAttribute("pastMeetings", getPastMeetings(tenant, username));
 			// Team members available as participants
 			model.addAttribute("teamMembers", getManagedTeamMembers(manager));
 		} else {
@@ -614,6 +726,7 @@ public class ManagerController {
 			injectStats(model);
 			if (manager != null) {
 				model.addAttribute("meetings", getUpcomingMeetings(tenant, username));
+				model.addAttribute("pastMeetings", getPastMeetings(tenant, username));
 				model.addAttribute("teamMembers", getManagedTeamMembers(manager));
 			} else {
 				model.addAttribute("meetings", Collections.emptyList());
@@ -646,6 +759,7 @@ public class ManagerController {
 		injectStats(model);
 		model.addAttribute("meetingForm", meeting);
 		model.addAttribute("meetings", getUpcomingMeetings(tenant, username));
+		model.addAttribute("pastMeetings", getPastMeetings(tenant, username));
 		model.addAttribute("teamMembers", getManagedTeamMembers(manager));
 		return "manager-meetings";
 	}
@@ -664,6 +778,7 @@ public class ManagerController {
 		if (result.hasErrors()) {
 			injectStats(model);
 			model.addAttribute("meetings", getUpcomingMeetings(tenant, username));
+			model.addAttribute("pastMeetings", getPastMeetings(tenant, username));
 			model.addAttribute("teamMembers", getManagedTeamMembers(manager));
 			model.addAttribute("errorMessage", "Please fix the errors below.");
 			return "manager-meetings";

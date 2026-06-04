@@ -352,9 +352,9 @@
 			<li><a th:href="@{/manager/tasks}"><i data-lucide="check-square"></i> Tasks</a></li>
 			<li><a th:href="@{/manager/reports}"><i data-lucide="file-bar-chart"></i> Reports</a></li>
 			<li><a th:href="@{/manager/attendance}"><i data-lucide="calendar-check"></i> Attendance</a></li>
+			<li class="active"><a th:href="@{/manager/leaves}"><i data-lucide="file-text"></i> Leave Request</a></li>
 			<li><a th:href="@{/manager/meetings}"><i data-lucide="calendar-clock"></i> Meetings</a></li>
 			<li><a th:href="@{/manager/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
-			<li class="active"><a th:href="@{/manager/leaves}"><i data-lucide="file-text"></i> Apply Leave</a></li>
 			<li><a th:href="@{/manager/settings}"><i data-lucide="settings"></i> Settings</a></li>
 		</ul>
 		<a href="#" data-logout style="text-decoration:none;">
@@ -442,12 +442,13 @@
 							<p>Fill in the details below to submit your leave</p>
 						</div>
 					</div>
-					<div class="card-form-body">
+					<form class="card-form-body" id="leaveForm" th:action="@{/manager/leaves}" method="post"
+						enctype="multipart/form-data">
 
 						<!-- Leave Type -->
 						<div class="lf-group">
 							<label>Leave Type</label>
-							<select id="lfType">
+							<select id="lfType" name="type" required>
 								<option value="" disabled selected>Select leave type…</option>
 								<option value="Sick Leave">Sick Leave</option>
 								<option value="Casual Leave">Casual Leave</option>
@@ -464,11 +465,11 @@
 						<div class="lf-date-row">
 							<div class="lf-group">
 								<label>From Date</label>
-								<input type="date" id="lfFrom">
+								<input type="date" id="lfFrom" name="fromDate" required>
 							</div>
 							<div class="lf-group">
 								<label>To Date</label>
-								<input type="date" id="lfTo">
+								<input type="date" id="lfTo" name="toDate" required>
 							</div>
 						</div>
 
@@ -478,7 +479,7 @@
 						<!-- Reason -->
 						<div class="lf-group">
 							<label>Reason</label>
-							<textarea id="lfReason"
+							<textarea id="lfReason" name="reason" required
 								placeholder="Briefly describe the reason for your leave…"></textarea>
 						</div>
 
@@ -494,7 +495,7 @@
 								</svg>
 								<p>Click or drag file to upload</p>
 								<span>PDF, JPG, PNG — max 5MB</span>
-								<input type="file" id="lfFile" accept=".pdf,.jpg,.jpeg,.png">
+								<input type="file" id="lfFile" name="attachment" accept=".pdf,.jpg,.jpeg,.png">
 							</label>
 							<div class="lf-file-preview" id="lfPreview">
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -512,12 +513,12 @@
 							</div>
 						</div>
 
-						<button class="lf-submit-btn" id="lfSubmit" type="button">
+						<button class="lf-submit-btn" id="lfSubmit" type="submit">
 							<i data-lucide="send"
 								style="width:15px;height:15px;vertical-align:-2px;margin-right:6px;"></i>
 							Submit Leave Request
 						</button>
-					</div>
+					</form>
 				</div>
 
 				<!-- RIGHT: Leave History -->
@@ -535,7 +536,9 @@
 								<div class="lh-type" th:text="${req.type}">Sick Leave</div>
 								<div class="lh-date" th:text="${req.dateRange}">Apr 10–12</div>
 							</div>
-							<span class="lh-badge lh-pending" th:text="${req.status}">Pending</span>
+								<span class="lh-badge"
+									th:classappend="${req.status == 'Approved'} ? 'lh-approved' : (${req.status == 'Rejected'} ? 'lh-rejected' : 'lh-pending')"
+									th:text="${req.status}">Pending</span>
 						</div>
 						<div th:if="${leaveRequests == null or #lists.isEmpty(leaveRequests)}" class="empty-state"
 							id="lfEmptyState" style="padding:40px;">
@@ -604,8 +607,8 @@
 			return new Date(str).toLocaleDateString('en-GB', {day: 'numeric', month: 'short'});
 		}
 
-		/* ── Submit ── */
-		document.getElementById('lfSubmit').addEventListener('click', function () {
+		/* ── Submit validation ── */
+		document.getElementById('leaveForm').addEventListener('submit', function (e) {
 			var type = document.getElementById('lfType').value;
 			var from = document.getElementById('lfFrom').value;
 			var to = document.getElementById('lfTo').value;
@@ -616,39 +619,7 @@
 			markError('lfFrom', !from); if (!from) valid = false;
 			markError('lfTo', !to); if (!to) valid = false;
 			markError('lfReason', !reason); if (!reason) valid = false;
-			if (!valid) return;
-
-			/* Add to history panel */
-			var dateRange = fmtDate(from) + (from === to ? '' : ' – ' + fmtDate(to));
-			var item = document.createElement('div');
-			item.className = 'lh-item';
-			item.innerHTML =
-				'<div>' +
-				'  <div class="lh-type">' + type + '</div>' +
-				'  <div class="lh-date">' + dateRange + '</div>' +
-				'</div>' +
-				'<span class="lh-badge lh-pending">Pending</span>';
-
-			var empty = document.getElementById('lfEmptyState');
-			if (empty) empty.style.display = 'none';
-			var history = document.getElementById('lfHistory');
-			history.insertBefore(item, history.firstChild);
-
-			/* Update stat counter */
-			var sp = document.getElementById('statPending');
-			if (sp) sp.textContent = parseInt(sp.textContent || '0') + 1;
-
-			/* Reset form */
-			document.getElementById('lfType').value = '';
-			document.getElementById('lfFrom').value = '';
-			document.getElementById('lfTo').value = '';
-			document.getElementById('lfReason').value = '';
-			document.getElementById('lfFile').value = '';
-			document.getElementById('lfPreview').style.display = 'none';
-			document.getElementById('lfDaysInfo').style.display = 'none';
-			['lfType', 'lfFrom', 'lfTo', 'lfReason'].forEach(function (id) {document.getElementById(id).classList.remove('lf-error');});
-
-			lucide.createIcons();
+			if (!valid) e.preventDefault();
 		});
 
 		/* ── History search ── */

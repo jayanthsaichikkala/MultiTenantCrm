@@ -566,20 +566,28 @@ public class EmployeeController {
         if (emp != null) {
             String tenant   = getTenantSegment(emp);
             String username = emp.getUsername();
-            // All upcoming meetings (today + future) where user is a participant OR the host, excluding ended ones
-            List<Meeting> all = meetingRepository
-                    .findUpcomingMeetingsForUserOrHost(tenant, username, LocalDate.now());
+            List<Meeting> all = meetingRepository.findAllMeetingsForUserOrHost(tenant, username);
             LocalDate today = LocalDate.now();
             LocalTime now   = LocalTime.now();
             List<Meeting> active = all.stream().filter(m -> {
-                if (!m.getMeetingDate().equals(today)) return true;
+                if (m.getMeetingDate().isBefore(today)) return false;
+                if (m.getMeetingDate().isAfter(today)) return true;
                 if (m.getMeetingTime() == null) return true;
                 int dur = (m.getDuration() != null) ? m.getDuration() : 0;
                 return !m.getMeetingTime().plusMinutes(dur).isBefore(now);
             }).toList();
+            List<Meeting> past = all.stream().filter(m -> {
+                if (m.getMeetingDate().isBefore(today)) return true;
+                if (!m.getMeetingDate().equals(today)) return false;
+                if (m.getMeetingTime() == null) return false;
+                int dur = (m.getDuration() != null) ? m.getDuration() : 0;
+                return m.getMeetingTime().plusMinutes(dur).isBefore(now);
+            }).toList();
             model.addAttribute("meetings", active);
+            model.addAttribute("pastMeetings", past);
         } else {
             model.addAttribute("meetings", Collections.emptyList());
+            model.addAttribute("pastMeetings", Collections.emptyList());
         }
         return "employee-meetings";
     }

@@ -35,6 +35,14 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long> {
 			@Param("username") String username,
 			@Param("date") LocalDate date);
 
+	/** Find every meeting for a user or host in the tenant, ordered newest first. */
+	@Query("SELECT m FROM Meeting m WHERE m.tenantSegment = :tenant " +
+	       "AND (m.participants LIKE %:username% OR m.scheduledBy = :username) " +
+	       "ORDER BY m.meetingDate DESC, m.meetingTime DESC")
+	List<Meeting> findAllMeetingsForUserOrHost(
+			@Param("tenant") String tenant,
+			@Param("username") String username);
+
 	/**
 	 * Find all upcoming meetings in a tenant where the user is either:
 	 *  - a participant (username appears in the participants field), OR

@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Controller;
@@ -632,6 +634,20 @@ public class HrController {
         return "hr-leaves";
     }
 
+    @GetMapping("/leaves/view/{id}")
+    public ResponseEntity<?> viewLeaveAttachment(@PathVariable Long id, HttpServletRequest request) {
+        String tenant = getTenantSegment(request);
+        LeaveRequest leave = leaveRequestRepository.findById(id).orElse(null);
+        if (leave == null || !tenant.equals(leave.getTenantSegment()) || leave.getAttachmentData() == null || leave.getAttachmentData().length == 0) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + (leave.getAttachmentName() != null ? leave.getAttachmentName() : "leave-attachment") + "\"")
+                .header(HttpHeaders.CONTENT_TYPE, leave.getAttachmentContentType() != null ? leave.getAttachmentContentType() : "application/octet-stream")
+                .body(leave.getAttachmentData());
+    }
+
     @PostMapping("/leaves/{id}/review")
     public String reviewLeave(@PathVariable Long id,
                               @RequestParam String action,
@@ -856,6 +872,19 @@ public class HrController {
         }).toList();
     }
 
+    private List<Meeting> getPastMeetings(String tenant, String username) {
+        List<Meeting> all = meetingRepository.findAllMeetingsForUserOrHost(tenant, username);
+        LocalDate today = LocalDate.now();
+        LocalTime now   = LocalTime.now();
+        return all.stream().filter(m -> {
+            if (m.getMeetingDate().isBefore(today)) return true;
+            if (!m.getMeetingDate().equals(today)) return false;
+            if (m.getMeetingTime() == null) return false;
+            int dur = (m.getDuration() != null) ? m.getDuration() : 0;
+            return m.getMeetingTime().plusMinutes(dur).isBefore(now);
+        }).toList();
+    }
+
     /** Returns upcoming meetings (today + future) where the user is a participant OR the host,
      *  excluding today's meetings that have already ended. */
     private List<Meeting> getUpcomingMeetings(String tenant, String username) {
@@ -879,6 +908,7 @@ public class HrController {
         String username = (String) request.getAttribute("loggedInUser");
 
         model.addAttribute("upcomingMeetings", getUpcomingMeetings(tenant, username != null ? username : ""));
+        model.addAttribute("pastMeetings", getPastMeetings(tenant, username != null ? username : ""));
 
         // All non-admin users in this tenant as potential participants
         List<User> tenantUsers = tenant.isEmpty()
@@ -908,6 +938,7 @@ public class HrController {
         if (result.hasErrors()) {
             injectUser(request, model);
             model.addAttribute("upcomingMeetings", getUpcomingMeetings(tenant, username != null ? username : ""));
+            model.addAttribute("pastMeetings", getPastMeetings(tenant, username != null ? username : ""));
             List<User> tenantUsers = tenant.isEmpty()
                     ? userRepository.findAll()
                     : userRepository.findByTenantSegment(tenant);
@@ -944,6 +975,7 @@ public class HrController {
 
         model.addAttribute("meetingForm", meeting);
         model.addAttribute("upcomingMeetings", getUpcomingMeetings(tenant, username != null ? username : ""));
+        model.addAttribute("pastMeetings", getPastMeetings(tenant, username != null ? username : ""));
         List<User> tenantUsers = tenant.isEmpty()
                 ? userRepository.findAll()
                 : userRepository.findByTenantSegment(tenant);
@@ -968,6 +1000,7 @@ public class HrController {
         if (result.hasErrors()) {
             injectUser(request, model);
             model.addAttribute("upcomingMeetings", getUpcomingMeetings(tenant, username != null ? username : ""));
+            model.addAttribute("pastMeetings", getPastMeetings(tenant, username != null ? username : ""));
             List<User> tenantUsers = tenant.isEmpty()
                     ? userRepository.findAll()
                     : userRepository.findByTenantSegment(tenant);
