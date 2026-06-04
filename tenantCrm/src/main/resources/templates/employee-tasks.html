@@ -32,9 +32,214 @@
         .badge-pending    { background: #f1f5f9; color: #64748b; }
         .badge-waiting    { background: #fef3c7; color: #b45309; }
 
+        .task-flash-toast {
+            position: fixed;
+            top: auto;
+            right: 24px;
+            bottom: 24px;
+            z-index: 10020;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 280px;
+            max-width: 390px;
+            padding: 14px 18px;
+            border-radius: 12px;
+            box-shadow: 0 14px 36px rgba(22, 54, 71, .18);
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+            transition: opacity .25s ease, transform .25s ease;
+            animation: taskToastIn .22s ease;
+        }
+
+        .task-flash-toast.task-flash-toast-hide {
+            opacity: 0;
+            transform: translateY(12px);
+        }
+
+        .task-attachments-list {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+            max-width: 170px;
+        }
+
+        .task-attachment-item {
+            max-width: 100%;
+        }
+
+        .task-attachment-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            max-width: 100%;
+            border: none;
+            background: none;
+            color: #1a6b8a;
+            cursor: pointer;
+            padding: 0;
+            font-size: 12px;
+            font-weight: 600;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        .task-attachment-name {
+            display: inline-block;
+            max-width: 130px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+
+        .task-attachments-list:not(.expanded) .task-attachment-extra {
+            display: none;
+        }
+
+        .task-attachments-toggle {
+            border: 1px solid #cfe3ec;
+            border-radius: 999px;
+            background: #f3f9fc;
+            color: #17455e;
+            cursor: pointer;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            transition: background .18s ease, border-color .18s ease;
+        }
+
+        .task-attachments-toggle:hover {
+            border-color: #17455e;
+            background: #e8f2f8;
+        }
+
+        .task-status-actions,
+        .task-status-form {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .task-status-select {
+            min-width: 112px;
+            padding: 7px 10px;
+            border: 1px solid #dbe7ee;
+            border-radius: 9px;
+            background: #fff;
+            color: #163647;
+            font-size: 12px;
+            font-weight: 500;
+            outline: none;
+        }
+
+        .task-upload-control {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            max-width: 260px;
+            min-height: 34px;
+            padding: 4px 10px 4px 4px;
+            border: 1px solid #d8e7ee;
+            border-radius: 10px;
+            background: #f8fbfd;
+            cursor: pointer;
+            transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+        }
+
+        .task-upload-control:hover,
+        .task-upload-control:focus-within {
+            border-color: #17455e;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(23, 69, 94, .1);
+        }
+
+        .task-file-input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .task-upload-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            background: #e8f2f8;
+            color: #17455e;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .task-file-name {
+            min-width: 0;
+            max-width: 130px;
+            overflow: hidden;
+            color: #64748b;
+            font-size: 12px;
+            font-weight: 500;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .task-update-btn {
+            border: none;
+            border-radius: 9px;
+            background: #17455e;
+            color: #fff;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background .18s ease, transform .18s ease;
+        }
+
+        .task-update-btn:hover {
+            background: #1f5573;
+            transform: translateY(-1px);
+        }
+
+        @media (max-width: 560px) {
+            .task-flash-toast {
+                right: 16px;
+                bottom: 16px;
+                left: 16px;
+                min-width: 0;
+                max-width: none;
+            }
+
+            .task-status-form,
+            .task-status-select,
+            .task-upload-control,
+            .task-update-btn {
+                width: 100%;
+            }
+
+            .task-upload-control {
+                justify-content: space-between;
+                max-width: none;
+            }
+
+            .task-file-name {
+                max-width: calc(100% - 110px);
+            }
+        }
+
         @keyframes fadeUp {
             from { opacity: 0; transform: translateY(24px) scale(.97); }
             to   { opacity: 1; transform: translateY(0)    scale(1);   }
+        }
+
+        @keyframes taskToastIn {
+            from { opacity: 0; transform: translateY(14px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
@@ -88,14 +293,13 @@
     <div class="page-content">
 
         <!-- Flash messages -->
-        <div class="toast success" th:if="${successMessage}"
-            style="position:relative;bottom:auto;right:auto;margin-bottom:16px;opacity:1;transform:none;pointer-events:auto;display:flex;">
+        <div class="toast success task-flash-toast" th:if="${successMessage}">
             <i data-lucide="check-circle" style="width:16px;height:16px;flex-shrink:0;"></i>
             <span th:text="${successMessage}"></span>
         </div>
 
         <!-- Stats Row -->
-        <div class="stats-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:22px;">
+        <div class="stats-row task-dashboard-stats">
             <div class="stat-card">
                 <div class="stat-icon green"><i data-lucide="check-circle-2"></i></div>
                 <div class="stat-info">
@@ -158,34 +362,52 @@
                             <td style="color:#6b7280;font-size:13px;" th:text="${task.startDate} ?: '—'">—</td>
                             <td style="color:#6b7280;font-size:13px;" th:text="${task.dueDate} ?: '—'">—</td>
                             <td>
-                                <th:block th:if="${task.attachments != null and !#lists.isEmpty(task.attachments)}">
-                                    <div th:each="att : ${task.attachments}" style="margin-bottom:3px;">
+                                <th:block th:if="${task.attachments != null and !#lists.isEmpty(task.attachments)}"
+                                          th:with="attachmentCount=${#lists.size(task.attachments)}">
+                                    <div class="task-attachments-list">
+                                    <div class="task-attachment-item" th:each="att, attStat : ${task.attachments}"
+                                         th:classappend="${attStat.index >= 2} ? ' task-attachment-extra' : ''">
                                         <button type="button"
                                                 th:data-view-url="@{/employee/tasks/view/{id}(id=${att.id})}"
                                                 th:data-download-url="@{/employee/tasks/download/{id}(id=${att.id})}"
                                                 th:data-filename="${att.originalFilename}"
                                                 th:data-content-type="${att.contentType}"
                                                 onclick="openPreviewModal(this)"
-                                                style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#1a6b8a;background:none;border:none;cursor:pointer;font-weight:500;padding:0;text-decoration:underline;text-underline-offset:2px;">
+                                                class="task-attachment-link">
                                             <i data-lucide="paperclip" style="width:12px;height:12px;"></i>
-                                            <span th:text="${att.originalFilename}"
-                                                  style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle;"></span>
+                                            <span class="task-attachment-name" th:text="${att.originalFilename}"></span>
                                         </button>
                                     </div>
+                                    <button type="button" class="task-attachments-toggle"
+                                            th:if="${attachmentCount > 2}"
+                                            th:attr="data-view-label=|View all (${attachmentCount - 2} more)|"
+                                            th:text="|View all (${attachmentCount - 2} more)|"
+                                            aria-expanded="false"
+                                            onclick="toggleTaskAttachments(this)">View all</button>
+                                    </div>
                                 </th:block>
-                                <th:block th:if="${!#lists.isEmpty(task.attachmentList) and (task.attachments == null or #lists.isEmpty(task.attachments))}">
-                                    <div th:each="att : ${task.attachmentList}" style="margin-bottom:3px;">
+                                <th:block th:if="${!#lists.isEmpty(task.attachmentList) and (task.attachments == null or #lists.isEmpty(task.attachments))}"
+                                          th:with="attachmentCount=${#lists.size(task.attachmentList)}">
+                                    <div class="task-attachments-list">
+                                    <div class="task-attachment-item" th:each="att, attStat : ${task.attachmentList}"
+                                         th:classappend="${attStat.index >= 2} ? ' task-attachment-extra' : ''">
                                         <button type="button"
                                                 th:data-view-url="@{/employee/tasks/view/{s}(s=${#strings.substringAfter(att,'::')})}"
                                                 th:data-download-url="@{/employee/tasks/download/{s}(s=${#strings.substringAfter(att,'::')})}"
                                                 th:data-filename="${#strings.substringBefore(att,'::')}"
                                                 th:data-content-type="'application/octet-stream'"
                                                 onclick="openPreviewModal(this)"
-                                                style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#1a6b8a;background:none;border:none;cursor:pointer;font-weight:500;padding:0;text-decoration:underline;text-underline-offset:2px;">
+                                                class="task-attachment-link">
                                             <i data-lucide="paperclip" style="width:12px;height:12px;"></i>
-                                            <span th:text="${#strings.substringBefore(att,'::')}"
-                                                  style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle;"></span>
+                                            <span class="task-attachment-name" th:text="${#strings.substringBefore(att,'::')}"></span>
                                         </button>
+                                    </div>
+                                    <button type="button" class="task-attachments-toggle"
+                                            th:if="${attachmentCount > 2}"
+                                            th:attr="data-view-label=|View all (${attachmentCount - 2} more)|"
+                                            th:text="|View all (${attachmentCount - 2} more)|"
+                                            aria-expanded="false"
+                                            onclick="toggleTaskAttachments(this)">View all</button>
                                     </div>
                                 </th:block>
                                 <span th:if="${(task.attachments == null or #lists.isEmpty(task.attachments)) and #lists.isEmpty(task.attachmentList)}"
@@ -200,18 +422,27 @@
                                 <span th:if="${task.createdBy == null}" style="color:#9ca3af;font-size:13px;">—</span>
                             </td>
                             <td>
-                                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                <div class="task-status-actions">
                                     <!-- Status Update Form (visible unless task is approved) -->
                                     <form th:action="@{/employee/tasks/update-status/{id}(id=${task.id})}" method="post" enctype="multipart/form-data"
-                                          style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"
+                                          class="task-status-form"
                                           th:if="${task.verificationStatus != 'approved'}">
-                                        <select name="status" style="padding:6px 8px;border:1px solid #dbe7ee;border-radius:8px;font-size:12px;background:#fff;min-width:110px;">
+                                        <select name="status" class="task-status-select">
                                             <option value="pending" th:selected="${task.status == 'pending'}">Pending</option>
                                             <option value="in-progress" th:selected="${task.status == 'in-progress'}">In Progress</option>
                                             <option value="done" th:selected="${task.status == 'done'}">Done</option>
                                         </select>
-                                        <input type="file" name="attachment" style="font-size:12px;max-width:180px;" />
-                                        <button type="submit" style="border:none;border-radius:8px;background:#17455e;color:#fff;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;transition:background .18s;">Update</button>
+                                        <label class="task-upload-control">
+                                            <input class="task-file-input" type="file" name="attachment"
+                                                   aria-label="Upload task attachment"
+                                                   accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.zip,.txt">
+                                            <span class="task-upload-button">
+                                                <i data-lucide="upload-cloud" style="width:13px;height:13px;"></i>
+                                                Upload File
+                                            </span>
+                                            <span class="task-file-name">No file selected</span>
+                                        </label>
+                                        <button type="submit" class="task-update-btn">Update</button>
                                     </form>
 
                                     <!-- Status Badges -->
@@ -327,9 +558,36 @@
         });
     });
 
+    document.querySelectorAll('.task-file-input').forEach(function (input) {
+        input.addEventListener('change', function () {
+            var fileName = this.files && this.files.length ? this.files[0].name : 'No file selected';
+            var label = this.closest('.task-upload-control');
+            var fileNameEl = label ? label.querySelector('.task-file-name') : null;
+            if (fileNameEl) fileNameEl.textContent = fileName;
+        });
+    });
+
     /* ══════════════════════════════════════════
        ATTACHMENT PREVIEW MODAL
        ══════════════════════════════════════════ */
+    document.querySelectorAll('.task-flash-toast').forEach(function (toast) {
+        setTimeout(function () {
+            toast.classList.add('task-flash-toast-hide');
+            toast.addEventListener('transitionend', function () {
+                toast.remove();
+            }, {once: true});
+        }, 3500);
+    });
+
+    function toggleTaskAttachments(button) {
+        var list = button.closest('.task-attachments-list');
+        if (!list) return;
+
+        var expanded = list.classList.toggle('expanded');
+        button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        button.textContent = expanded ? 'Show less' : (button.getAttribute('data-view-label') || 'View all');
+    }
+
     function escapeHtml(str) {
         return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }

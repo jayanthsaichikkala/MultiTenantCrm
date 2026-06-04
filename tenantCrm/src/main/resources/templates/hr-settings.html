@@ -97,6 +97,24 @@
         </div>
     </div>
 </div>
+<script th:inline="javascript">
+    (function () {
+        var token = /*[[${newJwtToken}]]*/ null;
+        var role = /*[[${newJwtRole}]]*/ null;
+        var username = /*[[${newJwtUsername}]]*/ null;
+        if (!token) return;
+        localStorage.setItem('jwt_token', token);
+        if (role) localStorage.setItem('jwt_role', role);
+        if (username) localStorage.setItem('jwt_username', username);
+        try {
+            var payload = JSON.parse(atob(token.split('.')[1]));
+            var expires = new Date(payload.exp * 1000).toUTCString();
+            document.cookie = 'jwt_token=' + token + '; expires=' + expires + '; path=/; SameSite=Strict';
+        } catch (e) {
+            document.cookie = 'jwt_token=' + token + '; path=/; SameSite=Strict';
+        }
+    })();
+</script>
 <script>
     var hamburger=document.getElementById('hamburgerBtn'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('sidebarOverlay');
     function openSidebar(){sidebar.classList.add('open');overlay.classList.add('active');document.body.style.overflow='hidden';}

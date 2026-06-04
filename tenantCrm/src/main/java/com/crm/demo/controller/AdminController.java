@@ -21,8 +21,10 @@ import com.crm.demo.repository.MeetingRepository;
 import com.crm.demo.repository.ProjectRepository;
 import com.crm.demo.repository.TaskRepository;
 import com.crm.demo.repository.UserRepository;
+import com.crm.demo.service.ProfileUpdateService;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
 @Controller
@@ -43,6 +45,9 @@ public class AdminController {
 
 	@Autowired
 	private BCryptPasswordEncoder passwordEncoder;
+
+	@Autowired
+	private ProfileUpdateService profileUpdateService;
 
 	// =========================================================
 	// COMMON USER DETAILS
@@ -429,11 +434,11 @@ public class AdminController {
 	}
 
 	@PostMapping("/settings/profile")
-	public String updateProfile(@RequestParam String username,
-	                            @RequestParam String email,
+	public String updateProfile(@RequestParam(required = false) String username,
+	                            @RequestParam(required = false) String email,
 	                            @RequestParam(required = false) String password,
 	                            @RequestParam(required = false) String confirmPassword,
-	                            HttpServletRequest request,
+	                            HttpServletResponse response,
 	                            RedirectAttributes ra) {
 
 		String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -443,25 +448,7 @@ public class AdminController {
 			return "redirect:/admin/settings";
 		}
 
-		User existing = userRepository.findByUsernameOrEmail(username, email);
-		if (existing != null && !existing.getId().equals(admin.getId())) {
-			ra.addFlashAttribute("errorMessage", "Username or email already in use.");
-			return "redirect:/admin/settings";
-		}
-
-		admin.setUsername(username);
-		admin.setEmail(email);
-
-		if (password != null && !password.isBlank()) {
-			if (!password.equals(confirmPassword)) {
-				ra.addFlashAttribute("errorMessage", "Passwords do not match.");
-				return "redirect:/admin/settings";
-			}
-			admin.setPassword(passwordEncoder.encode(password));
-		}
-
-		userRepository.save(admin);
-		ra.addFlashAttribute("successMessage", "Profile updated successfully.");
+		profileUpdateService.updateProfile(admin, username, email, password, confirmPassword, ra, response);
 		return "redirect:/admin/settings";
 	}
 

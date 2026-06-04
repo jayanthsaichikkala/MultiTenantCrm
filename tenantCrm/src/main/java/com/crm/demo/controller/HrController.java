@@ -37,8 +37,10 @@ import com.crm.demo.repository.HolidayRepository;
 import com.crm.demo.repository.MeetingRepository;
 import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
+import com.crm.demo.service.ProfileUpdateService;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
 @Controller
@@ -51,6 +53,7 @@ public class HrController {
     @Autowired private HolidayRepository     holidayRepository;
     @Autowired private MeetingRepository     meetingRepository;
     @Autowired private BCryptPasswordEncoder passwordEncoder;
+    @Autowired private ProfileUpdateService  profileUpdateService;
 
     // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -630,31 +633,17 @@ public class HrController {
     }
 
     @PostMapping("/settings/profile")
-    public String updateProfile(@RequestParam String username,
-                                @RequestParam String email,
+    public String updateProfile(@RequestParam(required = false) String username,
+                                @RequestParam(required = false) String email,
                                 @RequestParam(required = false) String password,
                                 @RequestParam(required = false) String confirmPassword,
+                                HttpServletResponse response,
                                 RedirectAttributes ra) {
         String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
         User hr = userRepository.findByUsername(currentUsername);
         if (hr == null) return "redirect:/hr/settings";
 
-        User existing = userRepository.findByUsernameOrEmail(username, email);
-        if (existing != null && !existing.getId().equals(hr.getId())) {
-            ra.addFlashAttribute("errorMessage", "Username or email already in use.");
-            return "redirect:/hr/settings";
-        }
-        hr.setUsername(username);
-        hr.setEmail(email);
-        if (password != null && !password.isBlank()) {
-            if (!password.equals(confirmPassword)) {
-                ra.addFlashAttribute("errorMessage", "Passwords do not match.");
-                return "redirect:/hr/settings";
-            }
-            hr.setPassword(passwordEncoder.encode(password));
-        }
-        userRepository.save(hr);
-        ra.addFlashAttribute("successMessage", "Profile updated successfully.");
+        profileUpdateService.updateProfile(hr, username, email, password, confirmPassword, ra, response);
         return "redirect:/hr/settings";
     }
 

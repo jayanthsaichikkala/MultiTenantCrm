@@ -18,6 +18,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.crm.demo.model.User;
 import com.crm.demo.repository.UserRepository;
+import com.crm.demo.service.ProfileUpdateService;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 @Controller
 @RequestMapping("/superadmin")
@@ -25,6 +28,7 @@ public class SuperAdminController {
 
     @Autowired private UserRepository        userRepository;
     @Autowired private BCryptPasswordEncoder passwordEncoder;
+    @Autowired private ProfileUpdateService  profileUpdateService;
 
     // ── helper: load admins and stats into model ─────────────────────────────
     private List<User> loadAdmins(Model model) {
@@ -250,10 +254,11 @@ public class SuperAdminController {
 
     // ── Update Profile (POST) ─────────────────────────────────────────────────
     @PostMapping("/update-profile")
-    public String updateProfile(@RequestParam String username,
-                                @RequestParam String email,
+    public String updateProfile(@RequestParam(required = false) String username,
+                                @RequestParam(required = false) String email,
                                 @RequestParam(required = false) String password,
                                 @RequestParam(required = false) String confirmPassword,
+                                HttpServletResponse response,
                                 RedirectAttributes ra) {
 
         String currentUsername = SecurityContextHolder.getContext()
@@ -263,19 +268,7 @@ public class SuperAdminController {
             return "redirect:/superadmin/profile";
         }
 
-        superAdmin.setUsername(username);
-        superAdmin.setEmail(email);
-
-        if (password != null && !password.isBlank()) {
-            if (!password.equals(confirmPassword)) {
-                ra.addFlashAttribute("errorMessage", "Passwords do not match.");
-                return "redirect:/superadmin/profile";
-            }
-            superAdmin.setPassword(passwordEncoder.encode(password));
-        }
-
-        userRepository.save(superAdmin);
-        ra.addFlashAttribute("successMessage", "Profile updated successfully.");
+        profileUpdateService.updateProfile(superAdmin, username, email, password, confirmPassword, ra, response);
         return "redirect:/superadmin/profile";
     }
 }

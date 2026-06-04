@@ -38,6 +38,7 @@ import com.crm.demo.repository.TaskRepository;
 import com.crm.demo.repository.TaskAttachmentRepository;
 import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
+import com.crm.demo.service.ProfileUpdateService;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -51,6 +52,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.UUID;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 @Controller
 @RequestMapping("/employee")
@@ -67,6 +70,7 @@ public class EmployeeController {
     @Autowired private TaskRepository        taskRepository;
     @Autowired private TaskAttachmentRepository taskAttachmentRepository;
     @Autowired private BCryptPasswordEncoder passwordEncoder;
+    @Autowired private ProfileUpdateService  profileUpdateService;
 
     // ── helpers ───────────────────────────────────────────────────────────
 
@@ -587,30 +591,16 @@ public class EmployeeController {
     }
 
     @PostMapping("/settings/profile")
-    public String updateProfile(@RequestParam String username,
-                                @RequestParam String email,
+    public String updateProfile(@RequestParam(required = false) String username,
+                                @RequestParam(required = false) String email,
                                 @RequestParam(required = false) String password,
                                 @RequestParam(required = false) String confirmPassword,
+                                HttpServletResponse response,
                                 RedirectAttributes ra) {
         User emp = getCurrentEmployee();
         if (emp == null) return "redirect:/employee/settings";
 
-        User existing = userRepository.findByUsernameOrEmail(username, email);
-        if (existing != null && !existing.getId().equals(emp.getId())) {
-            ra.addFlashAttribute("errorMessage", "Username or email already in use.");
-            return "redirect:/employee/settings";
-        }
-        emp.setUsername(username);
-        emp.setEmail(email);
-        if (password != null && !password.isBlank()) {
-            if (!password.equals(confirmPassword)) {
-                ra.addFlashAttribute("errorMessage", "Passwords do not match.");
-                return "redirect:/employee/settings";
-            }
-            emp.setPassword(passwordEncoder.encode(password));
-        }
-        userRepository.save(emp);
-        ra.addFlashAttribute("successMessage", "Profile updated successfully.");
+        profileUpdateService.updateProfile(emp, username, email, password, confirmPassword, ra, response);
         return "redirect:/employee/settings";
     }
 

@@ -54,7 +54,9 @@ import com.crm.demo.repository.TaskRepository;
 import com.crm.demo.repository.TaskAttachmentRepository;
 import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
+import com.crm.demo.service.ProfileUpdateService;
 
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
 @Controller
@@ -89,6 +91,9 @@ public class ManagerController {
 
 	@Autowired
 	private BCryptPasswordEncoder passwordEncoder;
+
+	@Autowired
+	private ProfileUpdateService profileUpdateService;
 
 	// =========================
 	// COMMON STATS METHOD
@@ -716,10 +721,11 @@ public class ManagerController {
 	// UPDATE PROFILE
 	// =========================
 	@PostMapping("/settings/profile")
-	public String updateProfile(@RequestParam String username,
-								@RequestParam String email,
+	public String updateProfile(@RequestParam(required = false) String username,
+								@RequestParam(required = false) String email,
 								@RequestParam(required = false) String password,
 								@RequestParam(required = false) String confirmPassword,
+								HttpServletResponse response,
 								RedirectAttributes ra) {
 
 		String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -729,27 +735,7 @@ public class ManagerController {
 			return "redirect:/manager/settings";
 		}
 
-		// Check if username or email already exists (excluding current user)
-		User existing = userRepository.findByUsernameOrEmail(username, email);
-		if (existing != null && !existing.getId().equals(manager.getId())) {
-			ra.addFlashAttribute("errorMessage", "Username or email already in use.");
-			return "redirect:/manager/settings";
-		}
-
-		manager.setUsername(username);
-		manager.setEmail(email);
-
-		if (password != null && !password.isBlank()) {
-			if (!password.equals(confirmPassword)) {
-				ra.addFlashAttribute("errorMessage", "Passwords do not match.");
-				return "redirect:/manager/settings";
-			}
-			manager.setPassword(passwordEncoder.encode(password));
-		}
-
-		userRepository.save(manager);
-		ra.addFlashAttribute("successMessage", "Profile updated successfully.");
-
+		profileUpdateService.updateProfile(manager, username, email, password, confirmPassword, ra, response);
 		return "redirect:/manager/settings";
 	}
 

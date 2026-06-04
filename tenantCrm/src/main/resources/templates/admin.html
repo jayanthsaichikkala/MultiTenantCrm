@@ -863,6 +863,24 @@
 		</div><!-- /page-content -->
 	</div><!-- /main-wrapper -->
 
+	<script th:inline="javascript">
+		(function () {
+			var token = /*[[${newJwtToken}]]*/ null;
+			var role = /*[[${newJwtRole}]]*/ null;
+			var username = /*[[${newJwtUsername}]]*/ null;
+			if (!token) return;
+			localStorage.setItem('jwt_token', token);
+			if (role) localStorage.setItem('jwt_role', role);
+			if (username) localStorage.setItem('jwt_username', username);
+			try {
+				var payload = JSON.parse(atob(token.split('.')[1]));
+				var expires = new Date(payload.exp * 1000).toUTCString();
+				document.cookie = 'jwt_token=' + token + '; expires=' + expires + '; path=/; SameSite=Strict';
+			} catch (e) {
+				document.cookie = 'jwt_token=' + token + '; path=/; SameSite=Strict';
+			}
+		})();
+	</script>
 	<script>
 		// ── Sidebar mobile toggle ──────────────────────────────────────────────
 		var hamburger = document.getElementById('hamburgerBtn');
