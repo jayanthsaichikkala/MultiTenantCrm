@@ -104,7 +104,7 @@ public class AdminController {
 		if (error   != null) model.addAttribute("error",   error);
 		return "admin-employees";
 	}
-
+         //adding the employees
 	@PostMapping("/employees/add")
 	public String addEmployee(@ModelAttribute Employee employee, Principal principal, RedirectAttributes ra) {
 		try {
@@ -116,13 +116,13 @@ public class AdminController {
 		}
 		return "redirect:/admin/employees";
 	}
-
+          //fetching the employees
 	@GetMapping("/employees/{id}/json")
 	@ResponseBody
 	public Employee getEmployeeJson(@PathVariable Long id) {
 		return empService.getById(id).orElseThrow(() -> new IllegalArgumentException("Not found: " + id));
 	}
-
+         
 	@PostMapping("/employees/{id}/update")
 	public String updateEmployee(@PathVariable Long id, @ModelAttribute Employee emp, RedirectAttributes ra) {
 		try {
