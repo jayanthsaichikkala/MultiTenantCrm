@@ -12,6 +12,8 @@ import com.springboot1.repository.UserRepository;
 @Configuration
 public class DataInitializer {
 
+	
+	//seeding initial members into the system
     @Bean
     CommandLineRunner seedUsers(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         return args -> {
