@@ -34,12 +34,14 @@ import com.crm.demo.model.AttendanceDay;
 import com.crm.demo.model.Holiday;
 import com.crm.demo.model.LeaveRequest;
 import com.crm.demo.model.Meeting;
+import com.crm.demo.model.Task;
 import com.crm.demo.model.Team;
 import com.crm.demo.model.User;
 import com.crm.demo.repository.AttendanceRepository;
 import com.crm.demo.repository.HolidayRepository;
 import com.crm.demo.repository.LeaveRequestRepository;
 import com.crm.demo.repository.MeetingRepository;
+import com.crm.demo.repository.TaskRepository;
 import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
 import com.crm.demo.service.ProfileUpdateService;
@@ -58,6 +60,7 @@ public class HrController {
     @Autowired private HolidayRepository     holidayRepository;
     @Autowired private MeetingRepository     meetingRepository;
     @Autowired private LeaveRequestRepository leaveRequestRepository;
+    @Autowired private TaskRepository         taskRepository;
     @Autowired private BCryptPasswordEncoder passwordEncoder;
     @Autowired private ProfileUpdateService  profileUpdateService;
 
@@ -203,6 +206,29 @@ public class HrController {
         injectStats(request, model);
         return "hr-employees";
     }
+
+    @GetMapping("/tasks")
+    public String tasksPage(HttpServletRequest request, Model model) {
+        injectUser(request, model);
+        injectStats(request, model);
+
+        String tenant = getTenantSegment(request);
+        List<Task> tasks = tenant.isBlank()
+                ? taskRepository.findAll()
+                : taskRepository.findByTenantSegment(tenant);
+
+        long done = tasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
+        long pending = tasks.stream().filter(t -> "pending".equalsIgnoreCase(t.getStatus())
+                || "in-progress".equalsIgnoreCase(t.getStatus())).count();
+
+        model.addAttribute("tasks", tasks);
+        model.addAttribute("totalTasks", tasks.size());
+        model.addAttribute("doneTasks", done);
+        model.addAttribute("pendingTaskCount", pending);
+
+        return "hr-tasks";
+    }
+
 
     // ═══════════════════════════════════════════════════════════════════════
     //  ADD / TOGGLE / DELETE USERS (HR can manage employees & managers)

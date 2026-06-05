@@ -349,30 +349,6 @@ public class AdminController {
 		return "admin-tasks";
 	}
 
-	@PostMapping("/tasks")
-	public String createTask(@RequestParam String title,
-	                         @RequestParam(required = false) String description,
-	                         @RequestParam String priority,
-	                         @RequestParam String status,
-	                         @RequestParam(required = false) String dueDate,
-	                         RedirectAttributes ra) {
-		Task t = new Task();
-		t.setTitle(title);
-		t.setDescription(description);
-		t.setPriority(priority);
-		t.setStatus(status);
-		t.setDueDate(dueDate);
-		taskRepository.save(t);
-		ra.addFlashAttribute("successMessage", "Task created successfully.");
-		return "redirect:/admin/tasks";
-	}
-
-	@PostMapping("/tasks/delete/{id}")
-	public String deleteTask(@PathVariable Long id, RedirectAttributes ra) {
-		taskRepository.deleteById(id);
-		ra.addFlashAttribute("successMessage", "Task deleted.");
-		return "redirect:/admin/tasks";
-	}
 
 	// =========================================================
 	// REPORTS

@@ -758,14 +758,83 @@
 											</button>
 										</form>
 
-										<!-- DELETE -->
+										<button type="button"
+											class="history-btn"
+											th:data-task-id="${task.id}"
+											th:data-title="${task.title}"
+											th:data-description="${task.description}"
+											th:data-assigned-to="${task.assignedTo}"
+											th:data-created-by="${task.createdBy}"
+											th:data-start-date="${task.startDate}"
+											th:data-due-date="${task.dueDate}"
+											th:data-priority="${task.priority}"
+											th:data-status="${task.status}"
+											th:data-verification-status="${task.verificationStatus}"
+											th:data-last-verified-by="${task.lastVerifiedBy}"
+											th:data-last-verified-at="${task.lastVerifiedAt}"
+											th:data-verification-reason="${task.verificationReason}"
+											th:data-tenant-segment="${task.tenantSegment}"
+											onclick="openTaskDetails(this)"
+											style="display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:8px;font-size:12px;font-weight:600;background:#eef2ff;color:#1d4ed8;border:1px solid #bfdbfe;cursor:pointer;transition:background .18s;">
+											<i data-lucide="clock" style="width:13px;height:13px;"></i> History
+										</button>
+
+										<!-- DELETE -->                                        <button type="button"
+                                                class="history-btn"
+                                                th:data-task-id="${task.id}"
+                                                th:data-title="${task.title}"
+                                                th:data-description="${task.description}"
+                                                th:data-assigned-to="${task.assignedTo}"
+                                                th:data-created-by="${task.createdBy}"
+                                                th:data-start-date="${task.startDate}"
+                                                th:data-due-date="${task.dueDate}"
+                                                th:data-priority="${task.priority}"
+                                                th:data-status="${task.status}"
+                                                th:data-verification-status="${task.verificationStatus}"
+                                                th:data-last-verified-by="${task.lastVerifiedBy}"
+                                                th:data-last-verified-at="${task.lastVerifiedAt}"
+                                                th:data-verification-reason="${task.verificationReason}"
+                                                th:data-tenant-segment="${task.tenantSegment}"
+                                                onclick="openTaskDetails(this)"
+                                                style="display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:8px;font-size:12px;font-weight:600;background:#eef2ff;color:#1d4ed8;border:1px solid #bfdbfe;cursor:pointer;transition:background .18s;">
+                                            <i data-lucide="clock" style="width:13px;height:13px;"></i> History
+                                        </button>
+
 										<form th:action="@{/manager/tasks/delete/{id}(id=${task.id})}" method="post" style="display:inline;" onsubmit="return confirm('Delete this task?');">
 											<button type="submit" style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:600;background:#fdecec;color:#d11a2a;border:none;cursor:pointer;transition:background .18s;">
 												<i data-lucide="trash-2" style="width:13px;height:13px;"></i> Delete
 											</button>
 										</form>
 									</div>
-								</td>
+								                                    <div class="task-details-data" style="display:none;">
+                                        <h4 style="margin:0 0 10px 0;font-size:14px;color:#0f172a;font-weight:700;">Stored Task Data</h4>
+                                        <div style="font-size:13px;color:#475569;line-height:1.6;">
+                                            <p><strong>Assigned To:</strong> <span th:text="${task.assignedTo} ?: '—'"></span></p>
+                                            <p><strong>Created By:</strong> <span th:text="${task.createdBy} ?: '—'"></span></p>
+                                            <p><strong>Start Date:</strong> <span th:text="${task.startDate} ?: '—'"></span></p>
+                                            <p><strong>Due Date:</strong> <span th:text="${task.dueDate} ?: '—'"></span></p>
+                                            <p><strong>Verification:</strong> <span th:text="${task.verificationStatus} ?: '—'"></span></p>
+                                            <p><strong>Verified By:</strong> <span th:text="${task.lastVerifiedBy} ?: '—'"></span></p>
+                                            <p><strong>Verified At:</strong> <span th:text="${task.lastVerifiedAt} ?: '—'"></span></p>
+                                            <p><strong>Reason:</strong> <span th:text="${task.verificationReason} ?: '—'"></span></p>
+                                            <p><strong>Tenant Segment:</strong> <span th:text="${task.tenantSegment} ?: '—'"></span></p>
+                                        </div>
+                                        <h4 style="margin:16px 0 8px 0;font-size:14px;color:#0f172a;font-weight:700;">Attachments</h4>
+                                        <ul style="list-style:none;padding-left:0;margin:0;">
+                                            <th:block th:if="${task.attachments != null and !#lists.isEmpty(task.attachments)}">
+                                                <li th:each="att : ${task.attachments}" style="margin-bottom:6px;">
+                                                    <a th:href="@{/manager/tasks/download/{id}(id=${att.id})}"
+                                                       style="color:#1d4ed8;text-decoration:underline;"
+                                                       th:text="${att.originalFilename}">Attachment</a>
+                                                </li>
+                                            </th:block>
+                                            <th:block th:if="${(task.attachments == null or #lists.isEmpty(task.attachments)) and !#lists.isEmpty(task.attachmentList)}">
+                                                <li th:each="att : ${task.attachmentList}" style="margin-bottom:6px;">
+                                                    <span th:text="${#strings.substringBefore(att,'::')}">Attachment</span>
+                                                </li>
+                                            </th:block>
+                                        </ul>
+                                    </div></td>
 							</tr>
 							<tr th:if="${tasks == null or #lists.isEmpty(tasks)}">
 								<td colspan="8">
@@ -1054,6 +1123,57 @@
 				document.getElementById('startDate').min = today;
 				document.getElementById('dueDate').min = today;
 				lucide.createIcons();
+            window.openTaskDetails = function (button) {
+                var modal = document.getElementById("taskDetailsModal");
+                if (!modal) return;
+
+                function setText(id, value) {
+                    var el = document.getElementById(id);
+                    if (!el) return;
+                    el.textContent = value ? value : '—';
+                }
+
+                setText('detailTitle', button.getAttribute('data-title'));
+                setText('detailDescription', button.getAttribute('data-description'));
+                setText('detailAssignedTo', button.getAttribute('data-assigned-to'));
+                setText('detailCreatedBy', button.getAttribute('data-created-by'));
+                setText('detailStartDate', button.getAttribute('data-start-date'));
+                setText('detailDueDate', button.getAttribute('data-due-date'));
+                setText('detailPriority', button.getAttribute('data-priority'));
+                setText('detailStatus', button.getAttribute('data-status'));
+                setText('detailVerificationStatus', button.getAttribute('data-verification-status'));
+                setText('detailVerifiedBy', button.getAttribute('data-last-verified-by'));
+                setText('detailVerifiedAt', button.getAttribute('data-last-verified-at'));
+                setText('detailReason', button.getAttribute('data-verification-reason'));
+                setText('detailTenant', button.getAttribute('data-tenant-segment'));
+
+                var attachmentsContainer = document.getElementById('detailAttachments');
+                attachmentsContainer.innerHTML = '';
+                var row = button.closest('tr');
+                if (row) {
+                    var hiddenBlock = row.querySelector('.task-details-data');
+                    if (hiddenBlock) {
+                        var clone = hiddenBlock.cloneNode(true);
+                        clone.style.display = '';
+                        clone.classList.remove('task-details-data');
+                        attachmentsContainer.appendChild(clone);
+                    }
+                }
+                if (!attachmentsContainer.innerHTML.trim()) {
+                    attachmentsContainer.innerHTML = '<p style="color:#6b7280;margin:0;">No attachments stored.</p>';
+                }
+
+                modal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+                lucide.createIcons();
+            };
+
+            window.closeTaskDetailsModal = function () {
+                var modal = document.getElementById('taskDetailsModal');
+                if (!modal) return;
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+            };
 			}
 			function closeModal() {
 				modal.classList.remove('active');

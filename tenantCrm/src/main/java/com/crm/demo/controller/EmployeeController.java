@@ -227,17 +227,21 @@ public class EmployeeController {
             long inProgress = myTasks.stream().filter(t -> "in-progress".equalsIgnoreCase(t.getStatus())).count();
             long pending    = myTasks.stream().filter(t -> "pending".equalsIgnoreCase(t.getStatus())).count();
 
-            model.addAttribute("myTasks",       myTasks);
-            model.addAttribute("completedTasks", completed);
+            model.addAttribute("myTasks",         myTasks);
+            model.addAttribute("taskHistory",     myTasks);
+            model.addAttribute("taskHistoryCount", myTasks.size());
+            model.addAttribute("completedTasks",  completed);
             model.addAttribute("inProgressTasks", inProgress);
             model.addAttribute("pendingTasks",   pending);
             model.addAttribute("totalTasks",     myTasks.size());
         } else {
-            model.addAttribute("myTasks",        java.util.Collections.emptyList());
-            model.addAttribute("completedTasks", 0);
-            model.addAttribute("inProgressTasks", 0);
-            model.addAttribute("pendingTasks",   0);
-            model.addAttribute("totalTasks",     0);
+            model.addAttribute("myTasks",          java.util.Collections.emptyList());
+            model.addAttribute("taskHistory",      java.util.Collections.emptyList());
+            model.addAttribute("taskHistoryCount", 0);
+            model.addAttribute("completedTasks",   0);
+            model.addAttribute("inProgressTasks",  0);
+            model.addAttribute("pendingTasks",    0);
+            model.addAttribute("totalTasks",      0);
         }
 
         return "employee-tasks";

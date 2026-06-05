@@ -583,7 +583,26 @@
 			document.getElementById('lfPreview').style.display = 'none';
 		});
 
-		/* ── Duration calculator ── */
+		/* ── Leave date helpers ── */
+		function getTodayIso() {
+			return new Date().toISOString().split('T')[0];
+		}
+
+		function updateLeaveDateLimits() {
+			var lfFrom = document.getElementById('lfFrom');
+			var lfTo = document.getElementById('lfTo');
+			if (!lfFrom || !lfTo) return;
+
+			var today = getTodayIso();
+			lfFrom.setAttribute('min', today);
+			var fromValue = lfFrom.value || today;
+			lfTo.setAttribute('min', fromValue);
+
+			if (lfTo.value && lfTo.value < fromValue) {
+				lfTo.value = fromValue;
+			}
+		}
+
 		function calcDays() {
 			var f = document.getElementById('lfFrom').value,
 				t = document.getElementById('lfTo').value,
@@ -594,8 +613,16 @@
 			el.textContent = 'Duration: ' + days + ' day' + (days > 1 ? 's' : '');
 			el.style.display = 'block';
 		}
-		document.getElementById('lfFrom').addEventListener('change', calcDays);
-		document.getElementById('lfTo').addEventListener('change', calcDays);
+
+		document.getElementById('lfFrom').addEventListener('change', function () {
+			updateLeaveDateLimits();
+			calcDays();
+		});
+		document.getElementById('lfTo').addEventListener('change', function () {
+			updateLeaveDateLimits();
+			calcDays();
+		});
+		updateLeaveDateLimits();
 
 		/* ── Validation ── */
 		function markError(id, hasErr) {
@@ -618,6 +645,11 @@
 			markError('lfType', !type); if (!type) valid = false;
 			markError('lfFrom', !from); if (!from) valid = false;
 			markError('lfTo', !to); if (!to) valid = false;
+			if (from && to && to < from) {
+				markError('lfFrom', true);
+				markError('lfTo', true);
+				valid = false;
+			}
 			markError('lfReason', !reason); if (!reason) valid = false;
 			if (!valid) e.preventDefault();
 		});

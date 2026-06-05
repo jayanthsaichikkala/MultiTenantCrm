@@ -206,6 +206,39 @@
             transform: translateY(-1px);
         }
 
+        .task-tab-bar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 20px 0 10px;
+        }
+
+        .task-tab-button {
+            border: 1px solid #dbe7ee;
+            border-radius: 999px;
+            background: #fff;
+            color: #1f2937;
+            padding: 10px 18px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background .18s ease, border-color .18s ease, color .18s ease;
+        }
+
+        .task-tab-button.active {
+            background: #17455e;
+            border-color: #17455e;
+            color: #fff;
+        }
+
+        .task-tab-panel {
+            display: none;
+        }
+
+        .task-tab-panel.active {
+            display: block;
+        }
+
         @media (max-width: 560px) {
             .task-flash-toast {
                 right: 16px;
@@ -323,7 +356,13 @@
             </div>
         </div>
 
-        <!-- Tasks Table -->
+        <div class="task-tab-bar">
+            <button type="button" id="tabTasks" class="task-tab-button active" onclick="switchTaskTab('tasks')">My Tasks</button>
+            <button type="button" id="tabHistory" class="task-tab-button" onclick="switchTaskTab('history')">Task History</button>
+        </div>
+
+        <div id="panelTasks" class="task-tab-panel active">
+            <!-- Tasks Table -->
         <div class="card">
             <div class="card-header">
                 <div>
@@ -482,6 +521,78 @@
                 </table>
             </div>
         </div>
+        </div>
+
+        <div id="panelHistory" class="task-tab-panel">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>Task History</h2>
+                        <p th:text="${taskHistoryCount} + ' task(s) in history'">0 task(s) in history</p>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table id="historyTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Title</th>
+                                <th>Priority</th>
+                                <th>Start Date</th>
+                                <th>Due Date</th>
+                                <th>Assigned By</th>
+                                <th>Status</th>
+                                <th>Verification</th>
+                                <th>Verified By</th>
+                                <th>Attachments</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="task, stat : ${taskHistory}">
+                                <td style="color:#9ca3af;font-weight:600;font-size:13px;" th:text="${stat.count}">1</td>
+                                <td>
+                                    <div style="font-weight:600;font-size:14px;color:#163647;" th:text="${task.title}">Task</div>
+                                    <div th:if="${task.description != null and !#strings.isEmpty(task.description)}"
+                                         style="font-size:12px;color:#6b7280;margin-top:2px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                                         th:text="${task.description}"></div>
+                                </td>
+                                <td>
+                                    <span class="task-priority"
+                                          th:classappend="${task.priority == 'High'} ? 'high' : (${task.priority == 'Low'} ? 'low' : 'medium')"
+                                          th:text="${task.priority}">Medium</span>
+                                </td>
+                                <td style="color:#6b7280;font-size:13px;" th:text="${task.startDate} ?: '—'">—</td>
+                                <td style="color:#6b7280;font-size:13px;" th:text="${task.dueDate} ?: '—'">—</td>
+                                <td style="color:#4b6a7a;font-size:13px;" th:text="${task.createdBy} ?: '—'">—</td>
+                                <td>
+                                    <span class="status-badge badge-done" th:if="${task.status == 'done'}">Done</span>
+                                    <span class="status-badge badge-inprogress" th:if="${task.status == 'in-progress'}">In Progress</span>
+                                    <span class="status-badge badge-pending" th:if="${task.status == 'pending'}">Pending</span>
+                                </td>
+                                <td style="color:#4b6a7a;font-size:13px;" th:text="${task.verificationStatus} ?: 'pending'">pending</td>
+                                <td style="color:#4b6a7a;font-size:13px;" th:text="${task.lastVerifiedBy} ?: '—'">—</td>
+                                <td>
+                                    <span th:if="${task.attachments != null and !#lists.isEmpty(task.attachments)}" style="font-size:12px;color:#1a6b8a;">
+                                        <span th:text="${#lists.size(task.attachments)} + ' files'">0 files</span>
+                                    </span>
+                                    <span th:if="${(task.attachments == null or #lists.isEmpty(task.attachments)) and not(task.attachmentPaths != null and !#strings.isEmpty(task.attachmentPaths))}" style="color:#9ca3af;font-size:13px;">—</span>
+                                    <span th:if="${(task.attachments == null or #lists.isEmpty(task.attachments)) and (task.attachmentPaths != null and !#strings.isEmpty(task.attachmentPaths))}" style="font-size:12px;color:#1a6b8a;" th:text="${#lists.size(task.attachmentList)} + ' files'">0 files</span>
+                                </td>
+                            </tr>
+                            <tr th:if="${taskHistory == null or #lists.isEmpty(taskHistory)}">
+                                <td colspan="10">
+                                    <div class="empty-state" style="padding:40px 20px;">
+                                        <i data-lucide="history" style="width:48px;height:48px;opacity:.3;"></i>
+                                        <h3>No History Records</h3>
+                                        <p>Completed or updated tasks will appear here.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
     </div><!-- /page-content -->
 </div><!-- /main-wrapper -->
@@ -553,10 +664,17 @@
     var gs = document.getElementById('globalSearch');
     if (gs) gs.addEventListener('input', function () {
         var q = this.value.toLowerCase();
-        document.querySelectorAll('#taskTable tbody tr').forEach(function (r) {
+        document.querySelectorAll('.task-tab-panel.active table tbody tr').forEach(function (r) {
             r.style.display = r.textContent.toLowerCase().indexOf(q) > -1 ? '' : 'none';
         });
     });
+
+    function switchTaskTab(tab) {
+        document.getElementById('tabTasks').classList.toggle('active', tab === 'tasks');
+        document.getElementById('tabHistory').classList.toggle('active', tab === 'history');
+        document.getElementById('panelTasks').classList.toggle('active', tab === 'tasks');
+        document.getElementById('panelHistory').classList.toggle('active', tab === 'history');
+    }
 
     document.querySelectorAll('.task-file-input').forEach(function (input) {
         input.addEventListener('change', function () {

@@ -471,7 +471,21 @@
 			lfPreview.style.display = 'none';
 		});
 
-		/* Date duration calculator */
+		/* Date helpers and duration calculator */
+		function getTodayIso() {
+			return new Date().toISOString().split('T')[0];
+		}
+
+		function updateLeaveDateLimits() {
+			var today = getTodayIso();
+			lfFrom.setAttribute('min', today);
+			var minTo = lfFrom.value || today;
+			lfTo.setAttribute('min', minTo);
+			if (lfTo.value && lfTo.value < minTo) {
+				lfTo.value = minTo;
+			}
+		}
+
 		function calcDays() {
 			if (!lfFrom.value || !lfTo.value) {lfDaysInfo.style.display = 'none'; return;}
 			var days = Math.round((new Date(lfTo.value) - new Date(lfFrom.value)) / 864e5) + 1;
@@ -479,8 +493,16 @@
 			lfDaysInfo.textContent = 'Duration: ' + days + ' day' + (days > 1 ? 's' : '');
 			lfDaysInfo.style.display = 'block';
 		}
-		lfFrom.addEventListener('change', calcDays);
-		lfTo.addEventListener('change', calcDays);
+
+		lfFrom.addEventListener('change', function () {
+			updateLeaveDateLimits();
+			calcDays();
+		});
+		lfTo.addEventListener('change', function () {
+			updateLeaveDateLimits();
+			calcDays();
+		});
+		updateLeaveDateLimits();
 
 		/* Validation helper */
 		function markError(el, hasError) {
@@ -502,6 +524,11 @@
 			markError(lfType, !type); if (!type) valid = false;
 			markError(lfFrom, !from); if (!from) valid = false;
 			markError(lfTo, !to); if (!to) valid = false;
+			if (from && to && to < from) {
+				markError(lfFrom, true);
+				markError(lfTo, true);
+				valid = false;
+			}
 			markError(lfReason, !reason); if (!reason) valid = false;
 			if (!valid) e.preventDefault();
 		});
