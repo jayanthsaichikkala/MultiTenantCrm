@@ -40,6 +40,20 @@ public class Report {
     @Column(length = 2000)
     private String recipientNames;
 
+    // Performance Data Snapshots
+    private Integer taskScore;
+    private Integer attendanceScore;
+    private Integer overallScore;
+    private String  grade;
+    private Integer totalTasks;
+    private Integer doneTasks;
+    private Integer pendingTasks;
+    private Integer overdueTasks;
+    private Integer presentDays;
+    private Integer absentDays;
+    private Integer lateDays;
+    private Integer leaveDays;
+
     @OneToMany(mappedBy = "report", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<ReportAttachment> attachments = new ArrayList<>();
 
@@ -68,6 +82,42 @@ public class Report {
 
     public String getRecipientNames()                { return recipientNames; }
     public void setRecipientNames(String n)          { this.recipientNames = n; }
+
+    public Integer getTaskScore() { return taskScore; }
+    public void setTaskScore(Integer taskScore) { this.taskScore = taskScore; }
+
+    public Integer getAttendanceScore() { return attendanceScore; }
+    public void setAttendanceScore(Integer attendanceScore) { this.attendanceScore = attendanceScore; }
+
+    public Integer getOverallScore() { return overallScore; }
+    public void setOverallScore(Integer overallScore) { this.overallScore = overallScore; }
+
+    public String getGrade() { return grade; }
+    public void setGrade(String grade) { this.grade = grade; }
+
+    public Integer getTotalTasks() { return totalTasks; }
+    public void setTotalTasks(Integer totalTasks) { this.totalTasks = totalTasks; }
+
+    public Integer getDoneTasks() { return doneTasks; }
+    public void setDoneTasks(Integer doneTasks) { this.doneTasks = doneTasks; }
+
+    public Integer getPendingTasks() { return pendingTasks; }
+    public void setPendingTasks(Integer pendingTasks) { this.pendingTasks = pendingTasks; }
+
+    public Integer getOverdueTasks() { return overdueTasks; }
+    public void setOverdueTasks(Integer overdueTasks) { this.overdueTasks = overdueTasks; }
+
+    public Integer getPresentDays() { return presentDays; }
+    public void setPresentDays(Integer presentDays) { this.presentDays = presentDays; }
+
+    public Integer getAbsentDays() { return absentDays; }
+    public void setAbsentDays(Integer absentDays) { this.absentDays = absentDays; }
+
+    public Integer getLateDays() { return lateDays; }
+    public void setLateDays(Integer lateDays) { this.lateDays = lateDays; }
+
+    public Integer getLeaveDays() { return leaveDays; }
+    public void setLeaveDays(Integer leaveDays) { this.leaveDays = leaveDays; }
 
     public List<ReportAttachment> getAttachments()   { return attachments; }
     public void setAttachments(List<ReportAttachment> a) { this.attachments = a; }
