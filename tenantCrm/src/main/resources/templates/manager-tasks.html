@@ -749,15 +749,6 @@
 											<i data-lucide="rotate-ccw" style="width:13px;height:13px;"></i> Return
 										</button>
 
-										<!-- MARK INCOMPLETE: re-open a verified-done task -->
-										<form th:if="${task.status == 'done' and task.verificationStatus == 'approved'}"
-										      th:action="@{/manager/tasks/verify/{id}(id=${task.id})}" method="post" style="display:inline;">
-											<input type="hidden" name="action" value="reopen">
-											<button type="submit" style="display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:8px;font-size:12px;font-weight:600;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;cursor:pointer;transition:background .18s;">
-												<i data-lucide="undo-2" style="width:13px;height:13px;"></i> Mark Incomplete
-											</button>
-										</form>
-
 										<button type="button"
 											class="history-btn"
 											th:data-task-id="${task.id}"
@@ -778,27 +769,6 @@
 											style="display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:8px;font-size:12px;font-weight:600;background:#eef2ff;color:#1d4ed8;border:1px solid #bfdbfe;cursor:pointer;transition:background .18s;">
 											<i data-lucide="clock" style="width:13px;height:13px;"></i> History
 										</button>
-
-										<!-- DELETE -->                                        <button type="button"
-                                                class="history-btn"
-                                                th:data-task-id="${task.id}"
-                                                th:data-title="${task.title}"
-                                                th:data-description="${task.description}"
-                                                th:data-assigned-to="${task.assignedTo}"
-                                                th:data-created-by="${task.createdBy}"
-                                                th:data-start-date="${task.startDate}"
-                                                th:data-due-date="${task.dueDate}"
-                                                th:data-priority="${task.priority}"
-                                                th:data-status="${task.status}"
-                                                th:data-verification-status="${task.verificationStatus}"
-                                                th:data-last-verified-by="${task.lastVerifiedBy}"
-                                                th:data-last-verified-at="${task.lastVerifiedAt}"
-                                                th:data-verification-reason="${task.verificationReason}"
-                                                th:data-tenant-segment="${task.tenantSegment}"
-                                                onclick="openTaskDetails(this)"
-                                                style="display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:8px;font-size:12px;font-weight:600;background:#eef2ff;color:#1d4ed8;border:1px solid #bfdbfe;cursor:pointer;transition:background .18s;">
-                                            <i data-lucide="clock" style="width:13px;height:13px;"></i> History
-                                        </button>
 
 										<form th:action="@{/manager/tasks/delete/{id}(id=${task.id})}" method="post" style="display:inline;" onsubmit="return confirm('Delete this task?');">
 											<button type="submit" style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:600;background:#fdecec;color:#d11a2a;border:none;cursor:pointer;transition:background .18s;">
@@ -822,15 +792,17 @@
                                         <h4 style="margin:16px 0 8px 0;font-size:14px;color:#0f172a;font-weight:700;">Attachments</h4>
                                         <ul style="list-style:none;padding-left:0;margin:0;">
                                             <th:block th:if="${task.attachments != null and !#lists.isEmpty(task.attachments)}">
-                                                <li th:each="att : ${task.attachments}" style="margin-bottom:6px;">
+                                                <li th:each="att : ${task.attachments}" style="margin-bottom:8px;">
                                                     <a th:href="@{/manager/tasks/download/{id}(id=${att.id})}"
-                                                       style="color:#1d4ed8;text-decoration:underline;"
+                                                       style="color:#1d4ed8;text-decoration:underline;display:block;"
                                                        th:text="${att.originalFilename}">Attachment</a>
+                                                    <span style="color:#64748b;font-size:12px;">Uploaded by <strong th:text="${att.uploadedBy != null ? att.uploadedBy : 'Unknown'}"></strong></span>
                                                 </li>
                                             </th:block>
                                             <th:block th:if="${(task.attachments == null or #lists.isEmpty(task.attachments)) and !#lists.isEmpty(task.attachmentList)}">
-                                                <li th:each="att : ${task.attachmentList}" style="margin-bottom:6px;">
-                                                    <span th:text="${#strings.substringBefore(att,'::')}">Attachment</span>
+                                                <li th:each="att : ${task.attachmentList}" style="margin-bottom:8px;">
+                                                    <span style="display:block;" th:text="${#strings.substringBefore(att,'::')}">Attachment</span>
+                                                    <span style="color:#64748b;font-size:12px;">Uploaded by <strong>Unknown</strong></span>
                                                 </li>
                                             </th:block>
                                         </ul>
@@ -876,6 +848,43 @@
 			<!-- Preview area -->
 			<div id="previewBody" style="flex:1;overflow:auto;padding:0;background:#f8fafc;min-height:400px;display:flex;align-items:center;justify-content:center;">
 				<!-- content injected by JS -->
+			</div>
+		</div>
+	</div>
+
+	<!-- ════════════════════════════════════════════
+	     TASK HISTORY / DETAILS MODAL
+	════════════════════════════════════════════ -->
+	<div class="modal-overlay" id="taskDetailsModal" role="dialog" aria-modal="true" aria-label="Task History Details" style="z-index:10000;">
+		<div class="modal-box" style="max-width:760px;width:95%;max-height:92vh;display:flex;flex-direction:column;">
+			<div class="modal-header" style="flex-shrink:0;">
+				<h2 style="font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:calc(100% - 120px);">
+					<i data-lucide="history" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;color:#1a6b8a;"></i>
+					<span id="detailTitle">Task History</span>
+				</h2>
+				<button class="modal-close" onclick="closeTaskDetailsModal()" aria-label="Close task details">
+					<i data-lucide="x" style="width:16px;height:16px;"></i>
+				</button>
+			</div>
+			<div class="modal-body" style="flex:1;overflow:auto;">
+				<div style="display:grid;gap:10px;font-size:13px;color:#334155;">
+					<p style="margin:0;"><strong>Description:</strong> <span id="detailDescription">—</span></p>
+					<p style="margin:0;"><strong>Assigned To:</strong> <span id="detailAssignedTo">—</span></p>
+					<p style="margin:0;"><strong>Created By:</strong> <span id="detailCreatedBy">—</span></p>
+					<p style="margin:0;"><strong>Start Date:</strong> <span id="detailStartDate">—</span></p>
+					<p style="margin:0;"><strong>Due Date:</strong> <span id="detailDueDate">—</span></p>
+					<p style="margin:0;"><strong>Priority:</strong> <span id="detailPriority">—</span></p>
+					<p style="margin:0;"><strong>Status:</strong> <span id="detailStatus">—</span></p>
+					<p style="margin:0;"><strong>Verification:</strong> <span id="detailVerificationStatus">—</span></p>
+					<p style="margin:0;"><strong>Verified By:</strong> <span id="detailVerifiedBy">—</span></p>
+					<p style="margin:0;"><strong>Verified At:</strong> <span id="detailVerifiedAt">—</span></p>
+					<p style="margin:0;"><strong>Reason:</strong> <span id="detailReason">—</span></p>
+					<p style="margin:0;"><strong>Tenant Segment:</strong> <span id="detailTenant">—</span></p>
+				</div>
+				<div style="margin-top:18px;">
+					<h3 style="margin:0 0 8px 0;font-size:14px;color:#0f172a;font-weight:700;">Attachments</h3>
+					<div id="detailAttachments" style="display:grid;gap:6px;"></div>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -1123,63 +1132,66 @@
 				document.getElementById('startDate').min = today;
 				document.getElementById('dueDate').min = today;
 				lucide.createIcons();
-            window.openTaskDetails = function (button) {
-                var modal = document.getElementById("taskDetailsModal");
-                if (!modal) return;
-
-                function setText(id, value) {
-                    var el = document.getElementById(id);
-                    if (!el) return;
-                    el.textContent = value ? value : '—';
-                }
-
-                setText('detailTitle', button.getAttribute('data-title'));
-                setText('detailDescription', button.getAttribute('data-description'));
-                setText('detailAssignedTo', button.getAttribute('data-assigned-to'));
-                setText('detailCreatedBy', button.getAttribute('data-created-by'));
-                setText('detailStartDate', button.getAttribute('data-start-date'));
-                setText('detailDueDate', button.getAttribute('data-due-date'));
-                setText('detailPriority', button.getAttribute('data-priority'));
-                setText('detailStatus', button.getAttribute('data-status'));
-                setText('detailVerificationStatus', button.getAttribute('data-verification-status'));
-                setText('detailVerifiedBy', button.getAttribute('data-last-verified-by'));
-                setText('detailVerifiedAt', button.getAttribute('data-last-verified-at'));
-                setText('detailReason', button.getAttribute('data-verification-reason'));
-                setText('detailTenant', button.getAttribute('data-tenant-segment'));
-
-                var attachmentsContainer = document.getElementById('detailAttachments');
-                attachmentsContainer.innerHTML = '';
-                var row = button.closest('tr');
-                if (row) {
-                    var hiddenBlock = row.querySelector('.task-details-data');
-                    if (hiddenBlock) {
-                        var clone = hiddenBlock.cloneNode(true);
-                        clone.style.display = '';
-                        clone.classList.remove('task-details-data');
-                        attachmentsContainer.appendChild(clone);
-                    }
-                }
-                if (!attachmentsContainer.innerHTML.trim()) {
-                    attachmentsContainer.innerHTML = '<p style="color:#6b7280;margin:0;">No attachments stored.</p>';
-                }
-
-                modal.classList.add('active');
-                document.body.style.overflow = 'hidden';
-                lucide.createIcons();
-            };
-
-            window.closeTaskDetailsModal = function () {
-                var modal = document.getElementById('taskDetailsModal');
-                if (!modal) return;
-                modal.classList.remove('active');
-                document.body.style.overflow = '';
-            };
 			}
 			function closeModal() {
 				modal.classList.remove('active');
 				document.body.style.overflow = '';
 				resetForm();
 			}
+
+			window.openTaskDetails = function (button) {
+				var modal = document.getElementById('taskDetailsModal');
+				if (!modal) return;
+
+				function setText(id, value) {
+					var el = document.getElementById(id);
+					if (!el) return;
+					el.textContent = value ? value : '—';
+				}
+
+				setText('detailTitle', button.getAttribute('data-title'));
+				setText('detailDescription', button.getAttribute('data-description'));
+				setText('detailAssignedTo', button.getAttribute('data-assigned-to'));
+				setText('detailCreatedBy', button.getAttribute('data-created-by'));
+				setText('detailStartDate', button.getAttribute('data-start-date'));
+				setText('detailDueDate', button.getAttribute('data-due-date'));
+				setText('detailPriority', button.getAttribute('data-priority'));
+				setText('detailStatus', button.getAttribute('data-status'));
+				setText('detailVerificationStatus', button.getAttribute('data-verification-status'));
+				setText('detailVerifiedBy', button.getAttribute('data-last-verified-by'));
+				setText('detailVerifiedAt', button.getAttribute('data-last-verified-at'));
+				setText('detailReason', button.getAttribute('data-verification-reason'));
+				setText('detailTenant', button.getAttribute('data-tenant-segment'));
+
+				var attachmentsContainer = document.getElementById('detailAttachments');
+				if (attachmentsContainer) {
+					attachmentsContainer.innerHTML = '';
+					var row = button.closest('tr');
+					if (row) {
+						var hiddenBlock = row.querySelector('.task-details-data');
+						if (hiddenBlock) {
+							var clone = hiddenBlock.cloneNode(true);
+							clone.style.display = '';
+							clone.classList.remove('task-details-data');
+							attachmentsContainer.appendChild(clone);
+						}
+					}
+					if (!attachmentsContainer.innerHTML.trim()) {
+						attachmentsContainer.innerHTML = '<p style="color:#6b7280;margin:0;">No attachments stored.</p>';
+					}
+				}
+
+				modal.classList.add('active');
+				document.body.style.overflow = 'hidden';
+				lucide.createIcons();
+			};
+
+			window.closeTaskDetailsModal = function () {
+				var modal = document.getElementById('taskDetailsModal');
+				if (!modal) return;
+				modal.classList.remove('active');
+				document.body.style.overflow = '';
+			};
 
 			if (openBtn) openBtn.addEventListener('click', openModal);
 			if (closeBtn) closeBtn.addEventListener('click', closeModal);
@@ -1543,8 +1555,11 @@
 		document.getElementById('rejectModal').addEventListener('click', function(e) {
 			if (e.target === this) closeRejectModal();
 		});
+		document.getElementById('taskDetailsModal').addEventListener('click', function(e) {
+			if (e.target === this) closeTaskDetailsModal();
+		});
 		document.addEventListener('keydown', function(e) {
-			if (e.key === 'Escape') { closePreviewModal(); closeRejectModal(); }
+			if (e.key === 'Escape') { closePreviewModal(); closeRejectModal(); closeTaskDetailsModal(); }
 		});
 	</script>
 
