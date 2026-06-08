@@ -45,6 +45,8 @@ import com.crm.demo.model.Holiday;
 import com.crm.demo.model.LeaveRequest;
 import com.crm.demo.model.Meeting;
 import com.crm.demo.model.Project;
+import com.crm.demo.model.Report;
+import com.crm.demo.model.ReportAttachment;
 import com.crm.demo.model.Task;
 import com.crm.demo.model.TaskAttachment;
 import com.crm.demo.model.Team;
@@ -54,6 +56,8 @@ import com.crm.demo.repository.HolidayRepository;
 import com.crm.demo.repository.LeaveRequestRepository;
 import com.crm.demo.repository.MeetingRepository;
 import com.crm.demo.repository.ProjectRepository;
+import com.crm.demo.repository.ReportAttachmentRepository;
+import com.crm.demo.repository.ReportRepository;
 import com.crm.demo.repository.TaskRepository;
 import com.crm.demo.repository.TaskAttachmentRepository;
 import com.crm.demo.repository.TeamRepository;
@@ -95,6 +99,12 @@ public class ManagerController {
 
 	@Autowired
 	private TaskAttachmentRepository taskAttachmentRepository;
+
+	@Autowired
+	private ReportRepository reportRepository;
+
+	@Autowired
+	private ReportAttachmentRepository reportAttachmentRepository;
 
 	@Autowired
 	private BCryptPasswordEncoder passwordEncoder;
@@ -399,7 +409,7 @@ public class ManagerController {
                         file.getOriginalFilename(),
                         fileData,
                         contentType,
-                        "manager"
+                        manager.getUsername()
                     );
                     taskAttachmentRepository.save(taskAttachment);
                     uploadedNames.add(file.getOriginalFilename());
@@ -634,7 +644,124 @@ public class ManagerController {
 
 		injectStats(model);
 
+		User manager = getCurrentManager();
+		if (manager != null) {
+			String tenant = getTenantSegment(manager);
+
+			// Team members available as recipients
+			List<User> teamMembers = getManagedTeamMembers(manager);
+			model.addAttribute("teamMembers", teamMembers);
+
+			// Sent reports history
+			List<Report> sentReports = reportRepository
+					.findBySentByAndTenantSegmentOrderBySentAtDesc(manager.getUsername(), tenant);
+			model.addAttribute("sentReports", sentReports);
+			model.addAttribute("sentReportCount", sentReports.size());
+		} else {
+			model.addAttribute("teamMembers", java.util.Collections.emptyList());
+			model.addAttribute("sentReports", java.util.Collections.emptyList());
+			model.addAttribute("sentReportCount", 0);
+		}
+
 		return "manager-reports";
+	}
+
+	// =========================
+	// SEND REPORT (POST)
+	// =========================
+	@PostMapping("/reports/send")
+	public String sendReport(
+			@RequestParam String title,
+			@RequestParam(required = false) String message,
+			@RequestParam(value = "recipientIds", required = false) List<Long> recipientIds,
+			@RequestParam(value = "attachments", required = false) MultipartFile[] attachments,
+			RedirectAttributes ra) {
+
+		User manager = getCurrentManager();
+		if (manager == null) {
+			ra.addFlashAttribute("errorMessage", "Session expired. Please log in again.");
+			return "redirect:/manager/reports";
+		}
+		if (title == null || title.isBlank()) {
+			ra.addFlashAttribute("errorMessage", "Report title is required.");
+			return "redirect:/manager/reports";
+		}
+		if (recipientIds == null || recipientIds.isEmpty()) {
+			ra.addFlashAttribute("errorMessage", "Please select at least one recipient.");
+			return "redirect:/manager/reports";
+		}
+
+		String tenant = getTenantSegment(manager);
+
+		// Verify recipients are in this manager's team
+		List<User> teamMembers = getManagedTeamMembers(manager);
+		List<User> validRecipients = teamMembers.stream()
+				.filter(u -> recipientIds.contains(u.getId()))
+				.toList();
+
+		if (validRecipients.isEmpty()) {
+			ra.addFlashAttribute("errorMessage", "None of the selected recipients are in your team.");
+			return "redirect:/manager/reports";
+		}
+
+		// Build CSV strings for IDs and names
+		String idsCsv   = validRecipients.stream().map(u -> String.valueOf(u.getId())).collect(java.util.stream.Collectors.joining(","));
+		String namesCsv = validRecipients.stream().map(User::getUsername).collect(java.util.stream.Collectors.joining(", "));
+
+		Report report = new Report();
+		report.setTitle(title.trim());
+		report.setMessage(message != null ? message.trim() : "");
+		report.setSentBy(manager.getUsername());
+		report.setTenantSegment(tenant);
+		report.setRecipientIds(idsCsv);
+		report.setRecipientNames(namesCsv);
+		reportRepository.save(report);
+
+		// Save attachments
+		if (attachments != null) {
+			for (MultipartFile file : attachments) {
+				if (file == null || file.isEmpty()) continue;
+				try {
+					String ct = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
+					ReportAttachment ra2 = new ReportAttachment(report, file.getOriginalFilename(), file.getBytes(), ct);
+					reportAttachmentRepository.save(ra2);
+				} catch (IOException e) {
+					ra.addFlashAttribute("errorMessage", "File upload failed: " + e.getMessage());
+					return "redirect:/manager/reports";
+				}
+			}
+		}
+
+		ra.addFlashAttribute("successMessage", "Report sent to " + validRecipients.size() + " recipient(s) successfully.");
+		return "redirect:/manager/reports";
+	}
+
+	// =========================
+	// VIEW REPORT ATTACHMENT INLINE
+	// =========================
+	@GetMapping("/reports/view/{attachmentId}")
+	public ResponseEntity<?> viewReportAttachment(@PathVariable Long attachmentId) {
+		ReportAttachment att = reportAttachmentRepository.findById(attachmentId).orElse(null);
+		if (att == null) return ResponseEntity.notFound().build();
+		String ct = att.getContentType() != null ? att.getContentType() : "application/octet-stream";
+		return ResponseEntity.ok()
+				.header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + att.getOriginalFilename() + "\"")
+				.header(HttpHeaders.CONTENT_TYPE, ct)
+				.body(att.getFileData());
+	}
+
+	// =========================
+	// DOWNLOAD REPORT ATTACHMENT
+	// =========================
+	@GetMapping("/reports/download/{attachmentId}")
+	public ResponseEntity<?> downloadReportAttachment(@PathVariable Long attachmentId) {
+		ReportAttachment att = reportAttachmentRepository.findById(attachmentId).orElse(null);
+		if (att == null) return ResponseEntity.notFound().build();
+		String ct = att.getContentType() != null ? att.getContentType() : "application/octet-stream";
+		return ResponseEntity.ok()
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + att.getOriginalFilename() + "\"")
+				.header(HttpHeaders.CONTENT_TYPE, ct)
+				.body(att.getFileData());
 	}
 
 	// =========================

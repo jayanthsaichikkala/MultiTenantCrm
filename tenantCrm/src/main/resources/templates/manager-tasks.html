@@ -390,7 +390,7 @@
 			flex-direction: column;
 			align-items: flex-start;
 			gap: 4px;
-			max-width: 170px;
+			max-width: 180px;
 		}
 
 		.task-attachment-item {
@@ -415,13 +415,26 @@
 
 		.task-attachment-name {
 			display: inline-block;
-			max-width: 130px;
+			max-width: 140px;
 			overflow: hidden;
 			text-overflow: ellipsis;
 			white-space: nowrap;
 			vertical-align: middle;
 		}
 
+		.attachment-uploader {
+			display: block;
+			font-size: 10px;
+			color: #94a3b8;
+			margin-top: 1px;
+			padding-left: 16px;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			max-width: 160px;
+		}
+
+		/* hide all items beyond the first one by default */
 		.task-attachments-list:not(.expanded) .task-attachment-extra {
 			display: none;
 		}
@@ -432,15 +445,21 @@
 			background: #f3f9fc;
 			color: #17455e;
 			cursor: pointer;
-			padding: 4px 10px;
+			padding: 3px 10px;
 			font-size: 11px;
 			font-weight: 700;
 			transition: background .18s ease, border-color .18s ease;
+			white-space: nowrap;
 		}
 
 		.task-attachments-toggle:hover {
 			border-color: #17455e;
 			background: #e8f2f8;
+		}
+
+		/* uniform row alignment */
+		#taskTable tbody td {
+			vertical-align: middle;
 		}
 
 		/* Toast notification */
@@ -681,7 +700,7 @@
 									          th:with="attachmentCount=${#lists.size(task.attachments)}">
 										<div class="task-attachments-list">
 										<div class="task-attachment-item" th:each="att, attStat : ${task.attachments}"
-										     th:classappend="${attStat.index >= 2} ? ' task-attachment-extra' : ''">
+										     th:classappend="${attStat.index >= 1} ? ' task-attachment-extra' : ''">
 											<button type="button"
 											        th:data-view-url="@{/manager/tasks/view/{id}(id=${att.id})}"
 											        th:data-download-url="@{/manager/tasks/download/{id}(id=${att.id})}"
@@ -692,20 +711,23 @@
 												<i data-lucide="paperclip" style="width:12px;height:12px;"></i>
 												<span class="task-attachment-name" th:text="${att.originalFilename}"></span>
 											</button>
+											<span class="attachment-uploader"
+											      th:text="${att.uploadedBy != null and !#strings.isEmpty(att.uploadedBy)} ? '↑ ' + ${att.uploadedBy} : '↑ Unknown'">
+											</span>
 										</div>
 										<button type="button" class="task-attachments-toggle"
-										        th:if="${attachmentCount > 2}"
-										        th:attr="data-view-label=|View all (${attachmentCount - 2} more)|"
-										        th:text="|View all (${attachmentCount - 2} more)|"
+										        th:if="${attachmentCount > 1}"
+										        th:attr="data-view-label=|View more (${attachmentCount - 1} more)|,data-hide-label='Show less'"
+										        th:text="|View more (${attachmentCount - 1} more)|"
 										        aria-expanded="false"
-										        onclick="toggleTaskAttachments(this)">View all</button>
+										        onclick="toggleTaskAttachments(this)">View more</button>
 										</div>
 									</th:block>
 									<th:block th:if="${(task.attachments == null or #lists.isEmpty(task.attachments)) and !#lists.isEmpty(task.attachmentList)}"
 									          th:with="attachmentCount=${#lists.size(task.attachmentList)}">
 										<div class="task-attachments-list">
 										<div class="task-attachment-item" th:each="att, attStat : ${task.attachmentList}"
-										     th:classappend="${attStat.index >= 2} ? ' task-attachment-extra' : ''">
+										     th:classappend="${attStat.index >= 1} ? ' task-attachment-extra' : ''">
 											<button type="button"
 											        th:data-view-url="@{/manager/tasks/view/{s}(s=${#strings.substringAfter(att,'::')})}"
 											        th:data-download-url="@{/manager/tasks/download/{s}(s=${#strings.substringAfter(att,'::')})}"
@@ -718,11 +740,11 @@
 											</button>
 										</div>
 										<button type="button" class="task-attachments-toggle"
-										        th:if="${attachmentCount > 2}"
-										        th:attr="data-view-label=|View all (${attachmentCount - 2} more)|"
-										        th:text="|View all (${attachmentCount - 2} more)|"
+										        th:if="${attachmentCount > 1}"
+										        th:attr="data-view-label=|View more (${attachmentCount - 1} more)|,data-hide-label='Show less'"
+										        th:text="|View more (${attachmentCount - 1} more)|"
 										        aria-expanded="false"
-										        onclick="toggleTaskAttachments(this)">View all</button>
+										        onclick="toggleTaskAttachments(this)">View more</button>
 										</div>
 									</th:block>
 									<span th:if="${(task.attachments == null or #lists.isEmpty(task.attachments)) and #lists.isEmpty(task.attachmentList)}"
@@ -776,37 +798,7 @@
 											</button>
 										</form>
 									</div>
-								                                    <div class="task-details-data" style="display:none;">
-                                        <h4 style="margin:0 0 10px 0;font-size:14px;color:#0f172a;font-weight:700;">Stored Task Data</h4>
-                                        <div style="font-size:13px;color:#475569;line-height:1.6;">
-                                            <p><strong>Assigned To:</strong> <span th:text="${task.assignedTo} ?: '—'"></span></p>
-                                            <p><strong>Created By:</strong> <span th:text="${task.createdBy} ?: '—'"></span></p>
-                                            <p><strong>Start Date:</strong> <span th:text="${task.startDate} ?: '—'"></span></p>
-                                            <p><strong>Due Date:</strong> <span th:text="${task.dueDate} ?: '—'"></span></p>
-                                            <p><strong>Verification:</strong> <span th:text="${task.verificationStatus} ?: '—'"></span></p>
-                                            <p><strong>Verified By:</strong> <span th:text="${task.lastVerifiedBy} ?: '—'"></span></p>
-                                            <p><strong>Verified At:</strong> <span th:text="${task.lastVerifiedAt} ?: '—'"></span></p>
-                                            <p><strong>Reason:</strong> <span th:text="${task.verificationReason} ?: '—'"></span></p>
-                                            <p><strong>Tenant Segment:</strong> <span th:text="${task.tenantSegment} ?: '—'"></span></p>
-                                        </div>
-                                        <h4 style="margin:16px 0 8px 0;font-size:14px;color:#0f172a;font-weight:700;">Attachments</h4>
-                                        <ul style="list-style:none;padding-left:0;margin:0;">
-                                            <th:block th:if="${task.attachments != null and !#lists.isEmpty(task.attachments)}">
-                                                <li th:each="att : ${task.attachments}" style="margin-bottom:8px;">
-                                                    <a th:href="@{/manager/tasks/download/{id}(id=${att.id})}"
-                                                       style="color:#1d4ed8;text-decoration:underline;display:block;"
-                                                       th:text="${att.originalFilename}">Attachment</a>
-                                                    <span style="color:#64748b;font-size:12px;">Uploaded by <strong th:text="${att.uploadedBy != null ? att.uploadedBy : 'Unknown'}"></strong></span>
-                                                </li>
-                                            </th:block>
-                                            <th:block th:if="${(task.attachments == null or #lists.isEmpty(task.attachments)) and !#lists.isEmpty(task.attachmentList)}">
-                                                <li th:each="att : ${task.attachmentList}" style="margin-bottom:8px;">
-                                                    <span style="display:block;" th:text="${#strings.substringBefore(att,'::')}">Attachment</span>
-                                                    <span style="color:#64748b;font-size:12px;">Uploaded by <strong>Unknown</strong></span>
-                                                </li>
-                                            </th:block>
-                                        </ul>
-                                    </div></td>
+								</td>
 							</tr>
 							<tr th:if="${tasks == null or #lists.isEmpty(tasks)}">
 								<td colspan="8">
@@ -827,7 +819,7 @@
 	<!-- ════════════════════════════════════════════
 	     ATTACHMENT PREVIEW MODAL
 	════════════════════════════════════════════ -->
-	<div class="modal-overlay" id="previewModal" role="dialog" aria-modal="true" aria-label="File Preview" style="z-index:10000;">
+	<div class="modal-overlay" id="previewModal" role="dialog" aria-modal="true" aria-label="File Preview" style="z-index:20000;background:rgba(10,30,50,0.72);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);">	
 		<div class="modal-box" style="max-width:860px;width:95%;max-height:92vh;display:flex;flex-direction:column;">
 			<!-- Header -->
 			<div class="modal-header" style="flex-shrink:0;">
@@ -856,7 +848,7 @@
 	     TASK HISTORY / DETAILS MODAL
 	════════════════════════════════════════════ -->
 	<div class="modal-overlay" id="taskDetailsModal" role="dialog" aria-modal="true" aria-label="Task History Details" style="z-index:10000;">
-		<div class="modal-box" style="max-width:760px;width:95%;max-height:92vh;display:flex;flex-direction:column;">
+		<div class="modal-box" style="max-width:620px;width:95%;max-height:92vh;display:flex;flex-direction:column;">
 			<div class="modal-header" style="flex-shrink:0;">
 				<h2 style="font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:calc(100% - 120px);">
 					<i data-lucide="history" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;color:#1a6b8a;"></i>
@@ -879,7 +871,6 @@
 					<p style="margin:0;"><strong>Verified By:</strong> <span id="detailVerifiedBy">—</span></p>
 					<p style="margin:0;"><strong>Verified At:</strong> <span id="detailVerifiedAt">—</span></p>
 					<p style="margin:0;"><strong>Reason:</strong> <span id="detailReason">—</span></p>
-					<p style="margin:0;"><strong>Tenant Segment:</strong> <span id="detailTenant">—</span></p>
 				</div>
 				<div style="margin-top:18px;">
 					<h3 style="margin:0 0 8px 0;font-size:14px;color:#0f172a;font-weight:700;">Attachments</h3>
@@ -1161,23 +1152,63 @@
 				setText('detailVerifiedBy', button.getAttribute('data-last-verified-by'));
 				setText('detailVerifiedAt', button.getAttribute('data-last-verified-at'));
 				setText('detailReason', button.getAttribute('data-verification-reason'));
-				setText('detailTenant', button.getAttribute('data-tenant-segment'));
 
+				// Build attachments list from the attachment buttons already in this table row
 				var attachmentsContainer = document.getElementById('detailAttachments');
 				if (attachmentsContainer) {
 					attachmentsContainer.innerHTML = '';
 					var row = button.closest('tr');
-					if (row) {
-						var hiddenBlock = row.querySelector('.task-details-data');
-						if (hiddenBlock) {
-							var clone = hiddenBlock.cloneNode(true);
-							clone.style.display = '';
-							clone.classList.remove('task-details-data');
-							attachmentsContainer.appendChild(clone);
-						}
-					}
-					if (!attachmentsContainer.innerHTML.trim()) {
-						attachmentsContainer.innerHTML = '<p style="color:#6b7280;margin:0;">No attachments stored.</p>';
+					var attachBtns = row ? row.querySelectorAll('.task-attachment-link') : [];
+
+					if (attachBtns.length > 0) {
+						attachBtns.forEach(function (btn) {
+							var filename    = btn.getAttribute('data-filename') || btn.querySelector('.task-attachment-name')?.textContent || 'File';
+							var viewUrl     = btn.getAttribute('data-view-url');
+							var downloadUrl = btn.getAttribute('data-download-url');
+							var contentType = btn.getAttribute('data-content-type') || '';
+
+							// Find the uploader label sibling
+							var item        = btn.closest('.task-attachment-item');
+							var uploaderEl  = item ? item.querySelector('.attachment-uploader') : null;
+							var uploader    = uploaderEl ? uploaderEl.textContent.replace('↑ ', '').trim() : null;
+
+							var wrapper = document.createElement('div');
+							wrapper.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;';
+
+							var left = document.createElement('div');
+							left.style.cssText = 'display:flex;flex-direction:column;gap:2px;min-width:0;';
+
+							var previewBtn = document.createElement('button');
+							previewBtn.type = 'button';
+							previewBtn.style.cssText = 'background:none;border:none;padding:0;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:#0369a1;font-size:13px;font-weight:600;text-decoration:underline;text-underline-offset:2px;text-align:left;';
+							previewBtn.innerHTML = '<i data-lucide="paperclip" style="width:13px;height:13px;flex-shrink:0;"></i><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px;">' + escapeHtml(filename) + '</span>';
+							previewBtn.setAttribute('data-view-url', viewUrl);
+							previewBtn.setAttribute('data-download-url', downloadUrl);
+							previewBtn.setAttribute('data-filename', filename);
+							previewBtn.setAttribute('data-content-type', contentType);
+							previewBtn.addEventListener('click', function () { openPreviewModal(this); });
+
+							left.appendChild(previewBtn);
+
+							if (uploader) {
+								var uploaderSpan = document.createElement('span');
+								uploaderSpan.style.cssText = 'font-size:11px;color:#64748b;padding-left:19px;';
+								uploaderSpan.textContent = '↑ ' + uploader;
+								left.appendChild(uploaderSpan);
+							}
+
+							var dlBtn = document.createElement('a');
+							dlBtn.href = downloadUrl;
+							dlBtn.setAttribute('download', filename);
+							dlBtn.style.cssText = 'flex-shrink:0;display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:6px;background:#1a6b8a;color:#fff;font-size:11px;font-weight:600;text-decoration:none;white-space:nowrap;';
+							dlBtn.innerHTML = '<i data-lucide="download" style="width:12px;height:12px;"></i> Download';
+
+							wrapper.appendChild(left);
+							wrapper.appendChild(dlBtn);
+							attachmentsContainer.appendChild(wrapper);
+						});
+					} else {
+						attachmentsContainer.innerHTML = '<p style="color:#6b7280;margin:0;font-size:13px;">No attachments.</p>';
 					}
 				}
 
@@ -1450,7 +1481,9 @@
 
 			var expanded = list.classList.toggle('expanded');
 			button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-			button.textContent = expanded ? 'Show less' : (button.getAttribute('data-view-label') || 'View all');
+			button.textContent = expanded
+				? (button.getAttribute('data-hide-label') || 'Show less')
+				: (button.getAttribute('data-view-label') || 'View more');
 		}
 
 		function openPreviewModal(btn) {

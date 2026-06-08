@@ -30,6 +30,8 @@ import com.crm.demo.model.AttendanceDay;
 import com.crm.demo.model.Holiday;
 import com.crm.demo.model.LeaveRequest;
 import com.crm.demo.model.Meeting;
+import com.crm.demo.model.Report;
+import com.crm.demo.model.ReportAttachment;
 import com.crm.demo.model.Task;
 import com.crm.demo.model.TaskAttachment;
 import com.crm.demo.model.Team;
@@ -38,6 +40,8 @@ import com.crm.demo.repository.AttendanceRepository;
 import com.crm.demo.repository.HolidayRepository;
 import com.crm.demo.repository.LeaveRequestRepository;
 import com.crm.demo.repository.MeetingRepository;
+import com.crm.demo.repository.ReportAttachmentRepository;
+import com.crm.demo.repository.ReportRepository;
 import com.crm.demo.repository.TaskRepository;
 import com.crm.demo.repository.TaskAttachmentRepository;
 import com.crm.demo.repository.TeamRepository;
@@ -74,6 +78,8 @@ public class EmployeeController {
     @Autowired private TaskRepository        taskRepository;
     @Autowired private TaskAttachmentRepository taskAttachmentRepository;
     @Autowired private LeaveRequestRepository leaveRequestRepository;
+    @Autowired private ReportRepository      reportRepository;
+    @Autowired private ReportAttachmentRepository reportAttachmentRepository;
     @Autowired private BCryptPasswordEncoder passwordEncoder;
     @Autowired private ProfileUpdateService  profileUpdateService;
 
@@ -229,6 +235,21 @@ public class EmployeeController {
             model.addAttribute("myTeamSize",    0);
         }
 
+        // ── Recent reports ────────────────────────────────────────────────
+        if (emp != null) {
+            String tenant = getTenantSegment(emp);
+            List<Report> recentReports = reportRepository.findByRecipientId(
+                    String.valueOf(emp.getId()), tenant);
+            // Show only latest 3 on dashboard
+            List<Report> dashReports = recentReports.size() > 3
+                    ? recentReports.subList(0, 3) : recentReports;
+            model.addAttribute("recentReports", dashReports);
+            model.addAttribute("totalReportCount", recentReports.size());
+        } else {
+            model.addAttribute("recentReports", java.util.Collections.emptyList());
+            model.addAttribute("totalReportCount", 0);
+        }
+
         return "employee-dashboard";
     }
 
@@ -312,7 +333,7 @@ public class EmployeeController {
                     attachment.getOriginalFilename(),
                     fileData,
                     contentType,
-                    "employee"
+                    emp.getUsername()
                 );
                 taskAttachmentRepository.save(taskAttachment);
 
@@ -703,6 +724,50 @@ public class EmployeeController {
         leaveRequestRepository.save(leave);
         ra.addFlashAttribute("successMessage", "Leave request submitted to HR.");
         return "redirect:/employee/leaves";
+    }
+
+    // ── REPORTS ───────────────────────────────────────────────────────────
+
+    @GetMapping("/reports")
+    public String reportsPage(Model model) {
+        injectUser(model);
+        injectStats(model);
+
+        User emp = getCurrentEmployee();
+        if (emp != null) {
+            String tenant = getTenantSegment(emp);
+            List<Report> myReports = reportRepository.findByRecipientId(
+                    String.valueOf(emp.getId()), tenant);
+            model.addAttribute("myReports", myReports);
+            model.addAttribute("reportCount", myReports.size());
+        } else {
+            model.addAttribute("myReports", java.util.Collections.emptyList());
+            model.addAttribute("reportCount", 0);
+        }
+
+        return "employee-reports";
+    }
+
+    @GetMapping("/reports/view/{attachmentId}")
+    public ResponseEntity<?> viewReportAttachment(@PathVariable Long attachmentId) {
+        ReportAttachment att = reportAttachmentRepository.findById(attachmentId).orElse(null);
+        if (att == null) return ResponseEntity.notFound().build();
+        String ct = att.getContentType() != null ? att.getContentType() : "application/octet-stream";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + att.getOriginalFilename() + "\"")
+                .header(HttpHeaders.CONTENT_TYPE, ct)
+                .body(att.getFileData());
+    }
+
+    @GetMapping("/reports/download/{attachmentId}")
+    public ResponseEntity<?> downloadReportAttachment(@PathVariable Long attachmentId) {
+        ReportAttachment att = reportAttachmentRepository.findById(attachmentId).orElse(null);
+        if (att == null) return ResponseEntity.notFound().build();
+        String ct = att.getContentType() != null ? att.getContentType() : "application/octet-stream";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + att.getOriginalFilename() + "\"")
+                .header(HttpHeaders.CONTENT_TYPE, ct)
+                .body(att.getFileData());
     }
 
     @GetMapping("/settings")
