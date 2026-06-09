@@ -200,18 +200,18 @@
 		.btn-approve,
 		.btn-reject,
 		.btn-view {
-            min-width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            border: none;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 14px;
-            font-size: 14px;
-            font-weight: 600;
-            transition: background .15s, transform .1s, box-shadow .15s;
+			min-width: 44px;
+			height: 44px;
+			border-radius: 12px;
+			border: none;
+			cursor: pointer;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			padding: 0 14px;
+			font-size: 14px;
+			font-weight: 600;
+			transition: background .15s, transform .1s, box-shadow .15s;
 		}
 
 		.btn-approve {
@@ -440,6 +440,8 @@
 			<li><a th:href="@{/hr/attendance}"><i data-lucide="calendar"></i> Attendance</a></li>
 			<li class="active"><a th:href="@{/hr/leaves}"><i data-lucide="file-text"></i> Leave Requests</a></li>
 			<li><a th:href="@{/hr/teams}"><i data-lucide="users-round"></i> Teams</a></li>
+			<li><a th:href="@{/hr/tasks}"><i data-lucide="check-square"></i> Tasks</a></li>
+
 			<li><a th:href="@{/hr/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
 			<li><a th:href="@{/hr/reports}"><i data-lucide="file-bar-chart"></i> Reports</a></li>
 			<li><a th:href="@{/hr/settings}"><i data-lucide="settings"></i> Settings</a></li>
@@ -519,9 +521,8 @@
 				<div id="lhList">
 					<!-- Server-rendered leave requests -->
 					<div th:each="req : ${leaveRequests}" class="leave-item" th:data-id="${req.id}"
-						th:data-name="${req.employeeName}"
-						th:data-type="${req.type}" th:data-status="${req.status}" th:data-from="${req.fromDate}"
-						th:data-to="${req.toDate}" th:data-reason="${req.reason}"
+						th:data-name="${req.employeeName}" th:data-type="${req.type}" th:data-status="${req.status}"
+						th:data-from="${req.fromDate}" th:data-to="${req.toDate}" th:data-reason="${req.reason}"
 						th:data-rejection-message="${req.rejectionMessage}"
 						th:data-has-attachment="${req.attachmentData != null}"
 						th:data-attachment-name="${req.attachmentName}">
@@ -545,9 +546,12 @@
 							<form th:if="${req.status == 'Pending'}" th:action="@{/hr/leaves/{id}/review(id=${req.id})}"
 								method="post" style="display:inline-flex;">
 								<input type="hidden" name="action" value="approve">
-								<button class="btn-approve" title="Approve" type="submit"><i data-lucide="check" style="margin-right:5px;"></i>Approve</button>
+								<button class="btn-approve" title="Approve" type="submit"><i data-lucide="check"
+										style="margin-right:5px;"></i>Approve</button>
 							</form>
-								<button th:if="${req.status == 'Pending'}" class="btn-reject" title="Reject" type="button" onclick="openModal(this)"><i data-lucide="x" style="margin-right:5px;"></i>Reject</button>
+							<button th:if="${req.status == 'Pending'}" class="btn-reject" title="Reject" type="button"
+								onclick="openModal(this)"><i data-lucide="x"
+									style="margin-right:5px;"></i>Reject</button>
 						</div>
 					</div>
 
@@ -585,13 +589,18 @@
 				</div>
 				<div class="lf-detail-row" id="mdAttachmentRow" style="display:none; flex-direction:column; gap:8px;">
 					<span>Attachment</span>
-					<a id="mdAttachmentLink" href="#" style="color:#17455e;font-weight:600;text-decoration:underline;">View attachment</a>
-					<div id="mdAttachmentPreviewBox" style="display:none; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; background:#fff; margin-top:6px;">
-						<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+					<a id="mdAttachmentLink" href="#"
+						style="color:#17455e;font-weight:600;text-decoration:underline;">View attachment</a>
+					<div id="mdAttachmentPreviewBox"
+						style="display:none; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; background:#fff; margin-top:6px;">
+						<div
+							style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; background:#f8fafc; border-bottom:1px solid #e2e8f0;">
 							<span style="font-size:12px; color:#475569; font-weight:600;">Attachment preview</span>
-							<button type="button" onclick="closeAttachmentPreview()" style="border:0; background:transparent; color:#475569; cursor:pointer; font-size:12px; font-weight:600;">Close</button>
+							<button type="button" onclick="closeAttachmentPreview()"
+								style="border:0; background:transparent; color:#475569; cursor:pointer; font-size:12px; font-weight:600;">Close</button>
 						</div>
-						<iframe id="mdAttachmentPreview" src="" style="width:100%; min-height:320px; border:0; background:#fff;"></iframe>
+						<iframe id="mdAttachmentPreview" src=""
+							style="width:100%; min-height:320px; border:0; background:#fff;"></iframe>
 					</div>
 				</div>
 				<div class="lf-detail-row" style="flex-direction:column; gap:8px;" id="mdRejectionRow">
@@ -712,13 +721,13 @@
 				attachmentRow.style.display = 'none';
 			}
 			var rejectionText = ds.rejectionMessage || '';
-				document.getElementById('mdRejectionNote').textContent = rejectionText || 'No rejection note provided.';
-				document.getElementById('mdRejectMessage').value = '';
-				var isPending = ds.status === 'Pending' || !ds.status;
-				document.getElementById('mdRejectMessageRow').style.display = isPending ? 'block' : 'none';
-				document.getElementById('mdRejectionRow').style.display = rejectionText ? 'block' : 'none';
-				var footer = document.getElementById('mdFooter');
-				footer.style.display = isPending ? 'flex' : 'none';
+			document.getElementById('mdRejectionNote').textContent = rejectionText || 'No rejection note provided.';
+			document.getElementById('mdRejectMessage').value = '';
+			var isPending = ds.status === 'Pending' || !ds.status;
+			document.getElementById('mdRejectMessageRow').style.display = isPending ? 'block' : 'none';
+			document.getElementById('mdRejectionRow').style.display = rejectionText ? 'block' : 'none';
+			var footer = document.getElementById('mdFooter');
+			footer.style.display = isPending ? 'flex' : 'none';
 			if (ds.id) {
 				document.getElementById('mdRejectForm').action = '/hr/leaves/' + ds.id + '/review';
 				document.getElementById('mdApproveForm').action = '/hr/leaves/' + ds.id + '/review';

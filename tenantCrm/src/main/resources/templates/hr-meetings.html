@@ -228,7 +228,9 @@
 			font-weight: 500;
 		}
 
-		.datetime-error-msg.visible { display: block; }
+		.datetime-error-msg.visible {
+			display: block;
+		}
 
 		/* Checkbox row */
 		.checkbox-row {
@@ -665,11 +667,13 @@
 			transition: background .18s, border-color .18s, transform .15s;
 			white-space: nowrap;
 		}
+
 		.btn-participants:hover {
 			background: #dcecf5;
 			border-color: #17455e;
 			transform: translateY(-1px);
 		}
+
 		.btn-participants i[data-lucide] {
 			width: 12px;
 			height: 12px;
@@ -684,9 +688,20 @@
 			overflow-y: auto;
 			padding-right: 2px;
 		}
-		.participants-modal-list::-webkit-scrollbar { width: 4px; }
-		.participants-modal-list::-webkit-scrollbar-track { background: transparent; }
-		.participants-modal-list::-webkit-scrollbar-thumb { background: #d1dce3; border-radius: 4px; }
+
+		.participants-modal-list::-webkit-scrollbar {
+			width: 4px;
+		}
+
+		.participants-modal-list::-webkit-scrollbar-track {
+			background: transparent;
+		}
+
+		.participants-modal-list::-webkit-scrollbar-thumb {
+			background: #d1dce3;
+			border-radius: 4px;
+		}
+
 		.pm-item {
 			display: flex;
 			align-items: center;
@@ -696,6 +711,7 @@
 			background: #f7fbfd;
 			border: 1.5px solid #e5edf2;
 		}
+
 		.pm-avatar {
 			width: 32px;
 			height: 32px;
@@ -709,6 +725,7 @@
 			justify-content: center;
 			flex-shrink: 0;
 		}
+
 		.pm-name {
 			font-size: 13px;
 			font-weight: 600;
@@ -943,6 +960,8 @@
 			<li><a th:href="@{/hr/attendance}"><i data-lucide="calendar-check"></i> Attendance</a></li>
 			<li><a th:href="@{/hr/leaves}"><i data-lucide="file-text"></i> Leave Requests</a></li>
 			<li><a th:href="@{/hr/teams}"><i data-lucide="users-round"></i> Teams</a></li>
+			<li><a th:href="@{/hr/tasks}"><i data-lucide="check-square"></i> Tasks</a></li>
+
 			<li class="active"><a th:href="@{/hr/meetings}"><i data-lucide="calendar-clock"></i> Meetings</a></li>
 			<li><a th:href="@{/hr/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
 			<li><a th:href="@{/hr/reports}"><i data-lucide="file-bar-chart"></i> Reports</a></li>
@@ -1017,8 +1036,8 @@
 
 					<form th:action="${meetingForm.id != null}
                                   ? @{/hr/meetings/edit/{id}(id=${meetingForm.id})}
-                                  : @{/hr/meetings}" th:object="${meetingForm}" method="post"
-						id="hrMeetingForm" onsubmit="return validateMeetingDateTime(event)">
+                                  : @{/hr/meetings}" th:object="${meetingForm}" method="post" id="hrMeetingForm"
+						onsubmit="return validateMeetingDateTime(event)">
 
 						<!-- ── Two-column split ── -->
 						<div class="form-body-split">
@@ -1042,11 +1061,12 @@
 									<div class="form-group">
 										<label>Date <span>*</span></label>
 										<div class="input-wrap">
-											<input type="date" th:field="*{meetingDate}"
-												id="meetingDateInput" required onchange="onDateTimeChange()">
+											<input type="date" th:field="*{meetingDate}" id="meetingDateInput" required
+												onchange="onDateTimeChange()">
 										</div>
 										<span class="datetime-error-msg" id="dateErrorMsg">
-											<i data-lucide="alert-circle" style="width:12px;height:12px;vertical-align:middle;margin-right:3px;"></i>
+											<i data-lucide="alert-circle"
+												style="width:12px;height:12px;vertical-align:middle;margin-right:3px;"></i>
 											Meeting date cannot be in the past.
 										</span>
 									</div>
@@ -1055,11 +1075,12 @@
 									<div class="form-group">
 										<label>Time <span>*</span></label>
 										<div class="input-wrap">
-											<input type="time" th:field="*{meetingTime}"
-												id="meetingTimeInput" required onchange="onDateTimeChange()">
+											<input type="time" th:field="*{meetingTime}" id="meetingTimeInput" required
+												onchange="onDateTimeChange()">
 										</div>
 										<span class="datetime-error-msg" id="timeErrorMsg">
-											<i data-lucide="alert-circle" style="width:12px;height:12px;vertical-align:middle;margin-right:3px;"></i>
+											<i data-lucide="alert-circle"
+												style="width:12px;height:12px;vertical-align:middle;margin-right:3px;"></i>
 											Meeting time has already passed for today.
 										</span>
 									</div>
@@ -1237,52 +1258,56 @@
 										<span class="status-badge badge-hybrid"
 											th:if="${m.meetingType == 'HYBRID'}">Hybrid</span>
 									</td>
-								<td>
-									<div class="participants-cell">
-										<button type="button" class="btn-participants"
-											th:if="${m.participants != null and !#strings.isEmpty(m.participants)}"
-											th:attr="data-participants=${m.participants}"
-											onclick="openParticipantsModal(this)">
-											<i data-lucide="users"></i>
-											View Participants
-										</button>
-										<span th:if="${m.participants == null or #strings.isEmpty(m.participants)}">—</span>
-									</div>
-								</td>
-								<td>
-									<th:block th:with="
+									<td>
+										<div class="participants-cell">
+											<button type="button" class="btn-participants"
+												th:if="${m.participants != null and !#strings.isEmpty(m.participants)}"
+												th:attr="data-participants=${m.participants}"
+												onclick="openParticipantsModal(this)">
+												<i data-lucide="users"></i>
+												View Participants
+											</button>
+											<span
+												th:if="${m.participants == null or #strings.isEmpty(m.participants)}">—</span>
+										</div>
+									</td>
+									<td>
+										<th:block
+											th:with="
 										isToday=${m.meetingDate != null and m.meetingDate.equals(T(java.time.LocalDate).now())},
 										hasStarted=${m.meetingTime != null and !m.meetingTime.isAfter(T(java.time.LocalTime).now())},
 										hasUrl=${m.location != null and (#strings.startsWith(m.location,'http://') or #strings.startsWith(m.location,'https://'))}">
-										<a th:if="${isToday and hasStarted and hasUrl}"
-										   th:href="${m.location}" target="_blank" rel="noopener noreferrer"
-										   class="btn-join">
-											<i data-lucide="video"></i> Join
-										</a>
-										<span th:if="${isToday and hasStarted and !hasUrl}"
-										      class="btn-join-disabled"
-										      th:title="${m.location ?: 'No link provided'}">
-											<i data-lucide="map-pin"></i>
-											<span th:text="${m.location != null and !#strings.isEmpty(m.location)} ? 'In Person' : 'No Link'">No Link</span>
-										</span>
-										<span th:if="${!isToday or !hasStarted}"
-										      style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:8px;font-size:11px;font-weight:600;background:#fef3c7;color:#92400e;white-space:nowrap;">
-											<i data-lucide="clock" style="width:12px;height:12px;"></i>
-											<span th:text="${isToday} ? 'Starting Soon' : 'Scheduled'">Scheduled</span>
-										</span>
-									</th:block>
-								</td>
-								<td>
-									<div class="action-btns">
-										<a th:href="@{/hr/meetings/edit/{id}(id=${m.id})}" class="btn-action edit">
-											<i data-lucide="pencil"></i> Edit
-										</a>
-										<button type="button" class="btn-action delete" th:data-id="${m.id}"
-											th:data-title="${m.title}" onclick="openDeleteModal(this)">
-											<i data-lucide="trash-2"></i> Delete
-										</button>
-									</div>
-								</td>
+											<a th:if="${isToday and hasStarted and hasUrl}" th:href="${m.location}"
+												target="_blank" rel="noopener noreferrer" class="btn-join">
+												<i data-lucide="video"></i> Join
+											</a>
+											<span th:if="${isToday and hasStarted and !hasUrl}"
+												class="btn-join-disabled"
+												th:title="${m.location ?: 'No link provided'}">
+												<i data-lucide="map-pin"></i>
+												<span
+													th:text="${m.location != null and !#strings.isEmpty(m.location)} ? 'In Person' : 'No Link'">No
+													Link</span>
+											</span>
+											<span th:if="${!isToday or !hasStarted}"
+												style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:8px;font-size:11px;font-weight:600;background:#fef3c7;color:#92400e;white-space:nowrap;">
+												<i data-lucide="clock" style="width:12px;height:12px;"></i>
+												<span
+													th:text="${isToday} ? 'Starting Soon' : 'Scheduled'">Scheduled</span>
+											</span>
+										</th:block>
+									</td>
+									<td>
+										<div class="action-btns">
+											<a th:href="@{/hr/meetings/edit/{id}(id=${m.id})}" class="btn-action edit">
+												<i data-lucide="pencil"></i> Edit
+											</a>
+											<button type="button" class="btn-action delete" th:data-id="${m.id}"
+												th:data-title="${m.title}" onclick="openDeleteModal(this)">
+												<i data-lucide="trash-2"></i> Delete
+											</button>
+										</div>
+									</td>
 								</tr>
 								<tr th:if="${upcomingMeetings == null or #lists.isEmpty(upcomingMeetings)}">
 									<td colspan="7">
@@ -1305,33 +1330,75 @@
 					<div class="card-header">
 						<div>
 							<h2>Past Meetings / History</h2>
-							<p th:text="${pastMeetings != null} ? (${#lists.size(pastMeetings)} + ' meeting(s)') : '0 meeting(s)'">0 meeting(s)</p>
+							<p
+								th:text="${pastMeetings != null} ? (${#lists.size(pastMeetings)} + ' meeting(s)') : '0 meeting(s)'">
+								0 meeting(s)</p>
 						</div>
-						<div class="card-header-icon"><i data-lucide="history" style="width:18px;height:18px;"></i></div>
+						<div class="card-header-icon"><i data-lucide="history" style="width:18px;height:18px;"></i>
+						</div>
 					</div>
 					<div class="table-wrap">
 						<table id="historyTable">
-							<thead><tr><th>#</th><th>Title</th><th>Date</th><th>Time</th><th>Type</th><th>Participants</th></tr></thead>
+							<thead>
+								<tr>
+									<th>#</th>
+									<th>Title</th>
+									<th>Date</th>
+									<th>Time</th>
+									<th>Type</th>
+									<th>Participants</th>
+								</tr>
+							</thead>
 							<tbody>
 								<tr th:each="m, stat : ${pastMeetings}">
 									<td style="color:#9ca3af;font-weight:600;" th:text="${stat.count}">1</td>
-									<td><div style="font-weight:600;font-size:13px;color:#163647;" th:text="${m.title}">Title</div></td>
-									<td><div style="font-size:12px;font-weight:600;color:#4b6a7a;" th:text="${#temporals.format(m.meetingDate, 'dd MMM yyyy')}">Date</div></td>
-									<td><div style="font-size:11px;color:#9ca3af;margin-top:2px;" th:text="${m.meetingTime != null} ? ${#strings.substring(m.meetingTime.toString(),0,5)} : '—'">Time</div></td>
-									<td><span class="status-badge badge-online" th:if="${m.meetingType == 'ONLINE'}">Online</span><span class="status-badge badge-inperson" th:if="${m.meetingType == 'IN_PERSON'}">In Person</span><span class="status-badge badge-hybrid" th:if="${m.meetingType == 'HYBRID'}">Hybrid</span></td>
 									<td>
-										<th:block th:if="${m.participants != null and !#strings.isEmpty(m.participants)}">
+										<div style="font-weight:600;font-size:13px;color:#163647;" th:text="${m.title}">
+											Title</div>
+									</td>
+									<td>
+										<div style="font-size:12px;font-weight:600;color:#4b6a7a;"
+											th:text="${#temporals.format(m.meetingDate, 'dd MMM yyyy')}">Date</div>
+									</td>
+									<td>
+										<div style="font-size:11px;color:#9ca3af;margin-top:2px;"
+											th:text="${m.meetingTime != null} ? ${#strings.substring(m.meetingTime.toString(),0,5)} : '—'">
+											Time</div>
+									</td>
+									<td><span class="status-badge badge-online"
+											th:if="${m.meetingType == 'ONLINE'}">Online</span><span
+											class="status-badge badge-inperson"
+											th:if="${m.meetingType == 'IN_PERSON'}">In Person</span><span
+											class="status-badge badge-hybrid"
+											th:if="${m.meetingType == 'HYBRID'}">Hybrid</span></td>
+									<td>
+										<th:block
+											th:if="${m.participants != null and !#strings.isEmpty(m.participants)}">
 											<th:block th:with="parts=${#strings.arraySplit(m.participants, ',')}">
 												<div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px;">
-													<span th:each="p, iter : ${parts}" th:if="${iter.index < 2}" style="display:inline-flex; align-items:center; padding:4px 8px; border-radius:999px; background:#eef6ff; color:#1d4ed8; font-size:12px; font-weight:600;">[[${p.trim()}]]</span>
-													<button th:if="${#arrays.length(parts) > 2}" type="button" style="border:none; background:none; color:#2563eb; font-size:12px; font-weight:600; cursor:pointer; padding:0;" th:attr="data-participants=${m.participants}" onclick="openParticipantsModal(this)">View all</button>
+													<span th:each="p, iter : ${parts}" th:if="${iter.index < 2}"
+														style="display:inline-flex; align-items:center; padding:4px 8px; border-radius:999px; background:#eef6ff; color:#1d4ed8; font-size:12px; font-weight:600;">[[${p.trim()}]]</span>
+													<button th:if="${#arrays.length(parts) > 2}" type="button"
+														style="border:none; background:none; color:#2563eb; font-size:12px; font-weight:600; cursor:pointer; padding:0;"
+														th:attr="data-participants=${m.participants}"
+														onclick="openParticipantsModal(this)">View all</button>
 												</div>
 											</th:block>
 										</th:block>
-										<span th:unless="${m.participants != null and !#strings.isEmpty(m.participants)}" style="font-size:12px;color:#6b7280;">—</span>
+										<span
+											th:unless="${m.participants != null and !#strings.isEmpty(m.participants)}"
+											style="font-size:12px;color:#6b7280;">—</span>
 									</td>
 								</tr>
-								<tr th:if="${pastMeetings == null or #lists.isEmpty(pastMeetings)}"><td colspan="6"><div class="empty-state"><i data-lucide="history" style="width:48px;height:48px;opacity:.3;"></i><h3>No Past Meetings</h3><p>Completed meetings will appear here.</p></div></td></tr>
+								<tr th:if="${pastMeetings == null or #lists.isEmpty(pastMeetings)}">
+									<td colspan="6">
+										<div class="empty-state"><i data-lucide="history"
+												style="width:48px;height:48px;opacity:.3;"></i>
+											<h3>No Past Meetings</h3>
+											<p>Completed meetings will appear here.</p>
+										</div>
+									</td>
+								</tr>
 							</tbody>
 						</table>
 					</div>
@@ -1369,7 +1436,9 @@
 					<h3 class="modal-title" style="margin:0;text-align:left;">Meeting Participants</h3>
 					<p style="font-size:12px;color:#6b7280;margin:4px 0 0;" id="participantsModalCount"></p>
 				</div>
-				<button type="button" style="border:none;background:#f3f8fb;color:#6b7280;font-size:18px;cursor:pointer;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;" onclick="closeParticipantsModal()">&times;</button>
+				<button type="button"
+					style="border:none;background:#f3f8fb;color:#6b7280;font-size:18px;cursor:pointer;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"
+					onclick="closeParticipantsModal()">&times;</button>
 			</div>
 			<div class="participants-modal-list" id="participantsModalList">No participants</div>
 			<div class="modal-actions" style="margin-top:20px;justify-content:flex-end;">
@@ -1452,8 +1521,8 @@
 				var timePast = isToday && timeInput.value && timeInput.value < getCurrentTimeString();
 				timeInput.classList.toggle('input-error', timePast);
 				timeErr.classList.toggle('visible', timePast);
-				if (isToday) { timeInput.setAttribute('min', getCurrentTimeString()); }
-				else { timeInput.removeAttribute('min'); timeInput.classList.remove('input-error'); timeErr.classList.remove('visible'); }
+				if (isToday) {timeInput.setAttribute('min', getCurrentTimeString());}
+				else {timeInput.removeAttribute('min'); timeInput.classList.remove('input-error'); timeErr.classList.remove('visible');}
 			}
 		}
 
@@ -1549,25 +1618,25 @@
 			document.body.style.overflow = '';
 		}
 
-function escapeHtml(text) {
-				return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-			}
+		function escapeHtml(text) {
+			return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+		}
 
-			function openParticipantsModal(btn) {
-				var raw = btn.getAttribute('data-participants') || '';
-				var list = document.getElementById('participantsModalList');
-				var countEl = document.getElementById('participantsModalCount');
-				var items = raw.split(',').map(function(item) { return item.trim(); }).filter(function(item) { return item.length > 0; });
-				if (items.length === 0) {
-					list.innerHTML = '<div style="color:#64748b;text-align:center;padding:16px;">No participants</div>';
-					if (countEl) countEl.textContent = '';
-				} else {
-					if (countEl) countEl.textContent = items.length + ' participant' + (items.length !== 1 ? 's' : '');
-					list.innerHTML = items.map(function(item) {
-						var initial = item.charAt(0).toUpperCase();
-						return '<div class="pm-item"><div class="pm-avatar">' + escapeHtml(initial) + '</div><div class="pm-name">' + escapeHtml(item) + '</div></div>';
-					}).join('');
-				}
+		function openParticipantsModal(btn) {
+			var raw = btn.getAttribute('data-participants') || '';
+			var list = document.getElementById('participantsModalList');
+			var countEl = document.getElementById('participantsModalCount');
+			var items = raw.split(',').map(function (item) {return item.trim();}).filter(function (item) {return item.length > 0;});
+			if (items.length === 0) {
+				list.innerHTML = '<div style="color:#64748b;text-align:center;padding:16px;">No participants</div>';
+				if (countEl) countEl.textContent = '';
+			} else {
+				if (countEl) countEl.textContent = items.length + ' participant' + (items.length !== 1 ? 's' : '');
+				list.innerHTML = items.map(function (item) {
+					var initial = item.charAt(0).toUpperCase();
+					return '<div class="pm-item"><div class="pm-avatar">' + escapeHtml(initial) + '</div><div class="pm-name">' + escapeHtml(item) + '</div></div>';
+				}).join('');
+			}
 			document.getElementById('participantsModalOverlay').classList.remove('hidden');
 			document.body.style.overflow = 'hidden';
 		}
@@ -1580,7 +1649,7 @@ function escapeHtml(text) {
 		if (delOverlay) delOverlay.addEventListener('click', function (e) {if (e.target === delOverlay) closeDeleteModal();});
 		var participantsOverlay = document.getElementById('participantsModalOverlay');
 		if (participantsOverlay) participantsOverlay.addEventListener('click', function (e) {if (e.target === participantsOverlay) closeParticipantsModal();});
-		document.addEventListener('keydown', function (e) {if (e.key === 'Escape') {closeDeleteModal(); closeParticipantsModal();}});
+		document.addEventListener('keydown', function (e) {if (e.key === 'Escape') {closeDeleteModal(); closeParticipantsModal();} });
 
 		/* ── Toast auto-dismiss ── */
 		document.querySelectorAll('.toast').forEach(function (t) {

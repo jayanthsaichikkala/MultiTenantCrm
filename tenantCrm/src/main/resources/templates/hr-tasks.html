@@ -2,137 +2,164 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HR — Tasks</title>
-    <link rel="stylesheet" th:href="@{/hr.css}">
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>HR — Tasks</title>
+	<link rel="stylesheet" th:href="@{/hr.css}">
+	<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
 
 <body>
-<div class="mobile-topbar"><button class="hamburger" id="hamburgerBtn"><span></span><span></span><span></span></button><span class="mobile-title">HR Tasks</span></div>
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
-<div class="sidebar" id="sidebar">
-    <div class="sidebar-logo"><div class="logo-icon"><i data-lucide="users"></i></div><h2>HR</h2></div>
-    <div class="profile-box">
-        <div class="profile-avatar" th:text="${#strings.substring(adminName ?: 'H', 0, 1).toUpperCase()}">H</div>
-        <h3 th:text="${adminName} ?: 'HR User'">HR User</h3>
-        <p th:text="${adminRole} ?: 'HR'">HR</p>
-    </div>
-    <ul class="sidebar-menu">
-        <li><a th:href="@{/hr/dashboard}"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
-        <li><a th:href="@{/hr/employees}"><i data-lucide="users"></i> Employees</a></li>
-        <li class="active"><a th:href="@{/hr/tasks}"><i data-lucide="check-square"></i> Tasks</a></li>
-        <li><a th:href="@{/hr/recruitment}"><i data-lucide="briefcase"></i> Recruitment</a></li>
-        <li><a th:href="@{/hr/attendance}"><i data-lucide="calendar-check"></i> Attendance</a></li>
-        <li><a th:href="@{/hr/leaves}"><i data-lucide="file-text"></i> Leave Requests</a></li>
-        <li><a th:href="@{/hr/teams}"><i data-lucide="users-round"></i> Teams</a></li>
-        <li><a th:href="@{/hr/meetings}"><i data-lucide="calendar-clock"></i> Meetings</a></li>
-        <li><a th:href="@{/hr/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
-        <li><a th:href="@{/hr/reports}"><i data-lucide="file-bar-chart"></i> Reports</a></li>
-        <li><a th:href="@{/hr/settings}"><i data-lucide="settings"></i> Settings</a></li>
-    </ul>
-    <a href="#" data-logout style="text-decoration:none;"><button class="logout-btn"><i data-lucide="log-out"></i> Logout</button></a>
-</div>
+	<div class="mobile-topbar"><button class="hamburger"
+			id="hamburgerBtn"><span></span><span></span><span></span></button><span class="mobile-title">HR Tasks</span>
+	</div>
+	<div class="sidebar-overlay" id="sidebarOverlay"></div>
+	<div class="sidebar" id="sidebar">
+		<div class="sidebar-logo">
+			<div class="logo-icon"><i data-lucide="users"></i></div>
+			<h2>HR</h2>
+		</div>
+		<div class="profile-box">
+			<div class="profile-avatar" th:text="${#strings.substring(adminName ?: 'H', 0, 1).toUpperCase()}">H</div>
+			<h3 th:text="${adminName} ?: 'HR User'">HR User</h3>
+			<p th:text="${adminRole} ?: 'HR'">HR</p>
+		</div>
+		<ul class="sidebar-menu">
+			<li><a th:href="@{/hr/dashboard}"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
+			<li><a th:href="@{/hr/employees}"><i data-lucide="users"></i> Employees</a></li>
+			<li><a th:href="@{/hr/recruitment}"><i data-lucide="briefcase"></i> Recruitment</a></li>
+			<li><a th:href="@{/hr/attendance}"><i data-lucide="calendar-check"></i> Attendance</a></li>
+			<li><a th:href="@{/hr/leaves}"><i data-lucide="file-text"></i> Leave Requests</a></li>
+			<li><a th:href="@{/hr/teams}"><i data-lucide="users-round"></i> Teams</a></li>
+			<li><a th:href="@{/hr/tasks}"><i data-lucide="check-square"></i> Tasks</a></li>
 
-<div class="main-wrapper">
-    <div class="topbar">
-        <h1>Tasks</h1>
-        <div class="topbar-right">
-            <div class="search-box"><input type="text" id="globalSearch" placeholder="Search tasks…"></div>
-            <div class="user-badge" th:text="${#strings.substring(adminName ?: 'H', 0, 1).toUpperCase()}">H</div>
-        </div>
-    </div>
+			<li><a th:href="@{/hr/meetings}"><i data-lucide="calendar-clock"></i> Meetings</a></li>
+			<li><a th:href="@{/hr/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
+			<li><a th:href="@{/hr/reports}"><i data-lucide="file-bar-chart"></i> Reports</a></li>
+			<li><a th:href="@{/hr/settings}"><i data-lucide="settings"></i> Settings</a></li>
+		</ul>
+		<a href="#" data-logout style="text-decoration:none;"><button class="logout-btn"><i data-lucide="log-out"></i>
+				Logout</button></a>
+	</div>
 
-    <div class="page-content">
-        <div class="toast success" th:if="${successMessage}" th:text="${successMessage}"></div>
-        <div class="toast error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+	<div class="main-wrapper">
+		<div class="topbar">
+			<h1>Tasks</h1>
+			<div class="topbar-right">
+				<div class="search-box"><input type="text" id="globalSearch" placeholder="Search tasks…"></div>
+				<div class="user-badge" th:text="${#strings.substring(adminName ?: 'H', 0, 1).toUpperCase()}">H</div>
+			</div>
+		</div>
 
-        <div class="stats-row task-dashboard-stats">
-            <div class="stat-card">
-                <div class="stat-icon orange"><i data-lucide="list-checks"></i></div>
-                <div class="stat-info"><h3 th:text="${totalTasks} ?: '0'">0</h3><p>Total Tasks</p></div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon green"><i data-lucide="check-circle-2"></i></div>
-                <div class="stat-info"><h3 th:text="${doneTasks} ?: '0'">0</h3><p>Completed</p></div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon purple"><i data-lucide="clock"></i></div>
-                <div class="stat-info"><h3 th:text="${pendingTaskCount} ?: '0'">0</h3><p>Pending / In Progress</p></div>
-            </div>
-        </div>
+		<div class="page-content">
+			<div class="toast success" th:if="${successMessage}" th:text="${successMessage}"></div>
+			<div class="toast error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
-        <div class="card">
-            <div class="card-header">
-                <div>
-                    <h2>All Tasks</h2>
-                    <p th:text="${totalTasks} + ' task(s)'">0 task(s)</p>
-                </div>
-            </div>
-            <div class="table-wrap">
-                <table id="taskTable">
-                    <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Title</th>
-                        <th>Priority</th>
-                        <th>Status</th>
-                        <th>Due Date</th>
-                        <th>Assigned To</th>
-                        <th>Created By</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr th:each="task, stat : ${tasks}">
-                        <td th:text="${stat.count}">1</td>
-                        <td>
-                            <div style="font-weight:700;" th:text="${task.title}">Task</div>
-                            <div style="font-size:12px;color:#6b7280;" th:text="${task.description} ?: 'No description'">Description</div>
-                        </td>
-                        <td>
-                            <span class="priority-badge high" th:if="${task.priority == 'high' or task.priority == 'High'}">High</span>
-                            <span class="priority-badge medium" th:if="${task.priority == 'medium' or task.priority == 'Medium'}">Medium</span>
-                            <span class="priority-badge low" th:if="${task.priority == 'low' or task.priority == 'Low'}">Low</span>
-                        </td>
-                        <td>
-                            <span class="status-badge active" th:if="${task.status == 'done'}">Done</span>
-                            <span class="status-badge" style="background:#fce9d8;color:#b45309;" th:if="${task.status == 'in-progress'}">In Progress</span>
-                            <span class="status-badge inactive" th:if="${task.status == 'pending'}">Pending</span>
-                        </td>
-                        <td th:text="${task.dueDate} ?: '—'">—</td>
-                        <td th:text="${task.assignedTo} ?: 'Unassigned'">Unassigned</td>
-                        <td th:text="${task.createdBy} ?: '—'">—</td>
-                    </tr>
-                    <tr th:if="${tasks == null or #lists.isEmpty(tasks)}">
-                        <td colspan="7">
-                            <div class="empty-state"><i data-lucide="check-square" style="width:48px;height:48px;opacity:.3;"></i><h3>No Tasks Yet</h3><p>There are no tasks in your tenant at the moment.</p></div>
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
+			<div class="stats-row task-dashboard-stats">
+				<div class="stat-card">
+					<div class="stat-icon orange"><i data-lucide="list-checks"></i></div>
+					<div class="stat-info">
+						<h3 th:text="${totalTasks} ?: '0'">0</h3>
+						<p>Total Tasks</p>
+					</div>
+				</div>
+				<div class="stat-card">
+					<div class="stat-icon green"><i data-lucide="check-circle-2"></i></div>
+					<div class="stat-info">
+						<h3 th:text="${doneTasks} ?: '0'">0</h3>
+						<p>Completed</p>
+					</div>
+				</div>
+				<div class="stat-card">
+					<div class="stat-icon purple"><i data-lucide="clock"></i></div>
+					<div class="stat-info">
+						<h3 th:text="${pendingTaskCount} ?: '0'">0</h3>
+						<p>Pending / In Progress</p>
+					</div>
+				</div>
+			</div>
 
-<script>
-    var hamburger = document.getElementById('hamburgerBtn'), sidebar = document.getElementById('sidebar'), overlay = document.getElementById('sidebarOverlay');
-    function openSidebar(){sidebar.classList.add('open');overlay.classList.add('active');document.body.style.overflow='hidden';}
-    function closeSidebar(){sidebar.classList.remove('open');overlay.classList.remove('active');document.body.style.overflow='';}
-    if(hamburger) hamburger.addEventListener('click', openSidebar);
-    if(overlay) overlay.addEventListener('click', closeSidebar);
-    var gs = document.getElementById('globalSearch');
-    if(gs) gs.addEventListener('input', function(){
-        var q = this.value.toLowerCase();
-        document.querySelectorAll('#taskTable tbody tr').forEach(function(r){
-            if(r.querySelector('td[colspan="6"]')) return;
-            r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none';
-        });
-    });
-    document.querySelectorAll('.toast').forEach(function(t){requestAnimationFrame(function(){t.classList.add('toast-show');}); setTimeout(function(){t.classList.remove('toast-show'); t.classList.add('toast-hide'); t.addEventListener('transitionend', function(){t.remove();}, {once:true});}, 3500);});
-    lucide.createIcons();
-</script>
-<script th:src="@{/auth.js}"></script>
+			<div class="card">
+				<div class="card-header">
+					<div>
+						<h2>All Tasks</h2>
+						<p th:text="${totalTasks} + ' task(s)'">0 task(s)</p>
+					</div>
+				</div>
+				<div class="table-wrap">
+					<table id="taskTable">
+						<thead>
+							<tr>
+								<th>#</th>
+								<th>Title</th>
+								<th>Priority</th>
+								<th>Status</th>
+								<th>Due Date</th>
+								<th>Assigned To</th>
+								<th>Created By</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr th:each="task, stat : ${tasks}">
+								<td th:text="${stat.count}">1</td>
+								<td>
+									<div style="font-weight:700;" th:text="${task.title}">Task</div>
+									<div style="font-size:12px;color:#6b7280;"
+										th:text="${task.description} ?: 'No description'">Description</div>
+								</td>
+								<td>
+									<span class="priority-badge high"
+										th:if="${task.priority == 'high' or task.priority == 'High'}">High</span>
+									<span class="priority-badge medium"
+										th:if="${task.priority == 'medium' or task.priority == 'Medium'}">Medium</span>
+									<span class="priority-badge low"
+										th:if="${task.priority == 'low' or task.priority == 'Low'}">Low</span>
+								</td>
+								<td>
+									<span class="status-badge active" th:if="${task.status == 'done'}">Done</span>
+									<span class="status-badge" style="background:#fce9d8;color:#b45309;"
+										th:if="${task.status == 'in-progress'}">In Progress</span>
+									<span class="status-badge inactive"
+										th:if="${task.status == 'pending'}">Pending</span>
+								</td>
+								<td th:text="${task.dueDate} ?: '—'">—</td>
+								<td th:text="${task.assignedTo} ?: 'Unassigned'">Unassigned</td>
+								<td th:text="${task.createdBy} ?: '—'">—</td>
+							</tr>
+							<tr th:if="${tasks == null or #lists.isEmpty(tasks)}">
+								<td colspan="7">
+									<div class="empty-state"><i data-lucide="check-square"
+											style="width:48px;height:48px;opacity:.3;"></i>
+										<h3>No Tasks Yet</h3>
+										<p>There are no tasks in your tenant at the moment.</p>
+									</div>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		var hamburger = document.getElementById('hamburgerBtn'), sidebar = document.getElementById('sidebar'), overlay = document.getElementById('sidebarOverlay');
+		function openSidebar() {sidebar.classList.add('open'); overlay.classList.add('active'); document.body.style.overflow = 'hidden';}
+		function closeSidebar() {sidebar.classList.remove('open'); overlay.classList.remove('active'); document.body.style.overflow = '';}
+		if (hamburger) hamburger.addEventListener('click', openSidebar);
+		if (overlay) overlay.addEventListener('click', closeSidebar);
+		var gs = document.getElementById('globalSearch');
+		if (gs) gs.addEventListener('input', function () {
+			var q = this.value.toLowerCase();
+			document.querySelectorAll('#taskTable tbody tr').forEach(function (r) {
+				if (r.querySelector('td[colspan="6"]')) return;
+				r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none';
+			});
+		});
+		document.querySelectorAll('.toast').forEach(function (t) {requestAnimationFrame(function () {t.classList.add('toast-show');}); setTimeout(function () {t.classList.remove('toast-show'); t.classList.add('toast-hide'); t.addEventListener('transitionend', function () {t.remove();}, {once: true});}, 3500);});
+		lucide.createIcons();
+	</script>
+	<script th:src="@{/auth.js}"></script>
 </body>
+
 </html>
