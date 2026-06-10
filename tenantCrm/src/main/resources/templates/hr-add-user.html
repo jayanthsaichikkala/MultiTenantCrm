@@ -213,6 +213,10 @@
 				</div>
 			</div>
 			<div class="topbar-right">
+				<button onclick="document.getElementById('bulkUploadModal').style.display='flex'"
+					style="height:46px;padding:0 18px;font-size:14px;display:inline-flex;align-items:center;gap:6px;background:#f0f7fb;color:#17455e;border:1.5px solid #c3d8e8;border-radius:10px;cursor:pointer;font-weight:600;font-family:'Poppins',sans-serif;">
+					<i data-lucide="upload" style="width:16px;height:16px;"></i> Bulk Upload
+				</button>
 				<div class="user-badge" th:text="${#strings.substring(adminName ?: 'H', 0, 1).toUpperCase()}">H</div>
 			</div>
 		</div>
@@ -221,6 +225,24 @@
 			<!-- Flash messages -->
 			<div class="toast success" th:if="${successMessage}" th:text="${successMessage}"></div>
 			<div class="toast error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+			<!-- Bulk upload error panel -->
+			<div th:if="${bulkErrors}" style="background:#fff5f5;border:1.5px solid #fca5a5;border-radius:12px;padding:18px 20px;margin-bottom:20px;">
+				<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+					<div style="width:34px;height:34px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+						<i data-lucide="alert-circle" style="width:18px;height:18px;color:#dc2626;"></i>
+					</div>
+					<div>
+						<p style="margin:0;font-size:14px;font-weight:700;color:#991b1b;">Upload Rejected — No employees were saved</p>
+						<p style="margin:2px 0 0;font-size:12px;color:#b91c1c;">Fix all the errors below and re-upload the file.</p>
+					</div>
+				</div>
+				<ul style="margin:0;padding-left:18px;list-style:disc;">
+					<li th:each="err : ${bulkErrors}"
+						th:text="${err}"
+						style="font-size:13px;color:#7f1d1d;padding:3px 0;border-bottom:1px solid #fecaca;"></li>
+				</ul>
+			</div>
 
 			<div class="card au-form-card">
 				<div class="card-header">
@@ -293,6 +315,66 @@
 					</div>
 				</form>
 			</div>
+
+		</div>
+	</div>
+
+	<!-- ── Bulk Upload Modal ── -->
+	<div id="bulkUploadModal"
+		style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;align-items:center;justify-content:center;">
+		<div style="background:#fff;border-radius:16px;width:100%;max-width:480px;padding:32px;box-shadow:0 8px 40px rgba(0,0,0,.18);position:relative;margin:16px;">
+
+			<!-- Close -->
+			<button onclick="document.getElementById('bulkUploadModal').style.display='none'"
+				style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280;line-height:1;">&#x2715;</button>
+
+			<!-- Header -->
+			<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+				<div style="width:46px;height:46px;border-radius:12px;background:#e6f2fa;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+					<i data-lucide="file-spreadsheet" style="width:22px;height:22px;color:#17455e;"></i>
+				</div>
+				<div>
+					<h2 style="margin:0 0 3px;font-size:17px;font-weight:700;color:#163647;">Bulk Upload Employees</h2>
+					<p style="margin:0;font-size:12px;color:#6b7280;">Import multiple members from an Excel file</p>
+				</div>
+			</div>
+
+			<!-- Format guide -->
+			<div style="background:#f5f9fb;border:1px solid #dde8ef;border-radius:10px;padding:12px 14px;margin-bottom:18px;font-size:12.5px;color:#374151;line-height:1.8;">
+				<strong style="color:#163647;">Required columns</strong> (row 1 = header, skipped)<br>
+				<code style="background:#e0edf5;padding:2px 7px;border-radius:4px;font-size:11.5px;color:#17455e;">A: username &nbsp; B: email &nbsp; C: password &nbsp; D: role</code><br><br>
+				<strong style="color:#163647;">Roles:</strong>
+				<code style="background:#e0edf5;padding:2px 7px;border-radius:4px;font-size:11.5px;color:#17455e;">EMPLOYEE</code>
+				<code style="background:#e0edf5;padding:2px 7px;border-radius:4px;font-size:11.5px;color:#17455e;">MANAGER</code>
+				<code style="background:#e0edf5;padding:2px 7px;border-radius:4px;font-size:11.5px;color:#17455e;">HR</code><br>
+				<strong style="color:#163647;">Email:</strong>
+				<code style="background:#e0edf5;padding:2px 7px;border-radius:4px;font-size:11.5px;color:#17455e;">name.&lt;tenant&gt;@crm.com</code>
+			</div>
+
+			<!-- Upload form -->
+			<form th:action="@{/hr/bulk-upload}" method="post" enctype="multipart/form-data">
+				<div style="position:relative;border:2px dashed #c3d8e8;border-radius:10px;padding:24px 16px;text-align:center;cursor:pointer;transition:border-color .2s;background:#fafcfe;"
+					id="bulkDropZone">
+					<input type="file" name="file" id="bulkFileInput" accept=".xlsx,.xls" required
+						style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;"
+						onchange="updateBulkFileLabel(this)">
+					<div style="pointer-events:none;">
+						<i data-lucide="upload-cloud" style="width:34px;height:34px;color:#17455e;margin-bottom:6px;"></i>
+						<p style="margin:0;font-size:13px;color:#6b7280;">Drop file here or <span style="color:#17455e;font-weight:600;">browse</span></p>
+						<p id="bulkFileName" style="margin:5px 0 0;font-size:12px;color:#17455e;font-weight:600;display:none;"></p>
+					</div>
+				</div>
+				<div style="display:flex;gap:10px;margin-top:18px;">
+					<button type="button" onclick="document.getElementById('bulkUploadModal').style.display='none'"
+						style="flex:1;height:44px;border:1.5px solid #c3d8e8;background:#f0f7fb;color:#17455e;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;">
+						Cancel
+					</button>
+					<button type="submit"
+						style="flex:2;height:44px;background:#17455e;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:'Poppins',sans-serif;">
+						<i data-lucide="upload" style="width:15px;height:15px;"></i> Upload &amp; Import
+					</button>
+				</div>
+			</form>
 		</div>
 	</div>
 
@@ -306,6 +388,11 @@
 		if (hamburger) hamburger.addEventListener('click', openSidebar);
 		if (overlay) overlay.addEventListener('click', closeSidebar);
 
+		// Close bulk modal on backdrop click
+		document.getElementById('bulkUploadModal').addEventListener('click', function(e) {
+			if (e.target === this) this.style.display = 'none';
+		});
+
 		// Password toggle
 		function togglePassword(fieldId, iconId) {
 			var f = document.getElementById(fieldId);
@@ -314,6 +401,16 @@
 			f.type = f.type === 'password' ? 'text' : 'password';
 			if (i) i.setAttribute('data-lucide', f.type === 'password' ? 'eye' : 'eye-off');
 			lucide.createIcons();
+		}
+
+		// Bulk file label
+		function updateBulkFileLabel(input) {
+			var label = document.getElementById('bulkFileName');
+			if (input.files && input.files.length > 0) {
+				label.textContent = input.files[0].name;
+				label.style.display = 'block';
+				document.getElementById('bulkDropZone').style.borderColor = '#17455e';
+			}
 		}
 
 		// Auto-dismiss toasts

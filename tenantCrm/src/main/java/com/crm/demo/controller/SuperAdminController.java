@@ -150,7 +150,7 @@ public class SuperAdminController {
             ra.addFlashAttribute("errorMessage", "Passwords do not match.");
             return "redirect:/superadmin/add-admin";
         }
-        if (userRepository.findByUsernameOrEmail(username, email) != null) {
+        if (userRepository.existsByUsernameOrEmail(username, email)) {
             ra.addFlashAttribute("errorMessage", "Username or email already exists.");
             return "redirect:/superadmin/add-admin";
         }
@@ -194,7 +194,7 @@ public class SuperAdminController {
         }
 
         // Check duplicate username/email (excluding current user)
-        User existing = userRepository.findByUsernameOrEmail(username, email);
+        User existing = userRepository.findByUsernameOrEmail(username, email).orElse(null);
         if (existing != null && !existing.getId().equals(id)) {
             ra.addFlashAttribute("errorMessage", "Username or email already in use.");
             return "redirect:/superadmin/edit-admin/" + id;

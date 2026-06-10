@@ -1,5 +1,6 @@
 package com.crm.demo.controller;
 
+import java.io.InputStream;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -10,6 +11,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.web.multipart.MultipartFile;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -275,7 +284,7 @@ public class HrController {
             return "redirect:/hr/add-user";
         }
 
-        if (userRepository.findByUsernameOrEmail(username, email) != null) {
+        if (userRepository.existsByUsernameOrEmail(username, email)) {
             ra.addFlashAttribute("errorMessage", "Username or email already exists.");
             return "redirect:/hr/add-user";
         }
@@ -289,6 +298,152 @@ public class HrController {
         userRepository.save(user);
         ra.addFlashAttribute("successMessage", "User '" + username + "' added successfully.");
         return "redirect:/hr/employees";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  BULK EMPLOYEE UPLOAD (Excel)
+    //  Expected columns (row 0 = header, skipped):
+    //    A: username  B: email  C: password  D: role
+    //
+    //  STRATEGY: validate ALL rows first — if ANY row has an error, reject
+    //  the entire file and save nothing. Only save when everything is clean.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    @PostMapping("/bulk-upload")
+    public String bulkUpload(@RequestParam("file") MultipartFile file,
+                              HttpServletRequest request,
+                              RedirectAttributes ra) {
+
+        if (file == null || file.isEmpty()) {
+            ra.addFlashAttribute("errorMessage", "Please select an Excel file to upload.");
+            return "redirect:/hr/add-user";
+        }
+
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null ||
+                (!originalFilename.endsWith(".xlsx") && !originalFilename.endsWith(".xls"))) {
+            ra.addFlashAttribute("errorMessage", "Only .xlsx or .xls files are supported.");
+            return "redirect:/hr/add-user";
+        }
+
+        String segment = getTenantSegment(request);
+
+        // ── Phase 1: parse and validate every row, collect all errors ────────
+        List<String> errors = new ArrayList<>();
+        List<User>   toSave = new ArrayList<>();
+
+        try (InputStream is = file.getInputStream();
+             Workbook workbook = new XSSFWorkbook(is)) {
+
+            Sheet sheet = workbook.getSheetAt(0);
+
+            if (sheet.getLastRowNum() < 1) {
+                ra.addFlashAttribute("errorMessage", "The file has no data rows.");
+                return "redirect:/hr/add-user";
+            }
+
+            for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+                Row row = sheet.getRow(rowIndex);
+                if (row == null) continue;
+
+                String username = getCellString(row, 0);
+                String email    = getCellString(row, 1);
+                String password = getCellString(row, 2);
+                String role     = getCellString(row, 3);
+
+                // Skip completely blank rows silently
+                if (username.isBlank() && email.isBlank() && password.isBlank() && role.isBlank()) continue;
+
+                String rowLabel = "Row " + (rowIndex + 1);
+
+                // Missing fields
+                if (username.isBlank()) {
+                    errors.add(rowLabel + ": username is empty.");
+                    continue;
+                }
+                if (email.isBlank()) {
+                    errors.add(rowLabel + " (" + username + "): email is empty.");
+                    continue;
+                }
+                if (password.isBlank()) {
+                    errors.add(rowLabel + " (" + username + "): password is empty.");
+                    continue;
+                }
+                if (role.isBlank()) {
+                    errors.add(rowLabel + " (" + username + "): role is empty.");
+                    continue;
+                }
+
+                // Role check
+                if ("ADMIN".equalsIgnoreCase(role) || "SUPER_ADMIN".equalsIgnoreCase(role)) {
+                    errors.add(rowLabel + " (" + username + "): role '" + role + "' is not allowed. Use EMPLOYEE or MANAGER.");
+                    continue;
+                }
+
+                // Tenant domain check
+                if (segment != null && !segment.isBlank() && !email.contains("." + segment + "@")) {
+                    errors.add(rowLabel + " (" + username + "): email '" + email
+                            + "' does not belong to tenant domain (expected format: name." + segment + "@crm.com).");
+                    continue;
+                }
+
+                // Duplicate check in DB
+                if (userRepository.existsByUsernameOrEmail(username, email)) {
+                    errors.add(rowLabel + " (" + username + "): username or email already exists in the system.");
+                    continue;
+                }
+
+                // Duplicate check within the same file (two rows with same username/email)
+                boolean duplicateInFile = toSave.stream().anyMatch(u ->
+                        u.getUsername().equalsIgnoreCase(username) || u.getEmail().equalsIgnoreCase(email));
+                if (duplicateInFile) {
+                    errors.add(rowLabel + " (" + username + "): username or email is duplicated within this file.");
+                    continue;
+                }
+
+                // Valid — stage for saving
+                User user = new User();
+                user.setUsername(username);
+                user.setEmail(email);
+                user.setPassword(passwordEncoder.encode(password));
+                user.setRole(role.toUpperCase());
+                user.setStatus("active");
+                toSave.add(user);
+            }
+
+        } catch (Exception e) {
+            ra.addFlashAttribute("errorMessage", "Failed to parse file: " + e.getMessage());
+            return "redirect:/hr/add-user";
+        }
+
+        // ── Phase 2: if any errors found, reject everything ──────────────────
+        if (!errors.isEmpty()) {
+            ra.addFlashAttribute("bulkErrors", errors);
+            ra.addFlashAttribute("errorMessage",
+                    "Upload rejected — " + errors.size() + " error(s) found. No employees were saved. Fix the issues and re-upload.");
+            return "redirect:/hr/add-user";
+        }
+
+        // ── Phase 3: all rows valid — save them all ──────────────────────────
+        if (toSave.isEmpty()) {
+            ra.addFlashAttribute("errorMessage", "No valid data rows found in the file.");
+            return "redirect:/hr/add-user";
+        }
+
+        userRepository.saveAll(toSave);
+        ra.addFlashAttribute("successMessage",
+                toSave.size() + " employee(s) imported successfully.");
+        return "redirect:/hr/employees";
+    }
+
+    /** Safely read a cell value as a trimmed String regardless of cell type. */
+    private String getCellString(Row row, int col) {
+        Cell cell = row.getCell(col);
+        if (cell == null) return "";
+        if (cell.getCellType() == CellType.STRING) return cell.getStringCellValue().trim();
+        if (cell.getCellType() == CellType.NUMERIC) return String.valueOf((long) cell.getNumericCellValue()).trim();
+        if (cell.getCellType() == CellType.BOOLEAN) return String.valueOf(cell.getBooleanCellValue()).trim();
+        return "";
     }
 
     @PostMapping("/toggle-user/{id}")
@@ -351,7 +506,7 @@ public class HrController {
         }
 
         // Check duplicate (excluding self)
-        User existing = userRepository.findByUsernameOrEmail(username, email);
+        User existing = userRepository.findByUsernameOrEmail(username, email).orElse(null);
         if (existing != null && !existing.getId().equals(emp.getId())) {
             ra.addFlashAttribute("errorMessage", "Username or email already in use.");
             return "redirect:/hr/edit-employee/" + id;

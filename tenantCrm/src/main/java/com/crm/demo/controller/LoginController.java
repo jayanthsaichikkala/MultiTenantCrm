@@ -43,7 +43,7 @@ public class LoginController {
                     .body(Map.of("error", "Username and password are required."));
         }
 
-        User user = userRepository.findByUsernameOrEmail(username, username);
+        User user = userRepository.findByUsernameOrEmail(username, username).orElse(null);
 
         if (user != null && passwordEncoder.matches(password, user.getPassword())) {
 

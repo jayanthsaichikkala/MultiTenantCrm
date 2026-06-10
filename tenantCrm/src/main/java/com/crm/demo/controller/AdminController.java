@@ -1,9 +1,17 @@
 package com.crm.demo.controller;
 
+import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -11,6 +19,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.crm.demo.model.Meeting;
@@ -207,6 +216,126 @@ public class AdminController {
 	}
 
 	// =========================================================
+	// BULK EMPLOYEE UPLOAD (Excel)
+	//  Expected columns (row 0 = header, skipped):
+	//    A: username  B: email  C: password  D: role
+	//
+	//  Validate ALL rows first — any error rejects the whole file.
+	// =========================================================
+
+	@PostMapping("/bulk-upload")
+	public String bulkUpload(@RequestParam("file") MultipartFile file,
+	                         HttpServletRequest request,
+	                         RedirectAttributes ra) {
+
+		if (file == null || file.isEmpty()) {
+			ra.addFlashAttribute("errorMessage", "Please select an Excel file to upload.");
+			return "redirect:/admin/add-employee";
+		}
+		String originalFilename = file.getOriginalFilename();
+		if (originalFilename == null ||
+				(!originalFilename.endsWith(".xlsx") && !originalFilename.endsWith(".xls"))) {
+			ra.addFlashAttribute("errorMessage", "Only .xlsx or .xls files are supported.");
+			return "redirect:/admin/add-employee";
+		}
+
+		String username = (String) request.getAttribute("loggedInUser");
+		String segment  = getTenantSegment(username);
+
+		List<String> errors = new ArrayList<>();
+		List<User>   toSave = new ArrayList<>();
+
+		try (InputStream is = file.getInputStream();
+		     Workbook workbook = new XSSFWorkbook(is)) {
+
+			Sheet sheet = workbook.getSheetAt(0);
+			if (sheet.getLastRowNum() < 1) {
+				ra.addFlashAttribute("errorMessage", "The file has no data rows.");
+				return "redirect:/admin/add-employee";
+			}
+
+			for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+				Row row = sheet.getRow(rowIndex);
+				if (row == null) continue;
+
+				String uname = getAdminCellString(row, 0);
+				String email  = getAdminCellString(row, 1);
+				String pwd    = getAdminCellString(row, 2);
+				String role   = getAdminCellString(row, 3);
+
+				// Skip fully blank rows
+				if (uname.isBlank() && email.isBlank() && pwd.isBlank() && role.isBlank()) continue;
+
+				String rowLabel = "Row " + (rowIndex + 1);
+
+				if (uname.isBlank()) { errors.add(rowLabel + ": username is empty."); continue; }
+				if (email.isBlank())  { errors.add(rowLabel + " (" + uname + "): email is empty."); continue; }
+				if (pwd.isBlank())    { errors.add(rowLabel + " (" + uname + "): password is empty."); continue; }
+				if (role.isBlank())   { errors.add(rowLabel + " (" + uname + "): role is empty."); continue; }
+
+				if ("ADMIN".equalsIgnoreCase(role) || "SUPER_ADMIN".equalsIgnoreCase(role)) {
+					errors.add(rowLabel + " (" + uname + "): role '" + role + "' is not allowed.");
+					continue;
+				}
+				if (segment != null && !segment.isBlank() && !email.contains("." + segment + "@")) {
+					errors.add(rowLabel + " (" + uname + "): email '" + email
+							+ "' does not belong to tenant domain (expected: name." + segment + "@crm.com).");
+					continue;
+				}
+				if (userRepository.existsByUsernameOrEmail(uname, email)) {
+					errors.add(rowLabel + " (" + uname + "): username or email already exists in the system.");
+					continue;
+				}
+				boolean dupInFile = toSave.stream().anyMatch(u ->
+						u.getUsername().equalsIgnoreCase(uname) || u.getEmail().equalsIgnoreCase(email));
+				if (dupInFile) {
+					errors.add(rowLabel + " (" + uname + "): username or email is duplicated within this file.");
+					continue;
+				}
+
+				User user = new User();
+				user.setUsername(uname);
+				user.setEmail(email);
+				user.setPassword(passwordEncoder.encode(pwd));
+				user.setRole(role.toUpperCase());
+				user.setStatus("active");
+				toSave.add(user);
+			}
+
+		} catch (Exception e) {
+			ra.addFlashAttribute("errorMessage", "Failed to parse file: " + e.getMessage());
+			return "redirect:/admin/add-employee";
+		}
+
+		// Any errors → reject all
+		if (!errors.isEmpty()) {
+			ra.addFlashAttribute("bulkErrors", errors);
+			ra.addFlashAttribute("errorMessage",
+					"Upload rejected — " + errors.size() + " error(s) found. No employees were saved.");
+			return "redirect:/admin/add-employee";
+		}
+
+		if (toSave.isEmpty()) {
+			ra.addFlashAttribute("errorMessage", "No valid data rows found in the file.");
+			return "redirect:/admin/add-employee";
+		}
+
+		userRepository.saveAll(toSave);
+		ra.addFlashAttribute("successMessage", toSave.size() + " employee(s) imported successfully.");
+		return "redirect:/admin/employees";
+	}
+
+	/** Safely read a cell value as a trimmed String. */
+	private String getAdminCellString(Row row, int col) {
+		Cell cell = row.getCell(col);
+		if (cell == null) return "";
+		if (cell.getCellType() == CellType.STRING)  return cell.getStringCellValue().trim();
+		if (cell.getCellType() == CellType.NUMERIC) return String.valueOf((long) cell.getNumericCellValue()).trim();
+		if (cell.getCellType() == CellType.BOOLEAN) return String.valueOf(cell.getBooleanCellValue()).trim();
+		return "";
+	}
+
+	// =========================================================
 	// EMPLOYEES — TOGGLE STATUS
 	// =========================================================
 
@@ -282,7 +411,7 @@ public class AdminController {
 			return "redirect:/admin/edit-employee/" + id;
 		}
 		// Check duplicate (excluding self)
-		User existing = userRepository.findByUsernameOrEmail(username, email);
+		User existing = userRepository.findByUsernameOrEmail(username, email).orElse(null);
 		if (existing != null && !existing.getId().equals(emp.getId())) {
 			ra.addFlashAttribute("errorMessage", "Username or email already in use.");
 			return "redirect:/admin/edit-employee/" + id;

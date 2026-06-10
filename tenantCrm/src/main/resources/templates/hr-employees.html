@@ -563,6 +563,8 @@
 			<!-- Flash messages -->
 			<div class="toast success" th:if="${successMessage}" th:text="${successMessage}"></div>
 			<div class="toast error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+			<div class="toast warning" th:if="${warningMessage}" th:text="${warningMessage}"
+				style="background:#fff8e1;border-left:4px solid #f59e0b;color:#92400e;padding:12px 18px;border-radius:8px;margin-bottom:12px;font-size:13px;"></div>
 
 			<!-- Stats -->
 			<div class="stats-row">
