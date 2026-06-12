@@ -26,6 +26,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -52,6 +53,8 @@ import com.crm.demo.repository.AttendanceRepository;
 import com.crm.demo.repository.HolidayRepository;
 import com.crm.demo.repository.LeaveRequestRepository;
 import com.crm.demo.repository.MeetingRepository;
+import com.crm.demo.repository.PasswordResetTokenRepository;
+import com.crm.demo.repository.PerformanceReviewRepository;
 import com.crm.demo.repository.ReportAttachmentRepository;
 import com.crm.demo.repository.ReportRepository;
 import com.crm.demo.repository.TaskRepository;
@@ -74,6 +77,8 @@ public class HrController {
     @Autowired private HolidayRepository     holidayRepository;
     @Autowired private MeetingRepository     meetingRepository;
     @Autowired private LeaveRequestRepository leaveRequestRepository;
+    @Autowired private PerformanceReviewRepository performanceReviewRepository;
+    @Autowired private PasswordResetTokenRepository passwordResetTokenRepository;
     @Autowired private TaskRepository         taskRepository;
     @Autowired private com.crm.demo.repository.ReportRepository reportRepository;
     @Autowired private com.crm.demo.repository.ReportAttachmentRepository reportAttachmentRepository;
@@ -459,10 +464,17 @@ public class HrController {
     }
 
     @PostMapping("/delete-user/{id}")
+    @Transactional
     public String deleteUser(@PathVariable Long id, RedirectAttributes ra) {
         User user = userRepository.findById(id).orElse(null);
         if (user != null && isNonAdminRole(user.getRole())) {
             String name = user.getUsername();
+            removeUserFromTeams(user);
+            notificationService.deleteAllForUser(user.getId());
+            passwordResetTokenRepository.deleteByUser(user);
+            performanceReviewRepository.deleteByEmployee(user);
+            leaveRequestRepository.deleteByEmployee(user);
+            attendanceRepository.deleteByUser(user);
             userRepository.delete(user);
             ra.addFlashAttribute("successMessage", "User '" + name + "' deleted.");
         }
@@ -472,6 +484,26 @@ public class HrController {
     // ═══════════════════════════════════════════════════════════════════════
     //  EDIT EMPLOYEE
     // ═══════════════════════════════════════════════════════════════════════
+
+    private void removeUserFromTeams(User user) {
+        List<Team> changedTeams = new ArrayList<>();
+        for (Team team : teamRepository.findAll()) {
+            boolean changed = false;
+            if (team.getManager() != null && user.getId().equals(team.getManager().getId())) {
+                team.setManager(null);
+                changed = true;
+            }
+            if (team.getMembers().removeIf(member -> user.getId().equals(member.getId()))) {
+                changed = true;
+            }
+            if (changed) {
+                changedTeams.add(team);
+            }
+        }
+        if (!changedTeams.isEmpty()) {
+            teamRepository.saveAll(changedTeams);
+        }
+    }
 
     @GetMapping("/edit-employee/{id}")
     public String editEmployeePage(@PathVariable Long id, HttpServletRequest request, Model model) {

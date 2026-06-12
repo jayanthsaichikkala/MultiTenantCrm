@@ -22,6 +22,8 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     /** All records for a specific user */
     List<Attendance> findByUserOrderByDateDesc(User user);
 
+    void deleteByUser(User user);
+
     /** All records for a specific user within a date range, newest first */
     List<Attendance> findByUserAndDateBetweenOrderByDateDesc(User user, LocalDate from, LocalDate to);
 

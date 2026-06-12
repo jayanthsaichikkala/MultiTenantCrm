@@ -17,6 +17,8 @@ public interface PerformanceReviewRepository extends JpaRepository<PerformanceRe
     /** All reviews for a specific employee */
     List<PerformanceReview> findByEmployeeOrderByReviewMonthDesc(User employee);
 
+    void deleteByEmployee(User employee);
+
     /** Find an existing review for a specific employee + month + tenant (for upsert) */
     Optional<PerformanceReview> findByEmployeeAndReviewMonthAndTenantSegment(
             User employee, String reviewMonth, String tenantSegment);
