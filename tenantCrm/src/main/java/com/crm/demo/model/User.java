@@ -26,6 +26,9 @@ public class User {
     @Column(nullable = false, columnDefinition = "VARCHAR(10) DEFAULT 'active'")
     private String status = "active";
 
+    @Column(name = "employee_limit", nullable = false, columnDefinition = "int default 10")
+    private Integer employeeLimit = 10;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -43,6 +46,9 @@ public class User {
 
     public String getStatus() { return status != null ? status : "active"; }
     public void setStatus(String status) { this.status = status; }
+
+    public Integer getEmployeeLimit() { return employeeLimit != null ? employeeLimit : 10; }
+    public void setEmployeeLimit(Integer employeeLimit) { this.employeeLimit = employeeLimit; }
 
     public boolean isActive() { return "active".equalsIgnoreCase(getStatus()); }
 	

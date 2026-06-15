@@ -287,6 +287,23 @@ public class AdminController {
 	                      HttpServletRequest request,
 	                      RedirectAttributes ra) {
 
+		String adminUser = (String) request.getAttribute("loggedInUser");
+		if (adminUser == null) {
+			adminUser = SecurityContextHolder.getContext().getAuthentication().getName();
+		}
+		User currentAdmin = userRepository.findByUsername(adminUser);
+		if (currentAdmin != null) {
+			String tenant = getTenantSegment(adminUser);
+			long employeeCount = userRepository.findByTenantSegment(tenant).stream()
+					.filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole()) && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
+					.count();
+			int limit = currentAdmin.getEmployeeLimit() != null ? currentAdmin.getEmployeeLimit() : 10;
+			if (employeeCount >= limit) {
+				ra.addFlashAttribute("errorMessage", "Employee limit reached (" + limit + "). You cannot add more employees.");
+				return "redirect:/admin/add-employee";
+			}
+		}
+
 		if (!password.equals(confirmPassword)) {
 			ra.addFlashAttribute("errorMessage", "Passwords do not match.");
 			return "redirect:/admin/add-employee";
@@ -417,6 +434,25 @@ public class AdminController {
 		if (toSave.isEmpty()) {
 			ra.addFlashAttribute("errorMessage", "No valid data rows found in the file.");
 			return "redirect:/admin/add-employee";
+		}
+
+		// Enforce employee limit for bulk upload
+		String adminUser = (String) request.getAttribute("loggedInUser");
+		if (adminUser == null) {
+			adminUser = SecurityContextHolder.getContext().getAuthentication().getName();
+		}
+		User currentAdmin = userRepository.findByUsername(adminUser);
+		if (currentAdmin != null) {
+			String tenant = getTenantSegment(adminUser);
+			long existingCount = userRepository.findByTenantSegment(tenant).stream()
+					.filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole()) && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
+					.count();
+			int limit = currentAdmin.getEmployeeLimit() != null ? currentAdmin.getEmployeeLimit() : 10;
+			if (existingCount + toSave.size() > limit) {
+				ra.addFlashAttribute("errorMessage", "Upload rejected. Adding " + toSave.size()
+						+ " employee(s) would exceed your limit of " + limit + " (current count: " + existingCount + ").");
+				return "redirect:/admin/add-employee";
+			}
 		}
 
 		userRepository.saveAll(toSave);

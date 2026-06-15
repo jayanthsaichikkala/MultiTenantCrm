@@ -139,6 +139,12 @@
                                         th:text="${editAdmin.status == 'active'} ? 'Active' : 'Inactive'">Active</span>
                                 </div>
                             </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label>Employee Limit</label>
+                                <div class="input-wrap">
+                                    <input type="number" name="employeeLimit" th:value="${editAdmin.employeeLimit != null ? editAdmin.employeeLimit : 10}" min="1" required placeholder="e.g. 10">
+                                </div>
+                            </div>
                         </div>
                         <div class="form-actions">
                             <a th:href="@{/superadmin/admins}" class="btn btn-outline-cancel">Cancel</a>
@@ -147,7 +153,62 @@
                             </button>
                         </div>
                     </form>
+                </div>
         </div><!-- end card -->
+
+        <!-- ── ADMIN'S EMPLOYEES LIST ── -->
+        <div class="card" style="margin-top: 24px;">
+            <div class="card-header">
+                <div>
+                    <h2>Admin Employees</h2>
+                    <p th:text="${#lists.size(employees)} + ' employee(s) registered under this administrator'">0 employee(s)</p>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Employee</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="emp, stat : ${employees}">
+                                <td style="color:var(--text-muted);font-weight:600;" th:text="${stat.count}">1</td>
+                                <td>
+                                    <div class="admin-cell">
+                                        <div class="admin-avatar" th:text="${#strings.substring(emp.username,0,1).toUpperCase()}">E</div>
+                                        <div>
+                                            <div style="font-weight:600;" th:text="${emp.username}">Employee</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td style="color:var(--text-muted);font-size:13px;" th:text="${emp.email}">employee@example.com</td>
+                                <td><span class="role-badge" th:text="${emp.role}">ROLE</span></td>
+                                <td>
+                                    <span class="status-badge active" th:if="${emp.status == 'active'}">Active</span>
+                                    <span class="status-badge inactive" th:if="${emp.status != 'active'}">Inactive</span>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(employees)}">
+                                <td colspan="5">
+                                    <div class="empty-state">
+                                        <i data-lucide="users" style="width:48px;height:48px;opacity:.3;"></i>
+                                        <h3>No Employees Found</h3>
+                                        <p>This administrator does not have any employees registered yet.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
 
     </div><!-- end page-content -->
 </div><!-- end main-wrapper -->

@@ -144,6 +144,7 @@ public class SuperAdminController {
                            @RequestParam String password,
                            @RequestParam String confirmPassword,
                            @RequestParam(defaultValue = "active") String status,
+                           @RequestParam(defaultValue = "10") Integer employeeLimit,
                            RedirectAttributes ra) {
 
         if (!password.equals(confirmPassword)) {
@@ -161,10 +162,22 @@ public class SuperAdminController {
         newAdmin.setPassword(passwordEncoder.encode(password));
         newAdmin.setRole("ADMIN");
         newAdmin.setStatus(status);
+        newAdmin.setEmployeeLimit(employeeLimit);
         userRepository.save(newAdmin);
 
         ra.addFlashAttribute("successMessage", "Admin '" + username + "' added successfully.");
         return "redirect:/superadmin/admins";
+    }
+
+    private String getTenantSegment(String email) {
+        if (email == null) return "";
+        try {
+            String local = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
+            int dot = local.lastIndexOf('.');
+            return dot >= 0 ? local.substring(dot + 1) : local;
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     // ── Edit Admin (GET) ──────────────────────────────────────────────────────
@@ -177,6 +190,14 @@ public class SuperAdminController {
         String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
         model.addAttribute("superAdminUser", userRepository.findByUsername(currentUsername));
         model.addAttribute("editAdmin", admin);
+
+        // Fetch employees under this admin's tenant segment
+        String tenant = getTenantSegment(admin.getEmail());
+        List<User> employees = userRepository.findByTenantSegment(tenant).stream()
+                .filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole()) && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
+                .collect(Collectors.toList());
+        model.addAttribute("employees", employees);
+
         return "superadmin-edit-admin";
     }
 
@@ -186,6 +207,7 @@ public class SuperAdminController {
                             @RequestParam String email,
                             @RequestParam String username,
                             @RequestParam(defaultValue = "active") String status,
+                            @RequestParam(defaultValue = "10") Integer employeeLimit,
                             RedirectAttributes ra) {
 
         User admin = userRepository.findById(id).orElse(null);
@@ -203,6 +225,7 @@ public class SuperAdminController {
         admin.setUsername(username);
         admin.setEmail(email);
         admin.setStatus(status);
+        admin.setEmployeeLimit(employeeLimit);
         userRepository.save(admin);
 
         ra.addFlashAttribute("successMessage", "Admin '" + username + "' updated successfully.");

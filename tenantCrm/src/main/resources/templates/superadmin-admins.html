@@ -227,6 +227,7 @@
                                 <th>Admin</th>
                                 <th>Email</th>
                                 <th>Role</th>
+                                <th>Limit</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -235,16 +236,19 @@
                             <tr th:each="admin, stat : ${admins}">
                                 <td style="color:var(--text-muted);font-weight:600;" th:text="${stat.count}">1</td>
                                 <td>
-                                    <div class="admin-cell">
-                                        <div class="admin-avatar" th:text="${#strings.substring(admin.username,0,1).toUpperCase()}">A</div>
-                                        <div>
-                                            <div style="font-weight:600;" th:text="${admin.username}">Admin</div>
-                                            <div style="font-size:11px;color:#9ab3bd;">Administrator</div>
+                                    <a th:href="@{/superadmin/edit-admin/{id}(id=${admin.id})}" style="text-decoration: none; color: inherit; display: block;" class="admin-link">
+                                        <div class="admin-cell">
+                                            <div class="admin-avatar" th:text="${#strings.substring(admin.username,0,1).toUpperCase()}">A</div>
+                                            <div>
+                                                <div style="font-weight:600; color: var(--blue-fg, #0284c7);" th:text="${admin.username}">Admin</div>
+                                                <div style="font-size:11px;color:#9ab3bd;">Administrator</div>
+                                            </div>
                                         </div>
-                                    </div>
+                                    </a>
                                 </td>
                                 <td style="color:var(--text-muted);font-size:13px;" th:text="${admin.email}">admin@example.com</td>
                                 <td><span class="role-badge">ADMIN</span></td>
+                                <td style="color:var(--text-muted);font-weight:600;" th:text="${admin.employeeLimit != null ? admin.employeeLimit : 10}">10</td>
                                 <td>
                                     <div class="table-status-cell">
                                         <span class="status-badge active"   th:if="${admin.status == 'active'}">Active</span>
@@ -263,7 +267,7 @@
                                     <div class="action-btns">
                                         <a th:href="@{/superadmin/edit-admin/{id}(id=${admin.id})}"
                                            class="btn-action edit">
-                                            <i data-lucide="pencil"></i> Edit
+                                            <i data-lucide="eye"></i> View & Edit
                                         </a>
                                         <button type="button" class="btn-action delete"
                                             th:data-id="${admin.id}"

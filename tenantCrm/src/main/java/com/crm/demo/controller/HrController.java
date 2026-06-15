@@ -378,6 +378,22 @@ public class HrController {
 
         // Enforce tenant domain: new user's email must contain the HR's tenant segment
         String segment = getTenantSegment(request);
+        if (segment != null && !segment.isBlank()) {
+            User tenantAdmin = userRepository.findByTenantSegment(segment).stream()
+                    .filter(u -> "ADMIN".equalsIgnoreCase(u.getRole()))
+                    .findFirst().orElse(null);
+            if (tenantAdmin != null) {
+                long employeeCount = userRepository.findByTenantSegment(segment).stream()
+                        .filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole()) && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
+                        .count();
+                int limit = tenantAdmin.getEmployeeLimit() != null ? tenantAdmin.getEmployeeLimit() : 10;
+                if (employeeCount >= limit) {
+                    ra.addFlashAttribute("errorMessage", "Employee limit reached (" + limit + "). You cannot add more employees.");
+                    return "redirect:/hr/add-user";
+                }
+            }
+        }
+
         if (segment != null && !segment.isBlank() && !email.contains("." + segment + "@")) {
             ra.addFlashAttribute("errorMessage",
                     "Email must belong to your tenant domain (e.g. user." + segment + "@crm.com).");
