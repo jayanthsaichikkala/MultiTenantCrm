@@ -1256,20 +1256,20 @@ public class ManagerController {
 	}
 
 	// =========================
-	// SETTINGS PAGE
+	// PROFILE PAGE
 	// =========================
-	@GetMapping("/settings")
-	public String settingsPage(Model model) {
+	@GetMapping("/profile")
+	public String profilePage(Model model) {
 
 		injectStats(model);
 
-		return "manager-settings";
+		return "manager-profile";
 	}
 
 	// =========================
 	// UPDATE PROFILE
 	// =========================
-	@PostMapping("/settings/profile")
+	@PostMapping("/update-profile")
 	public String updateProfile(@RequestParam(required = false) String username,
 								@RequestParam(required = false) String email,
 								@RequestParam(required = false) String password,
@@ -1281,11 +1281,11 @@ public class ManagerController {
 		User manager = userRepository.findByUsername(currentUsername);
 
 		if (manager == null) {
-			return "redirect:/manager/settings";
+			return "redirect:/manager/profile";
 		}
 
 		profileUpdateService.updateProfile(manager, username, email, password, confirmPassword, ra, response);
-		return "redirect:/manager/settings";
+		return "redirect:/manager/profile";
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════

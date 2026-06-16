@@ -202,3 +202,99 @@
     font-size: 13px;
 }
 .notif-feed-empty i[data-lucide] { width: 28px; height: 28px; opacity: 0.35; display: block; margin: 0 auto 8px; }
+
+/* Toast Notifications Container & Items */
+.notif-toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 380px;
+    width: calc(100% - 48px);
+}
+
+.notif-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    border-left: 4px solid #17455e;
+    transform: translateY(50px);
+    opacity: 0;
+    transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.35s;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.notif-toast.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.notif-toast-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: #dcecf5;
+    color: #17455e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.notif-toast-icon i[data-lucide] {
+    width: 18px;
+    height: 18px;
+}
+
+.notif-toast-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.notif-toast-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #163647;
+}
+
+.notif-toast-message {
+    font-size: 12px;
+    color: #6b7280;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.notif-toast-close {
+    background: none;
+    border: none;
+    color: #9ab3bd;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+}
+
+.notif-toast-close:hover {
+    background: #f3f7fa;
+    color: #d11a2a;
+}
+
+.notif-toast-close i[data-lucide] {
+    width: 14px;
+    height: 14px;
+}

@@ -327,6 +327,9 @@ public class AdminController {
 		user.setStatus("active");
 		userRepository.save(user);
 
+		String tenant = getTenantSegment(adminUser);
+		notificationService.notifyEmployeeManagementChanged(tenant, "added", username);
+
 		ra.addFlashAttribute("successMessage", "Employee added successfully.");
 		return "redirect:/admin/employees";
 	}
@@ -456,6 +459,7 @@ public class AdminController {
 		}
 
 		userRepository.saveAll(toSave);
+		notificationService.notifyEmployeeManagementChanged(segment, "uploaded", "multiple");
 		ra.addFlashAttribute("successMessage", toSave.size() + " employee(s) imported successfully.");
 		return "redirect:/admin/employees";
 	}
@@ -483,6 +487,11 @@ public class AdminController {
 			String newStatus = "active".equalsIgnoreCase(user.getStatus()) ? "inactive" : "active";
 			user.setStatus(newStatus);
 			userRepository.save(user);
+
+			String adminName = SecurityContextHolder.getContext().getAuthentication().getName();
+			String tenant = getTenantSegment(adminName);
+			notificationService.notifyEmployeeManagementChanged(tenant, "updated", user.getUsername());
+
 			ra.addFlashAttribute("successMessage", user.getUsername() + " is now " + newStatus + ".");
 		}
 		return "redirect:/admin/employees";
@@ -499,7 +508,15 @@ public class AdminController {
 				&& !"ADMIN".equalsIgnoreCase(user.getRole())
 				&& !"SUPER_ADMIN".equalsIgnoreCase(user.getRole())) {
 			String name = user.getUsername();
+			
+			String adminName = SecurityContextHolder.getContext().getAuthentication().getName();
+			String tenant = getTenantSegment(adminName);
+			notificationService.deleteAllForUser(user.getId());
+			
 			userRepository.delete(user);
+			
+			notificationService.notifyEmployeeManagementChanged(tenant, "deleted", name);
+
 			ra.addFlashAttribute("successMessage", "Employee '" + name + "' deleted.");
 		}
 		return "redirect:/admin/employees";
@@ -554,51 +571,16 @@ public class AdminController {
 		}
 		emp.setRole(role);
 		userRepository.save(emp);
+
+		String adminName = SecurityContextHolder.getContext().getAuthentication().getName();
+		String tenant = getTenantSegment(adminName);
+		notificationService.notifyEmployeeManagementChanged(tenant, "updated", emp.getUsername());
+
 		ra.addFlashAttribute("successMessage", "'" + emp.getUsername() + "' updated successfully.");
 		return "redirect:/admin/employees";
 	}
 
-	// =========================================================
-	// PROJECTS
-	// =========================================================
 
-	@GetMapping("/projects")
-	public String projectsPage(HttpServletRequest request, Model model) {
-		injectUser(request, model);
-
-		List<Project> projects = projectRepository.findAll();
-		projects.sort(java.util.Comparator.comparing(Project::getId).reversed());
-		long active    = projects.stream().filter(p -> "active".equalsIgnoreCase(p.getStatus())).count();
-		long completed = projects.stream().filter(p -> "completed".equalsIgnoreCase(p.getStatus())).count();
-
-		model.addAttribute("projects",          projects);
-		model.addAttribute("totalProjects",     projects.size());
-		model.addAttribute("activeProjects",    active);
-		model.addAttribute("completedProjects", completed);
-
-		return "admin-projects";
-	}
-
-	@PostMapping("/projects")
-	public String createProject(@RequestParam String name,
-	                            @RequestParam(required = false) String description,
-	                            @RequestParam String status,
-	                            RedirectAttributes ra) {
-		Project p = new Project();
-		p.setName(name);
-		p.setDescription(description);
-		p.setStatus(status);
-		projectRepository.save(p);
-		ra.addFlashAttribute("successMessage", "Project created successfully.");
-		return "redirect:/admin/projects";
-	}
-
-	@PostMapping("/projects/delete/{id}")
-	public String deleteProject(@PathVariable Long id, RedirectAttributes ra) {
-		projectRepository.deleteById(id);
-		ra.addFlashAttribute("successMessage", "Project deleted.");
-		return "redirect:/admin/projects";
-	}
 
 	// =========================================================
 	// TASKS

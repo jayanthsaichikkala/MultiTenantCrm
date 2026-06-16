@@ -21,6 +21,10 @@ import com.crm.demo.model.User;
 import com.crm.demo.repository.NotificationRepository;
 import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
+import java.util.HashMap;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class NotificationService {
@@ -30,6 +34,7 @@ public class NotificationService {
     @Autowired private NotificationRepository notificationRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private TeamRepository teamRepository;
+    @Autowired private SimpMessagingTemplate messagingTemplate;
 
     public Notification notify(User user, String title, String message, String type, String link) {
         if (user == null || user.getId() == null) return null;
@@ -40,11 +45,44 @@ public class NotificationService {
             n.setMessage(message);
             n.setType(type);
             n.setLink(link);
-            return notificationRepository.save(n);
+            Notification saved = notificationRepository.save(n);
+
+            if (TransactionSynchronizationManager.isActualTransactionActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        try {
+                            messagingTemplate.convertAndSend("/topic/notifications/" + user.getId(), toDto(saved));
+                        } catch (Exception e) {
+                            log.error("Failed to send WebSocket notification to user {}: {}", user.getUsername(), e.getMessage());
+                        }
+                    }
+                });
+            } else {
+                try {
+                    messagingTemplate.convertAndSend("/topic/notifications/" + user.getId(), toDto(saved));
+                } catch (Exception e) {
+                    log.error("Failed to send WebSocket notification to user {}: {}", user.getUsername(), e.getMessage());
+                }
+            }
+
+            return saved;
         } catch (Exception e) {
             log.error("Failed to save notification for user {}: {}", user.getUsername(), e.getMessage());
             return null;
         }
+    }
+
+    private Map<String, Object> toDto(Notification n) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("id", n.getId());
+        m.put("title", n.getTitle());
+        m.put("message", n.getMessage());
+        m.put("type", n.getType());
+        m.put("link", n.getLink());
+        m.put("read", n.isRead());
+        m.put("createdAt", n.getCreatedAt() != null ? n.getCreatedAt().toString() : null);
+        return m;
     }
 
     public void notifyByUsername(String username, String title, String message, String type, String link) {
@@ -128,6 +166,14 @@ public class NotificationService {
                             "MEETING",
                             meetingsLink(user));
                 });
+
+        // Broadcast to HR and Managers in the tenant
+        User creator = userRepository.findByUsername(scheduledBy);
+        if (creator != null) {
+            String tenant = getTenantSegment(creator);
+            sendLiveUpdateToTenantRole(tenant, "HR", "MEETING", "Meeting Scheduled", "Meeting: " + meeting.getTitle(), "/hr/meetings");
+            sendLiveUpdateToTenantRole(tenant, "MANAGER", "MEETING", "Meeting Scheduled", "Meeting: " + meeting.getTitle(), "/manager/meetings");
+        }
     }
 
     public void notifyTaskAssigned(User employee, String assignerName, String taskTitle) {
@@ -291,6 +337,91 @@ public class NotificationService {
                 holidayName + " on " + date + " has been added to the company calendar.",
                 "HOLIDAY",
                 "calendar");
+    }
+
+    public void sendLiveUpdate(User recipient, String type, String title, String message, String link) {
+        if (recipient == null || recipient.getId() == null) return;
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("id", -1L); // -1 signifies a live-update transient event (not stored in DB)
+            payload.put("title", title);
+            payload.put("message", message);
+            payload.put("type", type);
+            payload.put("link", link);
+            payload.put("read", false);
+            payload.put("createdAt", java.time.LocalDateTime.now().toString());
+
+            if (TransactionSynchronizationManager.isActualTransactionActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        try {
+                            messagingTemplate.convertAndSend("/topic/notifications/" + recipient.getId(), payload);
+                        } catch (Exception e) {
+                            log.error("Failed to send live update to user {}: {}", recipient.getUsername(), e.getMessage());
+                        }
+                    }
+                });
+            } else {
+                try {
+                    messagingTemplate.convertAndSend("/topic/notifications/" + recipient.getId(), payload);
+                } catch (Exception e) {
+                    log.error("Failed to send live update to user {}: {}", recipient.getUsername(), e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to create live update payload for user {}: {}", recipient.getUsername(), e.getMessage());
+        }
+    }
+
+    public void sendLiveUpdateToTenant(String tenant, String type, String title, String message, String link) {
+        if (tenant == null || tenant.isBlank()) return;
+        userRepository.findByTenantSegment(tenant).stream()
+                .filter(u -> u.getRole() != null && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
+                .forEach(u -> sendLiveUpdate(u, type, title, message, link));
+    }
+
+    public void sendLiveUpdateToTenantRole(String tenant, String role, String type, String title, String message, String link) {
+        if (tenant == null || tenant.isBlank() || role == null) return;
+        userRepository.findByTenantSegment(tenant).stream()
+                .filter(u -> role.equalsIgnoreCase(u.getRole()))
+                .forEach(u -> sendLiveUpdate(u, type, title, message, link));
+    }
+
+    public void notifyAttendanceUpdated(User employee, String action) {
+        if (employee == null) return;
+        String tenant = getTenantSegment(employee);
+        
+        // Notify all HR users in the same tenant
+        sendLiveUpdateToTenantRole(tenant, "HR", "ATTENDANCE", 
+            "Attendance Updated", 
+            employee.getUsername() + " performed " + action, 
+            "/hr/attendance");
+
+        // Notify all Manager users in the same tenant
+        sendLiveUpdateToTenantRole(tenant, "MANAGER", "ATTENDANCE", 
+            "Attendance Updated", 
+            employee.getUsername() + " performed " + action, 
+            "/manager/attendance");
+    }
+
+    public void notifyAttendanceModified(User employee, String reviewerName) {
+        if (employee == null) return;
+        sendLiveUpdate(employee, "ATTENDANCE", 
+            "Attendance Record Updated", 
+            reviewerName + " updated your attendance record.", 
+            "/employee/attendance");
+    }
+
+    public void notifyEmployeeManagementChanged(String tenant, String action, String employeeName) {
+        sendLiveUpdateToTenantRole(tenant, "HR", "EMPLOYEE", 
+            "Employee List Updated", 
+            "Employee " + employeeName + " was " + action, 
+            "/hr/employees");
+        sendLiveUpdateToTenantRole(tenant, "MANAGER", "EMPLOYEE", 
+            "Employee List Updated", 
+            "Employee " + employeeName + " was " + action, 
+            "/manager/team");
     }
 
     private String linkFor(User user, String page) {

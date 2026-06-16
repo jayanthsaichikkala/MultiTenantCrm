@@ -47,7 +47,8 @@ public class SecurityConfig {
                     new AntPathRequestMatcher("/**/*.jpg"),
                     new AntPathRequestMatcher("/**/*.ico"),
                     new AntPathRequestMatcher("/**/*.woff"),
-                    new AntPathRequestMatcher("/**/*.woff2")
+                    new AntPathRequestMatcher("/**/*.woff2"),
+                    new AntPathRequestMatcher("/ws/**")
                 ).permitAll()
                 // GET  /api/holidays   — any authenticated user (all roles see their tenant's holidays)
                 // POST /api/holidays   — ADMIN or HR only

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 
 <head>
@@ -506,6 +506,82 @@
 				width: 100%;
 			}
 		}
+
+		/* ── Pagination ── */
+		.pagination-container {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-top: 18px;
+			padding: 16px 24px;
+			border-top: 1px solid #edf3f6;
+			background: #fff;
+		}
+
+		.pagination-info {
+			font-size: 13.5px;
+			color: #6b7280;
+			font-weight: 500;
+		}
+
+		.pagination-buttons {
+			display: flex;
+			gap: 8px;
+			align-items: center;
+		}
+
+		.btn-pagination-nav {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			gap: 6px;
+			padding: 8px 16px;
+			border-radius: 10px;
+			font-size: 13px;
+			font-weight: 600;
+			cursor: pointer;
+			border: none;
+			background: #edf3f6;
+			color: #163647;
+			transition: background .2s, transform .2s, opacity .2s;
+		}
+
+		.btn-pagination-nav:hover:not(:disabled) {
+			background: #dfeaf0;
+			transform: translateY(-1px);
+		}
+
+		.btn-pagination-nav:disabled {
+			opacity: 0.5;
+			cursor: not-allowed;
+		}
+
+		.btn-pagination-num {
+			width: 34px;
+			height: 34px;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			border-radius: 8px;
+			font-size: 13px;
+			font-weight: 600;
+			cursor: pointer;
+			border: none;
+			background: #edf3f6;
+			color: #163647;
+			transition: background .2s, transform .2s;
+		}
+
+		.btn-pagination-num:hover:not(.active) {
+			background: #dfeaf0;
+			transform: translateY(-1px);
+		}
+
+		.btn-pagination-num.active {
+			background: #17455e;
+			color: white;
+			cursor: default;
+		}
 	</style>
 </head>
 
@@ -676,6 +752,21 @@
 						</tbody>
 					</table>
 				</div>
+				<!-- Pagination Container -->
+				<div id="paginationContainer" class="pagination-container" style="display: none;">
+					<div class="pagination-info">
+						Showing <span id="paginationStart">0</span> to <span id="paginationEnd">0</span> of <span id="paginationTotal">0</span> members
+					</div>
+					<div class="pagination-buttons">
+						<button type="button" class="btn-pagination-nav" id="prevPageBtn" onclick="prevPage()">
+							<i data-lucide="chevron-left"></i> Previous
+						</button>
+						<div id="pageNumbers" style="display: flex; gap: 6px;"></div>
+						<button type="button" class="btn-pagination-nav" id="nextPageBtn" onclick="nextPage()">
+							Next <i data-lucide="chevron-right"></i>
+						</button>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -724,19 +815,104 @@
 		if (overlay) overlay.addEventListener('click', closeSidebar);
 		if (sidebar) sidebar.querySelectorAll('a').forEach(function (l) {l.addEventListener('click', function () {if (window.innerWidth < 900) closeSidebar();});});
 
-		// ── Search + Status filter ──
-		function applyFilters() {
+		// ── Search + Status filter + Pagination ──
+		var currentPage = 1;
+		var pageSize = 10;
+		var filteredRows = [];
+
+		function updatePagination() {
 			var q = (document.getElementById('userSearch').value || '').toLowerCase();
 			var status = (document.getElementById('statusFilter').value || 'all').toLowerCase();
-			document.querySelectorAll('#empTable tbody tr[data-id]').forEach(function (row) {
+			
+			filteredRows = [];
+			var allRows = document.querySelectorAll('#empTable tbody tr[data-id]');
+			allRows.forEach(function (row) {
 				var text = row.textContent.toLowerCase();
 				var badge = row.querySelector('.status-badge');
 				var rowStatus = badge ? badge.textContent.trim().toLowerCase() : 'active';
 				var matchSearch = q === '' || text.indexOf(q) > -1;
 				var matchStatus = status === 'all' || rowStatus === status;
-				row.style.display = (matchSearch && matchStatus) ? '' : 'none';
+				
+				if (matchSearch && matchStatus) {
+					filteredRows.push(row);
+				} else {
+					row.style.display = 'none';
+				}
 			});
+
+			var totalRows = filteredRows.length;
+			var totalPages = Math.ceil(totalRows / pageSize) || 1;
+			if (currentPage > totalPages) currentPage = totalPages;
+			if (currentPage < 1) currentPage = 1;
+
+			var startIndex = (currentPage - 1) * pageSize;
+			var endIndex = Math.min(startIndex + pageSize, totalRows);
+
+			filteredRows.forEach(function (row, idx) {
+				if (idx >= startIndex && idx < endIndex) {
+					row.style.display = '';
+				} else {
+					row.style.display = 'none';
+				}
+			});
+
+			document.getElementById('paginationStart').textContent = totalRows > 0 ? (startIndex + 1) : 0;
+			document.getElementById('paginationEnd').textContent = endIndex;
+			document.getElementById('paginationTotal').textContent = totalRows;
+
+			document.getElementById('prevPageBtn').disabled = (currentPage === 1);
+			document.getElementById('nextPageBtn').disabled = (currentPage === totalPages);
+
+			var pageNumbersDiv = document.getElementById('pageNumbers');
+			pageNumbersDiv.innerHTML = '';
+			
+			var maxPageButtons = 5;
+			var startPage = Math.max(1, currentPage - Math.floor(maxPageButtons / 2));
+			var endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
+			if (endPage - startPage + 1 < maxPageButtons) {
+				startPage = Math.max(1, endPage - maxPageButtons + 1);
+			}
+
+			for (var i = startPage; i <= endPage; i++) {
+				var btn = document.createElement('button');
+				btn.type = 'button';
+				btn.className = 'btn-pagination-num' + (i === currentPage ? ' active' : '');
+				btn.textContent = i;
+				btn.addEventListener('click', (function(page) {
+					return function() {
+						currentPage = page;
+						updatePagination();
+					};
+				})(i));
+				pageNumbersDiv.appendChild(btn);
+			}
+			
+			var container = document.getElementById('paginationContainer');
+			if (container) {
+				container.style.display = totalRows > 0 ? 'flex' : 'none';
+			}
 		}
+
+		function prevPage() {
+			if (currentPage > 1) {
+				currentPage--;
+				updatePagination();
+			}
+		}
+
+		function nextPage() {
+			var totalPages = Math.ceil(filteredRows.length / pageSize) || 1;
+			if (currentPage < totalPages) {
+				currentPage++;
+				updatePagination();
+			}
+		}
+
+		function applyFilters() {
+			currentPage = 1;
+			updatePagination();
+		}
+
 		var si = document.getElementById('userSearch');
 		if (si) si.addEventListener('input', applyFilters);
 		var sf = document.getElementById('statusFilter');
@@ -859,6 +1035,7 @@
 			lucide.createIcons();
 		}
 
+		updatePagination();
 		lucide.createIcons();
 	</script>
 	<script th:src="@{/auth.js}"></script>

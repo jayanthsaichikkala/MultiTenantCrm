@@ -102,9 +102,7 @@
 			<li th:classappend="${activePage == 'meetings'} ? 'active'">
 				<a th:href="@{/admin/meetings}">&#128101; Meetings</a>
 			</li>
-			<li th:classappend="${activePage == 'projects'} ? 'active'">
-				<a th:href="@{/admin/projects}">&#128193; Projects</a>
-			</li>
+
 			<li th:classappend="${activePage == 'tasks'} ? 'active'">
 				<a th:href="@{/admin/tasks}">&#128221; Tasks</a>
 			</li>
@@ -162,14 +160,7 @@
 							<span class="stat-growth" th:text="${employeeGrowth} ?: '+0%'">+0%</span>
 						</div>
 					</div>
-					<div class="stat-card">
-						<div class="stat-icon blue">&#128193;</div>
-						<div class="stat-info">
-							<h3 th:text="${activeProjects} ?: '0'">0</h3>
-							<p>Active Projects</p>
-							<span class="stat-growth" th:text="${projectGrowth} ?: '+0%'">+0%</span>
-						</div>
-					</div>
+
 					<div class="stat-card">
 						<div class="stat-icon orange">&#9989;</div>
 						<div class="stat-info">
@@ -213,9 +204,7 @@
 								<a th:href="@{/admin/add-user}" class="quick-action-btn">
 									<div class="qa-icon" style="background:#dff5ea;">&#128100;</div> Employees
 								</a>
-								<a th:href="@{/admin/projects}" class="quick-action-btn">
-									<div class="qa-icon" style="background:#dcecf5;">&#128193;</div> New Project
-								</a>
+
 								<a th:href="@{/admin/tasks}" class="quick-action-btn">
 									<div class="qa-icon" style="background:#fce9d8;">&#9989;</div> Create Task
 								</a>
@@ -235,10 +224,7 @@
 									<span class="summary-label">Total Employees</span>
 									<span class="summary-value" th:text="${employeeCount} ?: '0'">0</span>
 								</div>
-								<div class="summary-row">
-									<span class="summary-label">Active Projects</span>
-									<span class="summary-value" th:text="${projectCount} ?: '0'">0</span>
-								</div>
+
 								<div class="summary-row">
 									<span class="summary-label">Pending Tasks</span>
 									<span class="summary-value" th:text="${pendingTasks} ?: '0'">0</span>
@@ -419,132 +405,7 @@
 			</div>
 			<!-- ===================== END SCHEDULE MEETING ===================== -->
 
-			<!-- ===================== PROJECTS PAGE ===================== -->
-			<div th:if="${activePage == 'projects'}">
-				<div class="toast success" th:if="${successMessage}" th:text="${successMessage}"></div>
-				<div class="toast error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
-				<div class="stats-row au-stats">
-					<div class="stat-card">
-						<div class="stat-icon blue">&#128193;</div>
-						<div class="stat-info">
-							<h3 th:text="${totalProjects} ?: '0'">0</h3>
-							<p>Total Projects</p>
-						</div>
-					</div>
-					<div class="stat-card">
-						<div class="stat-icon green">&#9989;</div>
-						<div class="stat-info">
-							<h3 th:text="${activeProjects} ?: '0'">0</h3>
-							<p>Active</p>
-						</div>
-					</div>
-					<div class="stat-card">
-						<div class="stat-icon orange">&#128203;</div>
-						<div class="stat-info">
-							<h3 th:text="${completedProjects} ?: '0'">0</h3>
-							<p>Completed</p>
-						</div>
-					</div>
-				</div>
-
-				<div class="card au-form-card" id="addProjCard" th:classappend="${showAddForm} ? '' : ' hidden'">
-					<div class="card-header">
-						<div>
-							<h2>Create New Project</h2>
-							<p>Fill in the project details</p>
-						</div>
-						<button type="button" class="au-close-btn" id="closeProjForm">&#10005;</button>
-					</div>
-					<form th:action="@{/admin/projects}" method="post">
-						<div class="au-form-grid">
-							<div class="form-group">
-								<label>Project Name</label>
-								<div class="input-wrap"><input type="text" name="name" placeholder="Enter project name"
-										required></div>
-							</div>
-							<div class="form-group">
-								<label>Status</label>
-								<div class="input-wrap">
-									<select name="status" class="select-input" required>
-										<option value="active">Active</option>
-										<option value="on-hold">On Hold</option>
-										<option value="completed">Completed</option>
-									</select>
-								</div>
-							</div>
-							<div class="form-group" style="grid-column:1/-1;">
-								<label>Description</label>
-								<div class="input-wrap"><textarea name="description" placeholder="Project description…"
-										rows="3" style="height:auto;padding:12px 16px;resize:vertical;"></textarea>
-								</div>
-							</div>
-						</div>
-						<div class="form-actions">
-							<button type="button" class="btn btn-clear" id="cancelProjForm">Cancel</button>
-							<button type="submit" class="btn btn-primary">&#10133; Create Project</button>
-						</div>
-					</form>
-				</div>
-
-				<div class="card">
-					<div class="card-header">
-						<div>
-							<h2>All Projects</h2>
-							<p th:text="${totalProjects} + ' project(s)'">0 project(s)</p>
-						</div>
-						<button type="button" class="btn btn-primary" id="openProjForm">&#10133; New Project</button>
-					</div>
-					<div class="table-wrap">
-						<table id="projTable">
-							<thead>
-								<tr>
-									<th>#</th>
-									<th>Project Name</th>
-									<th>Description</th>
-									<th>Status</th>
-									<th>Actions</th>
-								</tr>
-							</thead>
-							<tbody>
-								<tr th:each="proj, stat : ${projects}">
-									<td th:text="${stat.count}">1</td>
-									<td style="font-weight:600;" th:text="${proj.name}">Project</td>
-									<td style="color:#6b7280;font-size:13px;" th:text="${proj.description} ?: '—'">—
-									</td>
-									<td>
-										<span class="status-badge active"
-											th:if="${proj.status == 'active'}">Active</span>
-										<span class="status-badge" style="background:#fce9d8;color:#b45309;"
-											th:if="${proj.status == 'on-hold'}">On Hold</span>
-										<span class="status-badge" style="background:#e9e2ff;color:#5b21b6;"
-											th:if="${proj.status == 'completed'}">Completed</span>
-									</td>
-									<td>
-										<div class="action-btns">
-											<form th:action="@{/admin/projects/delete/{id}(id=${proj.id})}"
-												method="post" style="display:inline;"
-												onsubmit="return confirm('Delete this project?')">
-												<button type="submit" class="action-btn delete-btn">Delete</button>
-											</form>
-										</div>
-									</td>
-								</tr>
-								<tr th:if="${projects == null or #lists.isEmpty(projects)}">
-									<td colspan="5">
-										<div class="empty-state">
-											<div style="font-size:48px;">&#128193;</div>
-											<h3>No Projects Yet</h3>
-											<p>Click "New Project" to create one.</p>
-										</div>
-									</td>
-								</tr>
-							</tbody>
-						</table>
-					</div>
-				</div>
-			</div>
-			<!-- ===================== END PROJECTS ===================== -->
 
 			<!-- ===================== TASKS PAGE ===================== -->
 			<div th:if="${activePage == 'tasks'}">
@@ -701,13 +562,7 @@
 							<p>Employees</p>
 						</div>
 					</div>
-					<div class="stat-card">
-						<div class="stat-icon blue">&#128193;</div>
-						<div class="stat-info">
-							<h3 th:text="${reportProjects} ?: '0'">0</h3>
-							<p>Projects</p>
-						</div>
-					</div>
+
 					<div class="stat-card">
 						<div class="stat-icon orange">&#9989;</div>
 						<div class="stat-info">

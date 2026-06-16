@@ -331,12 +331,7 @@ public class EmployeeController {
         model.addAttribute("completedTasks", data.get("statusDone"));
     }
 
-    @GetMapping("/projects")
-    public String projectsPage(Model model) {
-        injectUser(model);
-        injectStats(model);
-        return "employee-projects";
-    }
+
 
     @GetMapping("/tasks")
     public String tasksPage(Model model) {
@@ -579,6 +574,7 @@ public class EmployeeController {
         att.setStatus(status);
         att.setTenantSegment(tenant);
         attendanceRepository.save(att);
+        notificationService.notifyAttendanceUpdated(emp, "punch-in");
 
         ra.addFlashAttribute("successMessage",
                 "Punched in at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
@@ -611,6 +607,7 @@ public class EmployeeController {
         LocalTime now = LocalTime.now();
         att.setCheckOut(now);
         attendanceRepository.save(att);
+        notificationService.notifyAttendanceUpdated(emp, "punch-out");
 
         ra.addFlashAttribute("successMessage",
                 "Punched out at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
@@ -646,6 +643,7 @@ public class EmployeeController {
         if (att.getBreakStart() == null) {
             att.setBreakStart(now);
             attendanceRepository.save(att);
+            notificationService.notifyAttendanceUpdated(emp, "break-1-start");
             ra.addFlashAttribute("successMessage",
                     "Break 1 started at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
             return "redirect:/employee/attendance";
@@ -655,6 +653,7 @@ public class EmployeeController {
         if (att.getBreakEnd() != null && att.getBreak2Start() == null) {
             att.setBreak2Start(now);
             attendanceRepository.save(att);
+            notificationService.notifyAttendanceUpdated(emp, "break-2-start");
             ra.addFlashAttribute("successMessage",
                     "Break 2 started at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
             return "redirect:/employee/attendance";
@@ -689,6 +688,7 @@ public class EmployeeController {
         if (att.getBreak2Start() != null && att.getBreak2End() == null) {
             att.setBreak2End(now);
             attendanceRepository.save(att);
+            notificationService.notifyAttendanceUpdated(emp, "break-2-end");
             ra.addFlashAttribute("successMessage",
                     "Break 2 ended at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
             return "redirect:/employee/attendance";
@@ -698,6 +698,7 @@ public class EmployeeController {
         if (att.getBreakStart() != null && att.getBreakEnd() == null) {
             att.setBreakEnd(now);
             attendanceRepository.save(att);
+            notificationService.notifyAttendanceUpdated(emp, "break-1-end");
             ra.addFlashAttribute("successMessage",
                     "Break 1 ended at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
             return "redirect:/employee/attendance";
@@ -852,16 +853,16 @@ public class EmployeeController {
                 .body(att.getFileData());
     }
 
-    @GetMapping("/settings")
-    public String settingsPage(Model model) {
+    @GetMapping("/profile")
+    public String profilePage(Model model) {
         injectUser(model);
         injectStats(model);
         User emp = getCurrentEmployee();
         model.addAttribute("employeeEmail", emp != null ? emp.getEmail() : "");
-        return "employee-settings";
+        return "employee-profile";
     }
 
-    @PostMapping("/settings/profile")
+    @PostMapping("/update-profile")
     public String updateProfile(@RequestParam(required = false) String username,
                                 @RequestParam(required = false) String email,
                                 @RequestParam(required = false) String password,
@@ -869,10 +870,10 @@ public class EmployeeController {
                                 HttpServletResponse response,
                                 RedirectAttributes ra) {
         User emp = getCurrentEmployee();
-        if (emp == null) return "redirect:/employee/settings";
+        if (emp == null) return "redirect:/employee/profile";
 
         profileUpdateService.updateProfile(emp, username, email, password, confirmPassword, ra, response);
-        return "redirect:/employee/settings";
+        return "redirect:/employee/profile";
     }
 
     // ── DOWNLOAD TASK ATTACHMENT ──────────────────────────────────────────
@@ -904,17 +905,5 @@ public class EmployeeController {
                 .body(attachment.getFileData());
     }
 
-    @GetMapping("/performance")
-    public String performancePage(Model model) {
-        injectUser(model);
-        injectStats(model);
-        User emp = getCurrentEmployee();
-        if (emp != null) {
-            String tenant = getTenantSegment(emp);
-            // Employee sees their own performance metrics
-            // We can reuse the logic from ManagerController's calculatePerformance stats if needed,
-            // or just show the reports where they are mentioned.
-        }
-        return "employee-performance";
-    }
+
 }

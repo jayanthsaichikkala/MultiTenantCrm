@@ -1,6 +1,6 @@
 /**
  * Shared notification bell for all dashboards.
- * Each user only sees their own notifications from /api/notifications.
+ * Uses WebSockets (SockJS + STOMP) with HTTP polling fallback.
  */
 (function () {
     'use strict';
@@ -10,6 +10,12 @@
     var isOpen = false;
     var notifications = [];
     var unreadCount = 0;
+
+    var stompClient = null;
+    var wsConnected = false;
+    var wsRetryCount = 0;
+    var maxWsRetries = 5;
+    var reconnectTimeout = null;
 
     function isAppPage() {
         var path = window.location.pathname;
@@ -174,6 +180,7 @@
             })
             .catch(function (err) {
                 console.warn('Notifications fetch failed:', err.message);
+                if (typeof cb === 'function') cb();
             });
     }
 
@@ -281,9 +288,407 @@
     }
 
     function startPolling() {
-        fetchNotifications();
         if (pollTimer) clearInterval(pollTimer);
         pollTimer = setInterval(fetchNotifications, POLL_MS);
+    }
+
+    /* WebSocket integration with Fallback */
+
+    function loadScript(src, callback) {
+        var s = document.createElement('script');
+        s.src = src;
+        s.onload = callback;
+        s.onerror = function () {
+            console.warn('Failed to load script:', src);
+            if (typeof callback === 'function') callback(new Error('Load failed'));
+        };
+        document.head.appendChild(s);
+    }
+
+    function loadLibrariesAndConnect(userId) {
+        var sockJsUrl = 'https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js';
+        var stompUrl = 'https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js';
+
+        function checkAndConnect() {
+            if (window.SockJS && window.Stomp) {
+                connectWebSocket(userId);
+            } else {
+                console.warn('WebSocket libraries loaded incorrectly. Falling back to HTTP polling.');
+                startPolling();
+            }
+        }
+
+        if (!window.SockJS) {
+            loadScript(sockJsUrl, function (err) {
+                if (err) {
+                    startPolling();
+                    return;
+                }
+                if (!window.Stomp) {
+                    loadScript(stompUrl, function (err2) {
+                        if (err2) {
+                            startPolling();
+                            return;
+                        }
+                        checkAndConnect();
+                    });
+                } else {
+                    checkAndConnect();
+                }
+            });
+        } else if (!window.Stomp) {
+            loadScript(stompUrl, function (err) {
+                if (err) {
+                    startPolling();
+                    return;
+                }
+                checkAndConnect();
+            });
+        } else {
+            checkAndConnect();
+        }
+    }
+
+    function connectWebSocket(userId) {
+        if (wsConnected) return;
+
+        try {
+            var socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+            stompClient.debug = null; // Suppress debug logging in console
+
+            stompClient.connect({}, function () {
+                wsConnected = true;
+                wsRetryCount = 0;
+                
+                // If we were polling, clear the interval
+                if (pollTimer) {
+                    clearInterval(pollTimer);
+                    pollTimer = null;
+                }
+
+                stompClient.subscribe('/topic/notifications/' + userId, function (msg) {
+                    try {
+                        var n = JSON.parse(msg.body);
+                        
+                        // Prevent duplicates
+                        if (notifications.some(function(item) { return item.id === n.id; })) {
+                            return;
+                        }
+
+                        notifications.unshift(n);
+                        if (notifications.length > 50) {
+                            notifications = notifications.slice(0, 50);
+                        }
+                        if (!n.read) {
+                            unreadCount++;
+                        }
+
+                        updateBadge();
+                        renderList();
+                        renderDashboardFeed();
+                        playNotificationSound();
+                        showToast(n);
+                        refreshPageContentIfRelevant(n.type);
+                    } catch (e) {
+                        console.error('Error handling WebSocket message:', e);
+                    }
+                });
+            }, function (err) {
+                console.warn('WebSocket STOMP error, attempting reconnect:', err);
+                handleDisconnect(userId);
+            });
+        } catch (e) {
+            console.warn('Failed to build SockJS/STOMP client:', e);
+            handleDisconnect(userId);
+        }
+    }
+
+    function handleDisconnect(userId) {
+        wsConnected = false;
+        if (stompClient) {
+            try { stompClient.disconnect(); } catch (e) {}
+            stompClient = null;
+        }
+
+        if (wsRetryCount < maxWsRetries) {
+            var delay = Math.min(30000, Math.pow(2, wsRetryCount) * 2000);
+            wsRetryCount++;
+            console.log('Reconnecting WebSocket in ' + (delay / 1000) + 's (attempt ' + wsRetryCount + '/' + maxWsRetries + ')...');
+            
+            if (reconnectTimeout) clearTimeout(reconnectTimeout);
+            reconnectTimeout = setTimeout(function () {
+                connectWebSocket(userId);
+            }, delay);
+        } else {
+            console.warn('WebSocket connection retries exhausted. Falling back to HTTP polling.');
+            startPolling();
+        }
+    }
+
+    /* Browser dynamic synthesized sound chime using Web Audio API */
+    function playNotificationSound() {
+        try {
+            var AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            var ctx = new AudioContext();
+
+            var osc1 = ctx.createOscillator();
+            var osc2 = ctx.createOscillator();
+            var gain = ctx.createGain();
+
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+            osc1.frequency.exponentialRampToValueAtTime(880.00, ctx.currentTime + 0.08); // A5
+
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(659.25, ctx.currentTime); // E5
+            osc2.frequency.exponentialRampToValueAtTime(1046.50, ctx.currentTime + 0.12); // C6
+
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+
+            osc1.connect(gain);
+            osc2.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc1.start();
+            osc2.start();
+
+            osc1.stop(ctx.currentTime + 0.4);
+            osc2.stop(ctx.currentTime + 0.4);
+        } catch (e) {
+            console.warn('Could not play synthesized notification sound:', e);
+        }
+    }
+
+    function shouldReloadPage(type) {
+        var path = window.location.pathname.toLowerCase();
+        var t = (type || '').toUpperCase();
+
+        if (path.indexOf('/dashboard') !== -1) {
+            return true;
+        }
+
+        if (t === 'TASK' && path.indexOf('/tasks') !== -1) {
+            return true;
+        }
+        if (t === 'MEETING' && (path.indexOf('/meetings') !== -1 || path.indexOf('/schedule-meeting') !== -1 || path.indexOf('/calendar') !== -1)) {
+            return true;
+        }
+        if (t === 'LEAVE' && (path.indexOf('/leaves') !== -1 || path.indexOf('/leave') !== -1)) {
+            return true;
+        }
+        if (t === 'TEAM' && (path.indexOf('/team') !== -1 || path.indexOf('/teams') !== -1)) {
+            return true;
+        }
+        if (t === 'HOLIDAY' && path.indexOf('/calendar') !== -1) {
+            return true;
+        }
+        if (t === 'REPORT' && path.indexOf('/reports') !== -1) {
+            return true;
+        }
+        if (t === 'PERFORMANCE' && path.indexOf('/performance') !== -1) {
+            return true;
+        }
+
+        return false;
+    }
+
+    function refreshPageContentIfRelevant(type) {
+        if (!shouldReloadPage(type)) return;
+
+        var pageContent = document.querySelector('.page-content');
+        if (!pageContent) {
+            window.location.reload();
+            return;
+        }
+
+        var activeEl = document.activeElement;
+        if (activeEl) {
+            var isInsideReplacedContainer = false;
+            var selectorsToCheck = [
+                '#lhList',
+                '#lhEmpty',
+                '#taskTbody',
+                '#taskTable',
+                '#meetingList',
+                '#employeeTbody',
+                '#attendanceTbody',
+                '#teamList',
+                '#dashboardNotifFeed',
+                '.stats-row',
+                '.tasks-scroll'
+            ];
+            selectorsToCheck.forEach(function (sel) {
+                var container = document.querySelector(sel);
+                if (container && container.contains(activeEl)) {
+                    isInsideReplacedContainer = true;
+                }
+            });
+            if (isInsideReplacedContainer) {
+                console.log('User is interacting with elements inside the replaced container, skipping AJAX refresh.');
+                return;
+            }
+        }
+
+        var modalOpen = false;
+        document.querySelectorAll('[id*="modal"], [class*="modal"], [id*="overlay"], [class*="overlay"]').forEach(function(el) {
+            var id = (el.id || '').toLowerCase();
+            var cls = (el.className || '').toLowerCase();
+            
+            // Ignore sidebar, notification, hamburger, or menu elements
+            if (id.indexOf('sidebar') !== -1 || cls.indexOf('sidebar') !== -1 ||
+                id.indexOf('notif') !== -1 || cls.indexOf('notif') !== -1 ||
+                id.indexOf('hamburger') !== -1 || cls.indexOf('hamburger') !== -1 ||
+                id.indexOf('menu') !== -1 || cls.indexOf('menu') !== -1) {
+                return;
+            }
+
+            var style = window.getComputedStyle(el);
+            if (style.display !== 'none' && style.visibility !== 'hidden' && el.offsetWidth > 0 && el.offsetHeight > 0) {
+                if (style.opacity !== '0') {
+                    modalOpen = true;
+                }
+            }
+        });
+        if (modalOpen) {
+            console.log('Modal/Overlay is currently open, skipping AJAX refresh.');
+            return;
+        }
+
+        console.log('Refreshing page content via AJAX for type ' + type + '...');
+        fetch(window.location.href)
+            .then(function (response) {
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                return response.text();
+            })
+            .then(function (htmlText) {
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(htmlText, 'text/html');
+                
+                var selectors = [
+                    '#lhList',
+                    '#lhEmpty',
+                    '#taskTbody',
+                    '#taskTable',
+                    '#meetingList',
+                    '#employeeTbody',
+                    '#attendanceTbody',
+                    '#teamList',
+                    '#dashboardNotifFeed',
+                    '.stats-row',
+                    '.tasks-scroll'
+                ];
+
+                var updatedAny = false;
+                selectors.forEach(function (selector) {
+                    var currentEl = document.querySelector(selector);
+                    var newEl = doc.querySelector(selector);
+                    if (currentEl && newEl) {
+                        currentEl.innerHTML = newEl.innerHTML;
+                        updatedAny = true;
+                    }
+                });
+
+                if (updatedAny) {
+                    if (window.lucide) {
+                        lucide.createIcons();
+                    }
+
+                    // Run page-specific callbacks/post-refresh adjustments
+                    var path = window.location.pathname.toLowerCase();
+                    if (path.indexOf('/leaves') !== -1) {
+                        if (typeof updateStats === 'function') updateStats();
+                        if (typeof applyFilters === 'function') applyFilters();
+                        document.querySelectorAll('#lhList .leave-item').forEach(function (el) {
+                            var s = el.dataset.status;
+                            if (s === 'Approved' || s === 'Rejected') {
+                                el.querySelectorAll('.btn-approve, .btn-reject').forEach(function (b) {
+                                    b.style.display = 'none';
+                                });
+                            }
+                        });
+                    }
+                    if (path.indexOf('/tasks') !== -1) {
+                        if (typeof filterMyTasks === 'function') filterMyTasks();
+                    }
+
+                    console.log('Page content elements updated dynamically.');
+                } else {
+                    console.log('No specific container selectors found, falling back to full reload...');
+                    window.location.reload();
+                }
+            })
+            .catch(function (error) {
+                console.warn('AJAX page refresh failed, falling back to full reload:', error);
+                window.location.reload();
+            });
+    }
+
+    /* Dynamic toast popup widget */
+    function getToastContainer() {
+        var container = document.getElementById('crmToastContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'crmToastContainer';
+            container.className = 'notif-toast-container';
+            document.body.appendChild(container);
+        }
+        return container;
+    }
+
+    function showToast(n) {
+        var container = getToastContainer();
+        var toast = document.createElement('div');
+        toast.className = 'notif-toast';
+        toast.innerHTML =
+            '<div class="notif-toast-icon">' +
+                '<i data-lucide="' + typeIcon(n.type) + '"></i>' +
+            '</div>' +
+            '<div class="notif-toast-content">' +
+                '<span class="notif-toast-title">' + escapeHtml(n.title || '') + '</span>' +
+                '<span class="notif-toast-message">' + escapeHtml(n.message || '') + '</span>' +
+            '</div>' +
+            '<button type="button" class="notif-toast-close" aria-label="Close">' +
+                '<i data-lucide="x"></i>' +
+            '</button>';
+
+        container.appendChild(toast);
+        if (window.lucide) lucide.createIcons();
+
+        // Trigger animation
+        setTimeout(function () {
+            toast.classList.add('show');
+        }, 10);
+
+        // Click redirects to the link if present
+        toast.addEventListener('click', function (e) {
+            if (e.target.closest('.notif-toast-close')) return;
+            if (n.link) {
+                window.location.href = n.link;
+            }
+        });
+
+        // Close button functionality
+        toast.querySelector('.notif-toast-close').addEventListener('click', function (e) {
+            e.stopPropagation();
+            hideToast(toast);
+        });
+
+        // Auto dismiss after 5s
+        setTimeout(function () {
+            hideToast(toast);
+        }, 5000);
+    }
+
+    function hideToast(toast) {
+        toast.classList.remove('show');
+        setTimeout(function () {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 400);
     }
 
     function init(attempt) {
@@ -297,7 +702,25 @@
         }
 
         ensureUi();
-        startPolling();
+
+        // Fetch initial list of notifications
+        fetchNotifications(function () {
+            // Once initial data loads, try connecting to WebSocket
+            window.crmFetch('/api/notifications/me', { method: 'GET', contentType: null })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (user) {
+                    if (user && user.id) {
+                        loadLibrariesAndConnect(user.id);
+                    } else {
+                        console.warn('Could not read user info. Falling back to HTTP polling.');
+                        startPolling();
+                    }
+                })
+                .catch(function (err) {
+                    console.warn('User details fetch failed. Falling back to HTTP polling:', err.message);
+                    startPolling();
+                });
+        });
     }
 
     if (document.readyState === 'loading') {

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
     <meta charset="UTF-8">
@@ -32,9 +32,6 @@
             <a href="#">&#128202; Dashboard</a>
         </li>
         <li>
-            <a href="#">&#128193; My Projects</a>
-        </li>
-        <li>
             <a href="#">&#9989; My Tasks</a>
         </li>
         <li>
@@ -58,7 +55,7 @@
         <h1>My Dashboard</h1>
         <div class="topbar-right">
             <div class="search-box">
-                <input type="text" placeholder="Search projects, tasks…">
+                <input type="text" placeholder="Search tasks…">
             </div>
             <div class="user-badge" th:text="${#strings.substring(employeeName ?: 'Employee', 0, 1).toUpperCase()}">E</div>
         </div>
@@ -68,13 +65,6 @@
 
         <!-- STATS ROW -->
         <div class="stats-row">
-            <div class="stat-card">
-                <div class="stat-icon blue">&#128193;</div>
-                <div class="stat-info">
-                    <h3 th:text="${activeProjectsCount} ?: '0'">0</h3>
-                    <p>Active Projects</p>
-                </div>
-            </div>
             <div class="stat-card">
                 <div class="stat-icon green">&#9989;</div>
                 <div class="stat-info">
@@ -104,32 +94,7 @@
             <!-- LEFT COLUMN: My Projects + My Tasks -->
             <div class="left-col">
 
-                <!-- My Projects -->
-                <div class="card">
-                    <div class="card-header">
-                        <div>
-                            <h2>My Projects</h2>
-                            <p>Active project assignments</p>
-                        </div>
-                        <a href="#" class="btn-link">View All &#8594;</a>
-                    </div>
-                    <div th:each="proj : ${myProjects}" class="project-item">
-                        <div>
-                            <div class="project-name" th:text="${proj.name}">Project Name</div>
-                            <div class="project-deadline" th:text="${proj.deadline}">Deadline</div>
-                        </div>
-                        <div class="project-progress-wrap">
-                            <div class="progress-bar-sm">
-                                <div class="progress-fill-sm" th:style="'width:' + ${proj.progress} + '%'"></div>
-                            </div>
-                            <span class="progress-pct" th:text="${proj.progress} + '%'">0%</span>
-                        </div>
-                    </div>
-                    <div th:if="${#lists.isEmpty(myProjects)}" class="empty-state" style="padding:20px;">
-                        <div style="font-size:32px;">&#128193;</div>
-                        <h3>No Projects Assigned</h3>
-                    </div>
-                </div>
+
 
                 <!-- My Tasks -->
                 <div class="card">
@@ -236,10 +201,7 @@
                         </div>
                     </div>
                     <div class="quick-actions">
-                        <a href="#" class="quick-action-btn">
-                            <span class="qa-icon" style="background:#dcecf5;">&#128193;</span>
-                            <span>My Projects</span>
-                        </a>
+
                         <a href="#" class="quick-action-btn">
                             <span class="qa-icon" style="background:#dff5ea;">&#9989;</span>
                             <span>My Tasks</span>

@@ -32,6 +32,17 @@ public class NotificationController {
         return userRepository.findByUsername(username);
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<?> getMe() {
+        User user = getCurrentUser();
+        if (user == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+        return ResponseEntity.ok(Map.of(
+                "id", user.getId(),
+                "username", user.getUsername(),
+                "role", user.getRole()
+        ));
+    }
+
     @GetMapping
     public ResponseEntity<?> list() {
         User user = getCurrentUser();

@@ -414,6 +414,7 @@ public class HrController {
         user.setRole(role);
         user.setStatus("active");
         userRepository.save(user);
+        notificationService.notifyEmployeeManagementChanged(getTenantSegment(request), "added", username);
         ra.addFlashAttribute("successMessage", "User '" + username + "' added successfully.");
         return "redirect:/hr/employees";
     }
@@ -566,11 +567,13 @@ public class HrController {
 
     @PostMapping("/toggle-user/{id}")
     public String toggleUser(@PathVariable Long id, RedirectAttributes ra) {
+        User hr = getCurrentHr();
         User user = userRepository.findById(id).orElse(null);
         if (user != null && isNonAdminRole(user.getRole())) {
             String newStatus = "active".equalsIgnoreCase(user.getStatus()) ? "inactive" : "active";
             user.setStatus(newStatus);
             userRepository.save(user);
+            notificationService.notifyEmployeeManagementChanged(getTenantSegmentFromUser(hr), "updated", user.getUsername());
             ra.addFlashAttribute("successMessage", user.getUsername() + " is now " + newStatus + ".");
         }
         return "redirect:/hr/employees";
@@ -579,6 +582,7 @@ public class HrController {
     @PostMapping("/delete-user/{id}")
     @Transactional
     public String deleteUser(@PathVariable Long id, RedirectAttributes ra) {
+        User hr = getCurrentHr();
         User user = userRepository.findById(id).orElse(null);
         if (user != null && isNonAdminRole(user.getRole())) {
             String name = user.getUsername();
@@ -589,6 +593,7 @@ public class HrController {
             leaveRequestRepository.deleteByEmployee(user);
             attendanceRepository.deleteByUser(user);
             userRepository.delete(user);
+            notificationService.notifyEmployeeManagementChanged(getTenantSegmentFromUser(hr), "deleted", name);
             ra.addFlashAttribute("successMessage", "User '" + name + "' deleted.");
         }
         return "redirect:/hr/employees";
@@ -661,6 +666,7 @@ public class HrController {
 
         emp.setRole(role);
         userRepository.save(emp);
+        notificationService.notifyEmployeeManagementChanged(getTenantSegment(request), "updated", emp.getUsername());
         ra.addFlashAttribute("successMessage", "'" + emp.getUsername() + "' updated successfully.");
         return "redirect:/hr/employees";
     }

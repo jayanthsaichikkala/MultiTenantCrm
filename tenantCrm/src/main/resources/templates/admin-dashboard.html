@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 
 <head>
@@ -61,13 +61,7 @@
 						<p>Total Employees</p><span class="stat-growth" th:text="${employeeGrowth} ?: '+0%'">+0%</span>
 					</div>
 				</div>
-				<div class="stat-card">
-					<div class="stat-icon blue"><i data-lucide="folder-open"></i></div>
-					<div class="stat-info">
-						<h3 data-analytics-stat="activeProjects" th:text="${activeProjects} ?: '0'">0</h3>
-						<p>Active Projects</p><span class="stat-growth" th:text="${projectGrowth} ?: '+0%'">+0%</span>
-					</div>
-				</div>
+
 				<div class="stat-card">
 					<div class="stat-icon orange"><i data-lucide="check-square"></i></div>
 					<div class="stat-info">
@@ -138,10 +132,7 @@
 								<div class="qa-icon" style="background:#dff5ea;color:#1b7a46;"><i
 										data-lucide="users"></i></div> Employees
 							</a>
-							<a th:href="@{/admin/projects}" class="quick-action-btn">
-								<div class="qa-icon" style="background:#dcecf5;color:#17455e;"><i
-										data-lucide="folder-open"></i></div> New Project
-							</a>
+
 							<a th:href="@{/admin/tasks}" class="quick-action-btn">
 								<div class="qa-icon" style="background:#fce9d8;color:#b45309;"><i
 										data-lucide="check-square"></i></div> Create Task
@@ -161,8 +152,7 @@
 						<div class="summary-list">
 							<div class="summary-row"><span class="summary-label">Total Employees</span><span
 									class="summary-value" th:text="${employeeCount} ?: '0'">0</span></div>
-							<div class="summary-row"><span class="summary-label">Active Projects</span><span
-									class="summary-value" th:text="${projectCount} ?: '0'">0</span></div>
+
 							<div class="summary-row"><span class="summary-label">Pending Tasks</span><span
 									class="summary-value" th:text="${pendingTasks} ?: '0'">0</span></div>
 						</div>
@@ -186,7 +176,6 @@
 		memberDatasetLabel: 'Tasks Assigned',
 		statBindings: {
 			totalEmployees: 'totalEmployees',
-			activeProjects: 'activeProjects',
 			tasksDone: 'tasksDone',
 			pendingTasks: 'pendingTaskTotal'
 		},
