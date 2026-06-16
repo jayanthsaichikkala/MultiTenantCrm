@@ -41,13 +41,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
 	// tcs -> emp.tcs@crm.com
 	// =========================
 
-	@Query("SELECT u FROM User u WHERE u.email LIKE %:tenantSegment%")
+	@Query("SELECT u FROM User u WHERE u.email LIKE %:tenantSegment% ORDER BY u.id DESC")
 	List<User> findByTenantSegment(@Param("tenantSegment") String tenantSegment);
 
 	// =========================
 	// ONLY EMPLOYEES BY TENANT
 	// =========================
 
-	@Query("SELECT u FROM User u WHERE u.email LIKE %:tenantSegment% AND UPPER(u.role) = 'EMPLOYEE'")
+	@Query("SELECT u FROM User u WHERE u.email LIKE %:tenantSegment% AND UPPER(u.role) = 'EMPLOYEE' ORDER BY u.id DESC")
 	List<User> findEmployeesByTenant(@Param("tenantSegment") String tenantSegment);
 }

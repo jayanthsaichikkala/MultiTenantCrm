@@ -248,7 +248,7 @@
 		<li><a th:href="@{/manager/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
 		<li><a th:href="@{/manager/performance}"><i data-lucide="bar-chart-2"></i> Performance</a></li>
 		<li class="active"><a th:href="@{/manager/reports}"><i data-lucide="file-bar-chart"></i> Reports</a></li>
-		<li><a th:href="@{/manager/settings}"><i data-lucide="settings"></i> Settings</a></li>
+		<li><a th:href="@{/manager/profile}"><i data-lucide="user"></i> Profile</a></li>
 	</ul>
 	<a href="#" data-logout style="text-decoration:none;">
 		<button class="logout-btn"><i data-lucide="log-out"></i> Logout</button>
@@ -410,7 +410,8 @@
 								         data-existing-rating=${perf.existingReview != null ? perf.existingReview.rating : 0},
 								         data-existing-remarks=${perf.existingReview != null ? (perf.existingReview.remarks ?: '') : ''},
 								         data-review-by=${perf.existingReview != null ? perf.existingReview.reviewedBy : ''},
-								         data-review-at=${perf.existingReview != null ? perf.existingReview.reviewedAtFormatted : ''}">
+								         data-review-at=${perf.existingReview != null ? perf.existingReview.reviewedAtFormatted : ''},
+								         data-weekly-locked=${perf.weeklyLocked}">
 							</td>
 						</tr>
 					</tbody>
@@ -779,6 +780,7 @@ sentReportsData.push({
 		var exRemarks = d.getAttribute('data-existing-remarks') || '';
 		var revBy     = d.getAttribute('data-review-by') || '';
 		var revAt     = d.getAttribute('data-review-at') || '';
+		var weeklyLocked = d.getAttribute('data-weekly-locked') === 'true';
 		var empMonth  = selectedMonth;
 
 		// Fill header
@@ -827,8 +829,32 @@ sentReportsData.push({
 			document.getElementById('detailReviewBtnLabel').textContent = 'Give Review';
 		}
 
+		// Configure give-review button state
+		var reviewBtn = document.getElementById('detailGiveReviewBtn');
+		if (exRating > 0) {
+			reviewBtn.style.display = 'none'; // Cannot update, hide completely!
+		} else if (weeklyLocked) {
+			reviewBtn.style.display = 'inline-flex';
+			reviewBtn.disabled = true;
+			reviewBtn.style.background = '#fee2e2';
+			reviewBtn.style.color = '#ef4444';
+			reviewBtn.style.border = '1px solid #fca5a5';
+			reviewBtn.style.cursor = 'not-allowed';
+			reviewBtn.style.transform = 'none';
+			document.getElementById('detailReviewBtnLabel').textContent = 'Weekly Limit';
+		} else {
+			reviewBtn.style.display = 'inline-flex';
+			reviewBtn.disabled = false;
+			reviewBtn.style.background = '';
+			reviewBtn.style.color = '';
+			reviewBtn.style.border = '';
+			reviewBtn.style.cursor = '';
+			reviewBtn.style.transform = '';
+			document.getElementById('detailReviewBtnLabel').textContent = 'Give Review';
+		}
+
 		// Wire give-review button
-		document.getElementById('detailGiveReviewBtn').onclick = function () {
+		reviewBtn.onclick = function () {
 			closeEmpDetail();
 			openReviewModal(empId, name, empMonth, exRating, exRemarks);
 		};

@@ -33,29 +33,7 @@ public class ProfileUpdateService {
             return false;
         }
 
-        String newUsername = clean(username);
-        String newEmail = clean(email);
         boolean changed = false;
-
-        if (newUsername != null && !newUsername.equals(user.getUsername())) {
-            User existing = userRepository.findByUsername(newUsername);
-            if (isAnotherUser(existing, user)) {
-                ra.addFlashAttribute("errorMessage", "Username already in use.");
-                return false;
-            }
-            user.setUsername(newUsername);
-            changed = true;
-        }
-
-        if (newEmail != null && !newEmail.equalsIgnoreCase(nullToEmpty(user.getEmail()))) {
-            User existing = userRepository.findByEmail(newEmail);
-            if (isAnotherUser(existing, user)) {
-                ra.addFlashAttribute("errorMessage", "Email already in use.");
-                return false;
-            }
-            user.setEmail(newEmail);
-            changed = true;
-        }
 
         if (password != null && !password.isBlank()) {
             if (!Objects.equals(password, confirmPassword)) {

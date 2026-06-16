@@ -4,8 +4,8 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>HR &mdash; Settings</title>
-	<link rel="stylesheet" th:href="@{/hr.css}">
+	<title>Admin &mdash; Profile</title>
+	<link rel="stylesheet" th:href="@{/admin.css}">
 	<link rel="stylesheet" th:href="@{/notifications.css}">
 	<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 	<style>
@@ -181,6 +181,11 @@
 			background: #e0eaf0;
 		}
 
+		.optional-text {
+			color: #6b7280;
+			font-weight: 400;
+		}
+
 		@media (max-width: 860px) {
 			.profile-combined-card {
 				flex-direction: column;
@@ -221,33 +226,30 @@
 
 <body>
 	<div class="mobile-topbar"><button class="hamburger"
-			id="hamburgerBtn"><span></span><span></span><span></span></button><span class="mobile-title">HR</span></div>
+			id="hamburgerBtn"><span></span><span></span><span></span></button><span class="mobile-title">CRM
+			Admin</span></div>
 	<div class="sidebar-overlay" id="sidebarOverlay"></div>
 	<div class="sidebar" id="sidebar">
-		<a th:href="@{/hr/dashboard}" style="text-decoration: none; color: inherit; display: block;">
+		<a th:href="@{/admin/dashboard}" style="text-decoration: none; color: inherit; display: block;">
 			<div class="sidebar-logo">
-				<div class="logo-icon"><i data-lucide="users"></i></div>
-				<h2>HR</h2>
+				<div class="logo-icon"><i data-lucide="shield"></i></div>
+				<h2>Admin</h2>
 			</div>
 		</a>
 		<div class="profile-box">
-			<div class="profile-avatar" th:text="${#strings.substring(adminName ?: 'H', 0, 1).toUpperCase()}">H</div>
-			<h3 th:text="${adminName} ?: 'HR User'">HR User</h3>
-			<p th:text="${adminRole} ?: 'HR'">HR</p>
+			<div class="profile-avatar" th:text="${#strings.substring(adminName ?: 'Admin', 0, 1).toUpperCase()}">A
+			</div>
+			<h3 th:text="${adminName} ?: 'Admin'">Admin</h3>
+			<p th:text="${adminRole} ?: 'ADMIN'">ADMIN</p>
 		</div>
 		<ul class="sidebar-menu">
-			<li><a th:href="@{/hr/dashboard}"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
-			<li><a th:href="@{/hr/employees}"><i data-lucide="users"></i> Employees</a></li>
-			<li><a th:href="@{/hr/tasks}"><i data-lucide="check-square"></i> Tasks</a></li>
-			<li><a th:href="@{/hr/recruitment}"><i data-lucide="briefcase"></i> Recruitment</a></li>
-			<li><a th:href="@{/hr/attendance}"><i data-lucide="calendar-check"></i> Attendance</a></li>
-			<li><a th:href="@{/hr/leaves}"><i data-lucide="file-text"></i> Leave Requests</a></li>
-			<li><a th:href="@{/hr/teams}"><i data-lucide="users-round"></i> Teams</a></li>
-			<li><a th:href="@{/hr/meetings}"><i data-lucide="calendar-clock"></i> Meetings</a></li>
-			<li><a th:href="@{/hr/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
-			<li><a th:href="@{/hr/performance}"><i data-lucide="bar-chart-2"></i> Performance</a></li>
-			<li><a th:href="@{/hr/reports}"><i data-lucide="file-bar-chart"></i> Reports</a></li>
-			<li class="active"><a th:href="@{/hr/settings}"><i data-lucide="settings"></i> Settings</a></li>
+			<li><a th:href="@{/admin/dashboard}"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
+			<li><a th:href="@{/admin/employees}"><i data-lucide="users"></i> Employees</a></li>
+			<li><a th:href="@{/admin/tasks}"><i data-lucide="check-square"></i> Tasks</a></li>
+			<li><a th:href="@{/admin/reports}"><i data-lucide="file-bar-chart"></i> Reports</a></li>
+			<li><a th:href="@{/admin/schedule-meeting}"><i data-lucide="calendar-clock"></i> Meetings</a></li>
+			<li><a th:href="@{/admin/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
+			<li class="active"><a th:href="@{/admin/profile}"><i data-lucide="user"></i> Profile</a></li>
 		</ul>
 		<a href="#" data-logout style="text-decoration:none;"><button class="logout-btn"><i data-lucide="log-out"></i>
 				Logout</button></a>
@@ -255,14 +257,15 @@
 	<div class="main-wrapper">
 		<div class="topbar">
 			<div>
-				<h1>Settings</h1>
-				<p class="topbar-subtitle">Manage your account settings</p>
-				<div class="breadcrumb"><a th:href="@{/hr/dashboard}"><i data-lucide="home"></i>
-						Home</a><span>&#8250;</span><span>Settings</span></div>
+				<h1>Profile</h1>
+				<p class="topbar-subtitle">Manage your account profile</p>
+				<div class="breadcrumb"><a th:href="@{/admin/dashboard}"><i data-lucide="home"></i>
+						Home</a><span>&#8250;</span><span>Profile</span></div>
 			</div>
 			<div class="topbar-right">
 				<button class="notif-btn"><i data-lucide="bell"></i><span class="notif-dot"></span></button>
-				<div class="user-badge" th:text="${#strings.substring(adminName ?: 'H', 0, 1).toUpperCase()}">H</div>
+				<div class="user-badge" th:text="${#strings.substring(adminName ?: 'Admin', 0, 1).toUpperCase()}">A
+				</div>
 			</div>
 		</div>
 		<div class="page-content">
@@ -271,10 +274,10 @@
 			<div class="card profile-combined-card">
 				<div class="profile-identity">
 					<div class="profile-page-avatar"
-						th:text="${#strings.substring(adminName ?: 'H', 0, 1).toUpperCase()}">H</div>
-					<h2 th:text="${adminName} ?: 'HR User'">HR User</h2>
-					<p th:text="${hrEmail} ?: 'hr@example.com'">hr@example.com</p>
-					<span class="role-badge" style="margin-top:12px;">HR</span>
+						th:text="${#strings.substring(adminName ?: 'Admin', 0, 1).toUpperCase()}">A</div>
+					<h2 th:text="${adminName} ?: 'Admin'">Admin</h2>
+					<p th:text="${adminEmail} ?: 'admin@example.com'">admin@example.com</p>
+					<span class="role-badge" style="margin-top:12px;" th:text="${adminRole} ?: 'ADMIN'">ADMIN</span>
 					<div style="margin-top:10px;"><span class="status-badge active">Online</span></div>
 				</div>
 				<div class="profile-divider"></div>
@@ -285,15 +288,15 @@
 							<p>Update your account information</p>
 						</div>
 					</div>
-					<form th:action="@{/hr/settings/profile}" method="post">
+					<form th:action="@{/admin/update-profile}" method="post">
 						<div class="form-grid">
 							<div class="form-group"><label>Username</label>
 								<div class="input-wrap"><input type="text" name="username" th:value="${adminName}"
-										required autocomplete="username"></div>
+										readonly style="background-color: #e5edf2; cursor: not-allowed;" autocomplete="username"></div>
 							</div>
 							<div class="form-group"><label>Email Address</label>
-								<div class="input-wrap"><input type="email" name="email" th:value="${hrEmail}"
-										placeholder="hr@example.com" required autocomplete="email"></div>
+								<div class="input-wrap"><input type="email" name="email" th:value="${adminEmail}"
+										placeholder="admin@example.com" readonly style="background-color: #e5edf2; cursor: not-allowed;" autocomplete="email"></div>
 							</div>
 							<div class="form-group"><label>New Password <span class="optional-text">(leave blank to
 										keep)</span></label>

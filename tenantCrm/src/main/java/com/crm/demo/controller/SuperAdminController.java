@@ -34,6 +34,7 @@ public class SuperAdminController {
     private List<User> loadAdmins(Model model) {
         List<User> admins = userRepository.findAll().stream()
                 .filter(u -> "ADMIN".equalsIgnoreCase(u.getRole()))
+                .sorted(java.util.Comparator.comparing(User::getId).reversed())
                 .toList();
         long activeCount = admins.stream().filter(User::isActive).count();
         model.addAttribute("admins",       admins);
@@ -215,20 +216,11 @@ public class SuperAdminController {
             return "redirect:/superadmin/admins";
         }
 
-        // Check duplicate username/email (excluding current user)
-        User existing = userRepository.findByUsernameOrEmail(username, email).orElse(null);
-        if (existing != null && !existing.getId().equals(id)) {
-            ra.addFlashAttribute("errorMessage", "Username or email already in use.");
-            return "redirect:/superadmin/edit-admin/" + id;
-        }
-
-        admin.setUsername(username);
-        admin.setEmail(email);
         admin.setStatus(status);
         admin.setEmployeeLimit(employeeLimit);
         userRepository.save(admin);
 
-        ra.addFlashAttribute("successMessage", "Admin '" + username + "' updated successfully.");
+        ra.addFlashAttribute("successMessage", "Admin '" + admin.getUsername() + "' updated successfully.");
         return "redirect:/superadmin/admins";
     }
 

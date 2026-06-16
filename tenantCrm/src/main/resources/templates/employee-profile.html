@@ -4,8 +4,8 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Manager &mdash; Settings</title>
-	<link rel="stylesheet" th:href="@{/manager.css}">
+	<title>Employee &mdash; Profile</title>
+	<link rel="stylesheet" th:href="@{/employee.css}">
 	<link rel="stylesheet" th:href="@{/notifications.css}">
 	<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 	<style>
@@ -47,41 +47,40 @@
 </head>
 
 <body>
-	<div class="mobile-topbar"><button class="hamburger" id="hamburgerBtn"><span></span><span></span><span></span></button><span class="mobile-title">Manager</span></div>
+	<div class="mobile-topbar"><button class="hamburger" id="hamburgerBtn"><span></span><span></span><span></span></button><span class="mobile-title">Employee</span></div>
 	<div class="sidebar-overlay" id="sidebarOverlay"></div>
 	<div class="sidebar" id="sidebar">
-		<a th:href="@{/manager/dashboard}" style="text-decoration: none; color: inherit; display: block;">
-			<div class="sidebar-logo"><div class="logo-icon"><i data-lucide="briefcase"></i></div><h2>Manager</h2></div>
+		<a th:href="@{/employee/dashboard}" style="text-decoration: none; color: inherit; display: block;">
+			<div class="sidebar-logo"><div class="logo-icon"><i data-lucide="user"></i></div><h2>Employee</h2></div>
 		</a>
 		<div class="profile-box">
-			<div class="profile-avatar" th:text="${#strings.substring(managerName ?: 'M', 0, 1).toUpperCase()}">M</div>
-			<h3 th:text="${managerName} ?: 'Manager'">Manager</h3>
-			<p>Manager</p>
+			<div class="profile-avatar" th:text="${#strings.substring(employeeName ?: 'E', 0, 1).toUpperCase()}">E</div>
+			<h3 th:text="${employeeName} ?: 'Employee'">Employee</h3>
+			<p th:text="${employeeRole} ?: 'Employee'">Employee</p>
 		</div>
 		<ul class="sidebar-menu">
-			<li><a th:href="@{/manager/dashboard}"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
-			<li><a th:href="@{/manager/team}"><i data-lucide="users"></i> My Team</a></li>
-			<li><a th:href="@{/manager/tasks}"><i data-lucide="check-square"></i> Tasks</a></li>
-			<li><a th:href="@{/manager/attendance}"><i data-lucide="calendar-check"></i> Attendance</a></li>
-			<li><a th:href="@{/manager/leave}"><i data-lucide="file-text"></i> Leave Request</a></li>
-			<li><a th:href="@{/manager/meetings}"><i data-lucide="calendar-clock"></i> Meetings</a></li>
-			<li><a th:href="@{/manager/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
-			<li><a th:href="@{/manager/performance}"><i data-lucide="bar-chart-2"></i> Performance</a></li>
-			<li><a th:href="@{/manager/reports}"><i data-lucide="file-bar-chart"></i> Reports</a></li>
-			<li class="active"><a th:href="@{/manager/settings}"><i data-lucide="settings"></i> Settings</a></li>
+			<li><a th:href="@{/employee/dashboard}"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
+			<li><a th:href="@{/employee/projects}"><i data-lucide="folder-open"></i> My Projects</a></li>
+			<li><a th:href="@{/employee/tasks}"><i data-lucide="check-square"></i> My Tasks</a></li>
+			<li><a th:href="@{/employee/attendance}"><i data-lucide="calendar-check"></i> Attendance</a></li>
+			<li><a th:href="@{/employee/leaves}"><i data-lucide="file-text"></i> Leave Request</a></li>
+			<li><a th:href="@{/employee/meetings}"><i data-lucide="calendar-clock"></i> Meetings</a></li>
+			<li><a th:href="@{/employee/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
+			<li><a th:href="@{/employee/performance}"><i data-lucide="bar-chart-2"></i> Performance</a></li>
+			<li><a th:href="@{/employee/reports}"><i data-lucide="file-bar-chart"></i> Reports</a></li>
+			<li class="active"><a th:href="@{/employee/profile}"><i data-lucide="user"></i> Profile</a></li>
 		</ul>
 		<a href="#" data-logout style="text-decoration:none;"><button class="logout-btn"><i data-lucide="log-out"></i> Logout</button></a>
 	</div>
 	<div class="main-wrapper">
 		<div class="topbar">
 			<div>
-				<h1>Settings</h1>
-				<p class="topbar-subtitle">Manage your account settings</p>
-				<div class="breadcrumb"><a th:href="@{/manager/dashboard}"><i data-lucide="home"></i> Home</a><span>&#8250;</span><span>Settings</span></div>
+				<h1>Profile</h1>
+				<p class="topbar-subtitle">Manage your account profile</p>
+				<div class="breadcrumb"><a th:href="@{/employee/dashboard}"><i data-lucide="home"></i> Home</a><span>&#8250;</span><span>Profile</span></div>
 			</div>
 			<div class="topbar-right">
-				<button class="notif-btn"><i data-lucide="bell"></i><span class="notif-dot"></span></button>
-				<div class="user-badge" th:text="${#strings.substring(managerName ?: 'M', 0, 1).toUpperCase()}">M</div>
+				<div class="user-badge" th:text="${#strings.substring(employeeName ?: 'E', 0, 1).toUpperCase()}">E</div>
 			</div>
 		</div>
 		<div class="page-content">
@@ -89,19 +88,19 @@
 			<div class="toast error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 			<div class="card profile-combined-card">
 				<div class="profile-identity">
-					<div class="profile-page-avatar" th:text="${#strings.substring(managerName ?: 'M', 0, 1).toUpperCase()}">M</div>
-					<h2 th:text="${managerName} ?: 'Manager'">Manager</h2>
-					<p th:text="${managerEmail} ?: 'manager@example.com'">manager@example.com</p>
-					<span class="role-badge" style="margin-top:12px;">MANAGER</span>
+					<div class="profile-page-avatar" th:text="${#strings.substring(employeeName ?: 'E', 0, 1).toUpperCase()}">E</div>
+					<h2 th:text="${employeeName} ?: 'Employee'">Employee</h2>
+					<p th:text="${employeeEmail} ?: 'employee@example.com'">employee@example.com</p>
+					<span class="role-badge" style="margin-top:12px;">EMPLOYEE</span>
 					<div style="margin-top:10px;"><span class="status-badge active">Online</span></div>
 				</div>
 				<div class="profile-divider"></div>
 				<div class="profile-form-side">
 					<div class="card-header" style="margin-bottom:18px;"><div><h2>Edit Profile</h2><p>Update your account information</p></div></div>
-					<form th:action="@{/manager/settings/profile}" method="post">
+					<form th:action="@{/employee/update-profile}" method="post">
 						<div class="form-grid">
-							<div class="form-group"><label>Username</label><div class="input-wrap"><input type="text" name="username" th:value="${managerName}" required autocomplete="username"></div></div>
-							<div class="form-group"><label>Email Address</label><div class="input-wrap"><input type="email" name="email" th:value="${managerEmail}" placeholder="manager@example.com" required autocomplete="email"></div></div>
+							<div class="form-group"><label>Username</label><div class="input-wrap"><input type="text" name="username" th:value="${employeeName}" readonly style="background-color: #e5edf2; cursor: not-allowed;" autocomplete="username"></div></div>
+							<div class="form-group"><label>Email Address</label><div class="input-wrap"><input type="email" name="email" th:value="${employeeEmail}" placeholder="employee@example.com" readonly style="background-color: #e5edf2; cursor: not-allowed;" autocomplete="email"></div></div>
 							<div class="form-group"><label>New Password <span class="optional-text">(leave blank to keep)</span></label><div class="input-wrap"><input class="has-toggle" type="password" name="password" id="passwordField" placeholder="New password" autocomplete="new-password"><button type="button" class="pwd-toggle" id="togglePassword" aria-label="Toggle password visibility"><i data-lucide="eye" id="togglePasswordIcon"></i></button></div></div>
 							<div class="form-group"><label>Confirm Password</label><div class="input-wrap"><input class="has-toggle" type="password" name="confirmPassword" id="confirmPasswordField" placeholder="Confirm new password" autocomplete="new-password"><button type="button" class="pwd-toggle" id="toggleConfirmPassword" aria-label="Toggle confirm password visibility"><i data-lucide="eye" id="toggleConfirmPasswordIcon"></i></button></div></div>
 						</div>

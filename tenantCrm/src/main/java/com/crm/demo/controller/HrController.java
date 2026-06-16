@@ -177,6 +177,7 @@ public class HrController {
                 ? userRepository.findAll().stream()
                         .filter(u -> isNonAdminRole(u.getRole()))
                         .filter(u -> !u.getUsername().equals(currentUsername))
+                        .sorted(java.util.Comparator.comparing(User::getId).reversed())
                         .toList()
                 : userRepository.findByTenantSegment(tenant).stream()
                         .filter(u -> isNonAdminRole(u.getRole()))
@@ -333,6 +334,7 @@ public class HrController {
         List<Task> tasks = tenant.isBlank()
                 ? taskRepository.findAll()
                 : taskRepository.findByTenantSegment(tenant);
+        tasks.sort(java.util.Comparator.comparing(Task::getId).reversed());
 
         long done = tasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
         long pending = tasks.stream().filter(t -> "pending".equalsIgnoreCase(t.getStatus())
@@ -648,13 +650,6 @@ public class HrController {
             return "redirect:/hr/edit-employee/" + id;
         }
 
-        // Check duplicate (excluding self)
-        User existing = userRepository.findByUsernameOrEmail(username, email).orElse(null);
-        if (existing != null && !existing.getId().equals(emp.getId())) {
-            ra.addFlashAttribute("errorMessage", "Username or email already in use.");
-            return "redirect:/hr/edit-employee/" + id;
-        }
-
         // Optional password change
         if (password != null && !password.isBlank()) {
             if (!password.equals(confirmPassword)) {
@@ -664,11 +659,9 @@ public class HrController {
             emp.setPassword(passwordEncoder.encode(password));
         }
 
-        emp.setUsername(username);
-        emp.setEmail(email);
         emp.setRole(role);
         userRepository.save(emp);
-        ra.addFlashAttribute("successMessage", "'" + username + "' updated successfully.");
+        ra.addFlashAttribute("successMessage", "'" + emp.getUsername() + "' updated successfully.");
         return "redirect:/hr/employees";
     }
 
@@ -737,9 +730,7 @@ public class HrController {
 
     @GetMapping("/recruitment")
     public String recruitmentPage(HttpServletRequest request, Model model) {
-        injectUser(request, model);
-        injectStats(request, model);
-        return "hr-recruitment";
+        return "redirect:/hr/dashboard";
     }
 
     @GetMapping("/attendance")
@@ -1074,17 +1065,17 @@ public class HrController {
                 .body(att.getFileData());
     }
 
-    @GetMapping("/settings")
-    public String settingsPage(HttpServletRequest request, Model model) {
+    @GetMapping("/profile")
+    public String profilePage(HttpServletRequest request, Model model) {
         injectUser(request, model);
         injectStats(request, model);
         String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
         User hr = userRepository.findByUsername(currentUsername);
         model.addAttribute("hrEmail", hr != null ? hr.getEmail() : "");
-        return "hr-settings";
+        return "hr-profile";
     }
 
-    @PostMapping("/settings/profile")
+    @PostMapping("/update-profile")
     public String updateProfile(@RequestParam(required = false) String username,
                                 @RequestParam(required = false) String email,
                                 @RequestParam(required = false) String password,
@@ -1093,10 +1084,10 @@ public class HrController {
                                 RedirectAttributes ra) {
         String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
         User hr = userRepository.findByUsername(currentUsername);
-        if (hr == null) return "redirect:/hr/settings";
+        if (hr == null) return "redirect:/hr/profile";
 
         profileUpdateService.updateProfile(hr, username, email, password, confirmPassword, ra, response);
-        return "redirect:/hr/settings";
+        return "redirect:/hr/profile";
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1109,7 +1100,7 @@ public class HrController {
         injectUser(request, model);
         String tenant = getTenantSegment(request);
 
-        List<Team> teams = teamRepository.findByTenantSegmentOrderByNameAsc(tenant);
+        List<Team> teams = teamRepository.findByTenantSegmentOrderByIdDesc(tenant);
 
         // Managers and employees available in this tenant
         List<User> tenantUsers = tenant.isEmpty()

@@ -886,7 +886,7 @@
 			<li><a th:href="@{/manager/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
 			<li><a th:href="@{/manager/performance}"><i data-lucide="bar-chart-2"></i> Performance</a></li>
 			<li><a th:href="@{/manager/reports}"><i data-lucide="file-bar-chart"></i> Reports</a></li>
-			<li><a th:href="@{/manager/settings}"><i data-lucide="settings"></i> Settings</a></li>
+			<li><a th:href="@{/manager/profile}"><i data-lucide="user"></i> Profile</a></li>
 		</ul>
 		<a href="#" data-logout style="text-decoration:none;"><button class="logout-btn"><i data-lucide="log-out"></i>
 				Logout</button></a>
@@ -947,6 +947,15 @@
 							<option value="Medium">Medium</option>
 							<option value="Low">Low</option>
 						</select>
+						<!-- Status filter -->
+						<select class="filter-select" id="statusFilter" onchange="filterTasks()">
+							<option value="">All Statuses</option>
+							<option value="done">Done</option>
+							<option value="waiting-for-review">Awaiting Review</option>
+							<option value="rejected">Returned</option>
+							<option value="in-progress">In Progress</option>
+							<option value="pending">Pending</option>
+						</select>
 						<button class="btn-new-task" id="openModalBtn">
 							<i data-lucide="plus-circle" style="width:15px;height:15px;"></i> Assign Task
 						</button>
@@ -980,7 +989,7 @@
 							</tr>
 
 							<tr th:each="task, stat : ${tasks}"
-								th:attr="data-priority=${task.priority}">
+								th:attr="data-priority=${task.priority},data-status=${task.verificationStatus == 'waiting-for-review' ? 'waiting-for-review' : (task.verificationStatus == 'rejected' ? 'rejected' : task.status)}">
 
 								<!-- # -->
 								<td class="td-num" th:text="${stat.count}">1</td>
@@ -1459,11 +1468,17 @@
 
 			function filterTasks() {
 				var pri = (document.getElementById('priorityFilter') || {}).value || '';
+				var status = (document.getElementById('statusFilter') || {}).value || '';
 				var q   = (document.getElementById('globalSearch')  || {}).value.toLowerCase() || '';
 				getVisibleRows().forEach(function (r) {
-					var priMatch = !pri || (r.getAttribute('data-priority') || '') === pri;
+					var rPri = r.getAttribute('data-priority') || '';
+					var priMatch = !pri || rPri.toLowerCase() === pri.toLowerCase();
+
+					var rStatus = r.getAttribute('data-status') || '';
+					var statusMatch = !status || rStatus.toLowerCase() === status.toLowerCase();
+
 					var qMatch   = !q   || r.textContent.toLowerCase().includes(q);
-					r.style.display = (priMatch && qMatch) ? '' : 'none';
+					r.style.display = (priMatch && statusMatch && qMatch) ? '' : 'none';
 				});
 				currentPage = 1;
 				renderPage();
@@ -1654,6 +1669,9 @@
 			if (dropZone) {dropZone.addEventListener('dragover', function (e) {e.preventDefault(); dropZone.classList.add('dragover');}); dropZone.addEventListener('dragleave', function () {dropZone.classList.remove('dragover');}); dropZone.addEventListener('drop', function (e) {e.preventDefault(); dropZone.classList.remove('dragover'); addFiles(e.dataTransfer.files);});}
 			if (submitBtn) submitBtn.addEventListener('click', function () {if (!validateForm()) return; syncFileInput(); document.getElementById('assignTaskForm').submit();});
 			function resetForm() {document.getElementById('assignTaskForm').reset(); selectedFiles = []; if (fileList) fileList.innerHTML = ''; document.querySelectorAll('.err-msg').forEach(function (e) {e.classList.remove('show');}); if (titleCount) titleCount.textContent = '0'; if (descCount) descCount.textContent = '0';}
+			window.filterTasks = filterTasks;
+			window.changePage = changePage;
+			window.changeRows = changeRows;
 			lucide.createIcons();
 		})();
 

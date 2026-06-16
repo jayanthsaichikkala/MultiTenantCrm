@@ -350,6 +350,7 @@ public class EmployeeController {
 
             // Load only tasks assigned to this employee in their tenant
             List<Task> myTasks = taskRepository.findByAssignedToAndTenantSegment(username, tenant);
+            myTasks.sort(java.util.Comparator.comparing(Task::getId).reversed());
 
             long completed  = myTasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
             long inProgress = myTasks.stream().filter(t -> "in-progress".equalsIgnoreCase(t.getStatus())).count();

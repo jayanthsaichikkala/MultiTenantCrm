@@ -239,7 +239,7 @@
 			<li><a th:href="@{/manager/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
 			<li class="active"><a th:href="@{/manager/performance}"><i data-lucide="bar-chart-2"></i> Performance</a></li>
 			<li><a th:href="@{/manager/reports}"><i data-lucide="file-bar-chart"></i> Reports</a></li>
-			<li><a th:href="@{/manager/settings}"><i data-lucide="settings"></i> Settings</a></li>
+			<li><a th:href="@{/manager/profile}"><i data-lucide="user"></i> Profile</a></li>
 		</ul>
 	<a href="#" data-logout style="text-decoration:none;">
 		<button class="logout-btn"><i data-lucide="log-out"></i> Logout</button>
@@ -421,15 +421,36 @@
 									  style="color:#cbd5e1;font-size:12px;">—</span>
 							</td>
 							<td>
+								<!-- If reviewed this month: show "Reviewed" (disabled) -->
 								<button type="button" class="btn-save-review"
+										th:if="${perf.existingReview != null}"
+										disabled
+										style="background:#cbd5e1;color:#64748b;cursor:not-allowed;transform:none;">
+									<i data-lucide="check" style="width:13px;height:13px;"></i>
+									<span>Reviewed</span>
+								</button>
+								
+								<!-- If NOT reviewed this month AND weekly locked: show "Weekly Limit" (disabled) -->
+								<button type="button" class="btn-save-review"
+										th:if="${perf.existingReview == null and perf.weeklyLocked}"
+										disabled
+										style="background:#fee2e2;color:#ef4444;border:1px solid #fca5a5;cursor:not-allowed;transform:none;"
+										title="You can only submit a performance review once a week for this employee.">
+									<i data-lucide="lock" style="width:13px;height:13px;"></i>
+									<span>Weekly Limit</span>
+								</button>
+
+								<!-- If NOT reviewed this month AND NOT weekly locked: show "Review" (active) -->
+								<button type="button" class="btn-save-review"
+										th:if="${perf.existingReview == null and !perf.weeklyLocked}"
 										th:attr="data-emp-id=${perf.employee.id},
 										         data-emp-name=${perf.employee.username},
 										         data-month=${selectedMonth},
-										         data-existing-rating=${perf.existingReview != null ? perf.existingReview.rating : 0},
-										         data-existing-remarks=${perf.existingReview != null ? (perf.existingReview.remarks ?: '') : ''}"
+										         data-existing-rating=0,
+										         data-existing-remarks=''"
 										onclick="openReviewModal(this)">
 									<i data-lucide="star" style="width:13px;height:13px;"></i>
-									<span th:text="${perf.existingReview != null} ? 'Update' : 'Review'">Review</span>
+									<span>Review</span>
 								</button>
 							</td>
 						</tr>

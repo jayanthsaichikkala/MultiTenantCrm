@@ -757,7 +757,7 @@
 			<li class="active"><a th:href="@{/admin/schedule-meeting}"><i data-lucide="calendar-clock"></i> Meetings</a>
 			</li>
 			<li><a th:href="@{/admin/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
-			<li><a th:href="@{/admin/settings}"><i data-lucide="settings"></i> Settings</a></li>
+			<li><a th:href="@{/admin/profile}"><i data-lucide="user"></i> Profile</a></li>
 		</ul>
 		<a href="#" data-logout style="text-decoration:none;"><button class="logout-btn"><i data-lucide="log-out"></i>
 				Logout</button></a>
@@ -896,12 +896,6 @@
 										</div>
 									</div>
 
-									<div class="form-group full" style="padding-bottom:0;">
-										<label class="checkbox-row">
-											<input type="checkbox" th:field="*{sendNotification}">
-											Send email notification to participants
-										</label>
-									</div>
 
 								</div>
 							</div><!-- /form-left -->

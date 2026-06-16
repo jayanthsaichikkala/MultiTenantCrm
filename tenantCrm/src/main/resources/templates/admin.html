@@ -120,8 +120,8 @@
 			<li th:classappend="${activePage == 'leaves'} ? 'active'">
 				<a th:href="@{/admin/leaves}">&#128196; Leaves</a>
 			</li>
-			<li th:classappend="${activePage == 'settings'} ? 'active'">
-				<a th:href="@{/admin/settings}">&#9881; Settings</a>
+			<li th:classappend="${activePage == 'profile'} ? 'active'">
+				<a th:href="@{/admin/profile}">&#128100; Profile</a>
 			</li>
 		</ul>
 		<a href="#" data-logout style="text-decoration:none;">
@@ -355,13 +355,6 @@
 								</div>
 							</div>
 
-							<!-- Notify -->
-							<div class="form-group" style="grid-column:1/-1;">
-								<label class="checkbox-row">
-									<input type="checkbox" th:field="*{sendNotification}" />
-									Send email notifications to participants
-								</label>
-							</div>
 
 						</div><!-- /au-form-grid -->
 						<div class="form-actions">
@@ -798,7 +791,7 @@
 			<!-- ===================== END REPORTS ===================== -->
 
 			<!-- ===================== SETTINGS PAGE ===================== -->
-			<div th:if="${activePage == 'settings'}">
+			<div th:if="${activePage == 'profile'}">
 				<div class="toast success" th:if="${successMessage}" th:text="${successMessage}"></div>
 				<div class="toast error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 				<div class="dashboard-grid">
@@ -809,7 +802,7 @@
 								<p>Update your account information</p>
 							</div>
 						</div>
-						<form th:action="@{/admin/settings/profile}" method="post">
+						<form th:action="@{/admin/update-profile}" method="post">
 							<div class="form-group">
 								<label>Username</label>
 								<div class="input-wrap"><input type="text" name="username" th:value="${adminName}"

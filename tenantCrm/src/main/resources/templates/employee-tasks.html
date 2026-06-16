@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 
 <head>
@@ -610,7 +610,7 @@
 			<li><a th:href="@{/employee/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
 			<li><a th:href="@{/employee/performance}"><i data-lucide="bar-chart-2"></i> Performance</a></li>
 			<li><a th:href="@{/employee/reports}"><i data-lucide="file-bar-chart"></i> Reports</a></li>
-			<li><a th:href="@{/employee/settings}"><i data-lucide="settings"></i> Settings</a></li>
+			<li><a th:href="@{/employee/profile}"><i data-lucide="user"></i> Profile</a></li>
 		</ul>
 		<a href="#" data-logout style="text-decoration:none;">
 			<button class="logout-btn"><i data-lucide="log-out"></i> Logout</button>
@@ -683,12 +683,18 @@
 							<h2>My Tasks</h2>
 							<p th:text="${totalTasks} + ' task(s) assigned to you'">0 task(s)</p>
 						</div>
-						<div class="tasks-toolbar-right">
+						<div class="tasks-toolbar-right" style="display: flex; align-items: center; gap: 10px;">
 							<select class="filter-select" id="priorityFilter" onchange="filterMyTasks()">
 								<option value="">All Priorities</option>
 								<option value="High">High</option>
 								<option value="Medium">Medium</option>
 								<option value="Low">Low</option>
+							</select>
+							<select class="filter-select" id="statusFilter" onchange="filterMyTasks()">
+								<option value="">All Statuses</option>
+								<option value="done">Done</option>
+								<option value="in-progress">In Progress</option>
+								<option value="pending">Pending</option>
 							</select>
 						</div>
 					</div>
@@ -717,7 +723,7 @@
 										</div>
 									</td>
 								</tr>
-								<tr th:each="task, stat : ${myTasks}" th:attr="data-priority=${task.priority}">
+								<tr th:each="task, stat : ${myTasks}" th:attr="data-priority=${task.priority},data-status=${task.status}">
 
 									<!-- # -->
 									<td class="td-num" th:text="${stat.count}">1</td>
@@ -872,6 +878,20 @@
 							<h2>Task History</h2>
 							<p th:text="${taskHistoryCount} + ' task(s) in history'">0 task(s)</p>
 						</div>
+						<div class="tasks-toolbar-right" style="display: flex; align-items: center; gap: 10px;">
+							<select class="filter-select" id="priorityFilterHistory" onchange="filterHistoryTasks()">
+								<option value="">All Priorities</option>
+								<option value="High">High</option>
+								<option value="Medium">Medium</option>
+								<option value="Low">Low</option>
+							</select>
+							<select class="filter-select" id="statusFilterHistory" onchange="filterHistoryTasks()">
+								<option value="">All Statuses</option>
+								<option value="done">Done</option>
+								<option value="in-progress">In Progress</option>
+								<option value="pending">Pending</option>
+							</select>
+						</div>
 					</div>
 					<div class="tasks-scroll">
 						<table class="tasks-table" id="historyTable">
@@ -886,7 +906,7 @@
 									<th style="width:150px;">Verification</th>
 								</tr>
 							</thead>
-							<tbody>
+							<tbody id="historyTbody">
 								<tr th:if="${taskHistory == null or #lists.isEmpty(taskHistory)}">
 									<td colspan="7" style="padding:52px;text-align:center;">
 										<div class="empty-state">
@@ -896,7 +916,7 @@
 										</div>
 									</td>
 								</tr>
-								<tr th:each="task, stat : ${taskHistory}">
+								<tr th:each="task, stat : ${taskHistory}" th:attr="data-priority=${task.priority},data-status=${task.status}">
 									<td class="td-num" th:text="${stat.count}">1</td>
 									<td>
 										<div class="td-title" th:text="${task.title}">Task</div>
@@ -948,6 +968,23 @@
 								</tr>
 							</tbody>
 						</table>
+					</div>
+					<!-- Pagination bar for History -->
+					<div class="pagination-bar" id="historyPaginationBar">
+						<span id="pageInfoHistory">Showing tasks</span>
+						<div class="page-btns">
+							<button class="page-btn" id="prevPageHistory" onclick="changePageHistory(-1)" disabled>&#8249;</button>
+							<button class="page-btn active" id="pageNumHistory">1</button>
+							<button class="page-btn" id="nextPageHistory" onclick="changePageHistory(1)">&#8250;</button>
+						</div>
+						<div style="display:flex;align-items:center;gap:8px;">
+							<span style="font-size:13px;color:#64748b;">Rows per page:</span>
+							<select class="rows-select" id="rowsPerPageHistory" onchange="changeRowsHistory()">
+								<option value="10" selected>10</option>
+								<option value="25">25</option>
+								<option value="50">50</option>
+							</select>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -1092,11 +1129,17 @@
 
 		function filterMyTasks() {
 			var pri = (document.getElementById('priorityFilter') || {}).value || '';
+			var status = (document.getElementById('statusFilter') || {}).value || '';
 			var q = (document.getElementById('globalSearch') || {}).value.toLowerCase() || '';
 			getTaskRows().forEach(function (r) {
-				var priMatch = !pri || (r.getAttribute('data-priority') || '') === pri;
+				var rPri = r.getAttribute('data-priority') || '';
+				var priMatch = !pri || rPri.toLowerCase() === pri.toLowerCase();
+
+				var rStatus = r.getAttribute('data-status') || '';
+				var statusMatch = !status || rStatus.toLowerCase() === status.toLowerCase();
+
 				var qMatch = !q || r.textContent.toLowerCase().includes(q);
-				r.style.display = (priMatch && qMatch) ? '' : 'none';
+				r.style.display = (priMatch && statusMatch && qMatch) ? '' : 'none';
 			});
 			currentPageTasks = 1;
 			renderPageTasks();
@@ -1109,7 +1152,13 @@
 			var end = start + rowsPerPageTasks;
 			rows.forEach(function (r, i) {r.style.display = (i >= start && i < end) ? '' : 'none';});
 			var el = document.getElementById('pageInfoTasks');
-			if (el) el.textContent = 'Showing ' + (Math.min(start + 1, total)) + ' to ' + Math.min(end, total) + ' of ' + total + ' tasks';
+			if (el) {
+				if (total === 0) {
+					el.textContent = 'Showing 0 to 0 of 0 tasks';
+				} else {
+					el.textContent = 'Showing ' + (start + 1) + ' to ' + Math.min(end, total) + ' of ' + total + ' tasks';
+				}
+			}
 			var prev = document.getElementById('prevPageTasks');
 			var next = document.getElementById('nextPageTasks');
 			var num = document.getElementById('pageNumTasks');
@@ -1125,6 +1174,62 @@
 		}
 
 		filterMyTasks();
+
+		// Task History filtering & pagination
+		var currentPageHistory = 1;
+		var rowsPerPageHistory = 10;
+
+		function getHistoryRows() {
+			return Array.from(document.querySelectorAll('#historyTbody tr:not([colspan])'));
+		}
+
+		function filterHistoryTasks() {
+			var pri = (document.getElementById('priorityFilterHistory') || {}).value || '';
+			var status = (document.getElementById('statusFilterHistory') || {}).value || '';
+			var q = (document.getElementById('globalSearch') || {}).value.toLowerCase() || '';
+			getHistoryRows().forEach(function (r) {
+				var rPri = r.getAttribute('data-priority') || '';
+				var priMatch = !pri || rPri.toLowerCase() === pri.toLowerCase();
+
+				var rStatus = r.getAttribute('data-status') || '';
+				var statusMatch = !status || rStatus.toLowerCase() === status.toLowerCase();
+
+				var qMatch = !q || r.textContent.toLowerCase().includes(q);
+				r.style.display = (priMatch && statusMatch && qMatch) ? '' : 'none';
+			});
+			currentPageHistory = 1;
+			renderPageHistory();
+		}
+
+		function renderPageHistory() {
+			var rows = getHistoryRows().filter(function (r) {return r.style.display !== 'none';});
+			var total = rows.length;
+			var start = (currentPageHistory - 1) * rowsPerPageHistory;
+			var end = start + rowsPerPageHistory;
+			rows.forEach(function (r, i) {r.style.display = (i >= start && i < end) ? '' : 'none';});
+			var el = document.getElementById('pageInfoHistory');
+			if (el) {
+				if (total === 0) {
+					el.textContent = 'Showing 0 to 0 of 0 tasks';
+				} else {
+					el.textContent = 'Showing ' + (start + 1) + ' to ' + Math.min(end, total) + ' of ' + total + ' tasks';
+				}
+			}
+			var prev = document.getElementById('prevPageHistory');
+			var next = document.getElementById('nextPageHistory');
+			var num = document.getElementById('pageNumHistory');
+			if (prev) prev.disabled = currentPageHistory <= 1;
+			if (next) next.disabled = end >= total;
+			if (num) num.textContent = currentPageHistory;
+		}
+
+		function changePageHistory(dir) {currentPageHistory += dir; renderPageHistory();}
+		function changeRowsHistory() {
+			rowsPerPageHistory = parseInt(document.getElementById('rowsPerPageHistory').value, 10);
+			currentPageHistory = 1; renderPageHistory();
+		}
+
+		filterHistoryTasks();
 
 		/* Attachments panel */
 		function openAttachmentsPanel(chip) {

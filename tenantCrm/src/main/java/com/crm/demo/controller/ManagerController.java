@@ -176,6 +176,7 @@ public class ManagerController {
 
 		// ── Projects & Tasks ──────────────────────────────────────────────
 		List<Project> projects = projectRepository.findAll();
+		projects.sort(java.util.Comparator.comparing(Project::getId).reversed());
 		// For stats only — scoped tasks loaded per-page where needed
 		List<Task>    tasks    = taskRepository.findAll();
 
@@ -464,16 +465,6 @@ public class ManagerController {
 		return resp;
 	}
 
-	// =========================
-	// PROJECTS PAGE
-	// =========================
-	@GetMapping("/projects")
-	public String projectsPage(Model model) {
-
-		injectStats(model);
-
-		return "manager-projects";
-	}
 
 	// =========================
 	// TASKS PAGE
@@ -488,6 +479,7 @@ public class ManagerController {
 			String tenant = getTenantSegment(manager);
 			// Only show tasks belonging to this manager's tenant
 			List<Task> tasks = taskRepository.findByTenantSegment(tenant);
+			tasks.sort(java.util.Comparator.comparing(Task::getId).reversed());
 			long done    = tasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
 			long pending = tasks.stream().filter(t -> "pending".equalsIgnoreCase(t.getStatus())).count();
 			model.addAttribute("tasks",            tasks);
@@ -928,6 +920,7 @@ public class ManagerController {
 				p.existingReview = performanceReviewRepository
 						.findByEmployeeAndReviewMonthAndTenantSegment(emp, ym.toString(), tenant)
 						.orElse(null);
+				p.weeklyLocked = isWeeklyLocked(emp);
 				perfList.add(p);
 			}
 			model.addAttribute("perfList",      perfList);
@@ -1658,6 +1651,22 @@ public class ManagerController {
 		public int    overallScore;    // 0-100
 		public String grade;           // A+/A/B/C/D
 		public PerformanceReview existingReview; // null if not yet reviewed this month
+		public boolean weeklyLocked;
+	}
+
+	private boolean isWeeklyLocked(User employee) {
+		List<PerformanceReview> allReviews = performanceReviewRepository.findByEmployeeOrderByReviewMonthDesc(employee);
+		if (allReviews.isEmpty()) {
+			return false;
+		}
+		PerformanceReview latestReview = allReviews.stream()
+				.max(java.util.Comparator.comparing(PerformanceReview::getReviewedAt))
+				.orElse(null);
+		if (latestReview != null && latestReview.getReviewedAt() != null) {
+			long diffMs = System.currentTimeMillis() - latestReview.getReviewedAt();
+			return diffMs < 7L * 24 * 60 * 60 * 1000;
+		}
+		return false;
 	}
 
 	@GetMapping("/performance")
@@ -1765,6 +1774,7 @@ public class ManagerController {
 			p.existingReview = performanceReviewRepository
 					.findByEmployeeAndReviewMonthAndTenantSegment(emp, ym.toString(), tenant)
 					.orElse(null);
+			p.weeklyLocked = isWeeklyLocked(emp);
 
 			perfList.add(p);
 		}
@@ -1819,11 +1829,19 @@ public class ManagerController {
 			return "redirect:/manager/performance?month=" + reviewMonth;
 		}
 
-		// Upsert — update existing review if one already exists for this month
-		PerformanceReview review = performanceReviewRepository
-				.findByEmployeeAndReviewMonthAndTenantSegment(emp, reviewMonth, tenant)
-				.orElse(new PerformanceReview());
+		Optional<PerformanceReview> existingOpt = performanceReviewRepository
+				.findByEmployeeAndReviewMonthAndTenantSegment(emp, reviewMonth, tenant);
+		if (existingOpt.isPresent()) {
+			ra.addFlashAttribute("errorMessage", "Performance reviews cannot be updated once submitted.");
+			return "redirect:/manager/performance?month=" + reviewMonth;
+		}
 
+		if (isWeeklyLocked(emp)) {
+			ra.addFlashAttribute("errorMessage", "You can only submit a performance review once a week for this employee.");
+			return "redirect:/manager/performance?month=" + reviewMonth;
+		}
+
+		PerformanceReview review = new PerformanceReview();
 		review.setEmployee(emp);
 		review.setReviewedBy(manager.getUsername());
 		review.setTenantSegment(tenant);

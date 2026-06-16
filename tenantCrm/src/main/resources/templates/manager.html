@@ -58,8 +58,8 @@
 			<li th:classappend="${activePage == 'performance'} ? 'active' : ''">
 				<a th:href="@{/manager/performance}">&#128202; Performance</a>
 			</li>
-			<li th:classappend="${activePage == 'settings'} ? 'active' : ''">
-				<a th:href="@{/manager/settings}">&#9881; Settings</a>
+			<li th:classappend="${activePage == 'profile'} ? 'active' : ''">
+				<a th:href="@{/manager/profile}">&#128100; Profile</a>
 			</li>
 		</ul>
 		<a href="#" data-logout style="text-decoration:none;">
@@ -228,10 +228,6 @@
 							<a th:href="@{/manager/team}" class="quick-action-btn">
 								<span class="qa-icon" style="background:#dff5ea;">&#128101;</span>
 								<span>My Team</span>
-							</a>
-							<a th:href="@{/manager/projects}" class="quick-action-btn">
-								<span class="qa-icon" style="background:#dcecf5;">&#128193;</span>
-								<span>Projects</span>
 							</a>
 							<a th:href="@{/manager/tasks}" class="quick-action-btn">
 								<span class="qa-icon" style="background:#fce9d8;">&#9989;</span>

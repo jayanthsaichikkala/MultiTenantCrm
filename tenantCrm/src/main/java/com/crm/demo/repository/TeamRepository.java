@@ -17,6 +17,9 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
     /** All teams for a tenant, ordered by name. */
     List<Team> findByTenantSegmentOrderByNameAsc(String tenantSegment);
 
+    /** All teams for a tenant, ordered by ID descending (newest first). */
+    List<Team> findByTenantSegmentOrderByIdDesc(String tenantSegment);
+
     /** Find the team assigned to a specific manager. */
     Optional<Team> findByManager(User manager);
 

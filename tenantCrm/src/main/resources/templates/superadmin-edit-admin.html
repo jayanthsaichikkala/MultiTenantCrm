@@ -115,13 +115,13 @@
                             <div class="form-group">
                                 <label>Email Address</label>
                                 <div class="input-wrap">
-                                    <input type="email" name="email" th:value="${editAdmin.email}" required autocomplete="email">
+                                    <input type="email" name="email" th:value="${editAdmin.email}" readonly style="background-color: #e5edf2; cursor: not-allowed;" autocomplete="email">
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label>Username</label>
                                 <div class="input-wrap">
-                                    <input type="text" name="username" th:value="${editAdmin.username}" required autocomplete="username">
+                                    <input type="text" name="username" th:value="${editAdmin.username}" readonly style="background-color: #e5edf2; cursor: not-allowed;" autocomplete="username">
                                 </div>
                             </div>
                             <div class="form-group" style="grid-column: 1 / -1;">

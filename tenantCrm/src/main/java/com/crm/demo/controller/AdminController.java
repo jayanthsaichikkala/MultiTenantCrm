@@ -545,12 +545,6 @@ public class AdminController {
 			ra.addFlashAttribute("errorMessage", "You cannot assign that role.");
 			return "redirect:/admin/edit-employee/" + id;
 		}
-		// Check duplicate (excluding self)
-		User existing = userRepository.findByUsernameOrEmail(username, email).orElse(null);
-		if (existing != null && !existing.getId().equals(emp.getId())) {
-			ra.addFlashAttribute("errorMessage", "Username or email already in use.");
-			return "redirect:/admin/edit-employee/" + id;
-		}
 		if (password != null && !password.isBlank()) {
 			if (!password.equals(confirmPassword)) {
 				ra.addFlashAttribute("errorMessage", "Passwords do not match.");
@@ -558,11 +552,9 @@ public class AdminController {
 			}
 			emp.setPassword(passwordEncoder.encode(password));
 		}
-		emp.setUsername(username);
-		emp.setEmail(email);
 		emp.setRole(role);
 		userRepository.save(emp);
-		ra.addFlashAttribute("successMessage", "'" + username + "' updated successfully.");
+		ra.addFlashAttribute("successMessage", "'" + emp.getUsername() + "' updated successfully.");
 		return "redirect:/admin/employees";
 	}
 
@@ -575,6 +567,7 @@ public class AdminController {
 		injectUser(request, model);
 
 		List<Project> projects = projectRepository.findAll();
+		projects.sort(java.util.Comparator.comparing(Project::getId).reversed());
 		long active    = projects.stream().filter(p -> "active".equalsIgnoreCase(p.getStatus())).count();
 		long completed = projects.stream().filter(p -> "completed".equalsIgnoreCase(p.getStatus())).count();
 
@@ -616,6 +609,7 @@ public class AdminController {
 		injectUser(request, model);
 
 		List<Task> tasks = taskRepository.findAll();
+		tasks.sort(java.util.Comparator.comparing(Task::getId).reversed());
 		long done    = tasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
 		long pending = tasks.stream().filter(t -> "pending".equalsIgnoreCase(t.getStatus())).count();
 
@@ -711,8 +705,8 @@ public class AdminController {
 	// SETTINGS
 	// =========================================================
 
-	@GetMapping("/settings")
-	public String settingsPage(HttpServletRequest request, Model model) {
+	@GetMapping("/profile")
+	public String profilePage(HttpServletRequest request, Model model) {
 		injectUser(request, model);
 
 		String username = (String) request.getAttribute("loggedInUser");
@@ -721,10 +715,10 @@ public class AdminController {
 		model.addAttribute("adminEmail",         admin != null ? admin.getEmail() : "");
 		model.addAttribute("settingsTotalUsers", userRepository.count());
 
-		return "admin-settings";
+		return "admin-profile";
 	}
 
-	@PostMapping("/settings/profile")
+	@PostMapping("/update-profile")
 	public String updateProfile(@RequestParam(required = false) String username,
 	                            @RequestParam(required = false) String email,
 	                            @RequestParam(required = false) String password,
@@ -736,11 +730,11 @@ public class AdminController {
 		User admin = userRepository.findByUsername(currentUsername);
 
 		if (admin == null) {
-			return "redirect:/admin/settings";
+			return "redirect:/admin/profile";
 		}
 
 		profileUpdateService.updateProfile(admin, username, email, password, confirmPassword, ra, response);
-		return "redirect:/admin/settings";
+		return "redirect:/admin/profile";
 	}
 
 	// =========================================================

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 
 <head>
@@ -8,6 +8,20 @@
 	<link rel="stylesheet" th:href="@{/admin.css}">
 	<link rel="stylesheet" th:href="@{/notifications.css}">
 	<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+	<style>
+		.filter-select {
+			height: 38px; padding: 0 32px 0 12px; border: 1.5px solid #e2e8f0;
+			border-radius: 10px; font-size: 13px; font-family: inherit; color: #334155;
+			background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 10px center;
+			appearance: none; cursor: pointer; outline: none;
+		}
+		.filter-select:focus { border-color: #17455e; }
+		.page-btn {
+			transition: background .15s, border-color .15s;
+		}
+		.page-btn:hover { background: #f8fafc; }
+		.page-btn:disabled { opacity: .4; cursor: default; }
+	</style>
 </head>
 
 <body>
@@ -33,7 +47,7 @@
 			<li><a th:href="@{/admin/reports}"><i data-lucide="file-bar-chart"></i> Reports</a></li>
 			<li><a th:href="@{/admin/schedule-meeting}"><i data-lucide="calendar-clock"></i> Meetings</a></li>
 			<li><a th:href="@{/admin/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
-			<li><a th:href="@{/admin/settings}"><i data-lucide="settings"></i> Settings</a></li>
+			<li><a th:href="@{/admin/profile}"><i data-lucide="user"></i> Profile</a></li>
 		</ul>
 		<a href="#" data-logout style="text-decoration:none;"><button class="logout-btn"><i data-lucide="log-out"></i>
 				Logout</button></a>
@@ -74,10 +88,24 @@
 				</div>
 			</div>
 			<div class="card">
-				<div class="card-header">
+				<div class="card-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 18px 20px 14px;">
 					<div>
 						<h2>All Tasks</h2>
 						<p th:text="${totalTasks} + ' task(s)'">0 task(s)</p>
+					</div>
+					<div style="display: flex; align-items: center; gap: 10px;">
+						<select class="filter-select" id="priorityFilter" onchange="filterTasks()">
+							<option value="">All Priorities</option>
+							<option value="High">High</option>
+							<option value="Medium">Medium</option>
+							<option value="Low">Low</option>
+						</select>
+						<select class="filter-select" id="statusFilter" onchange="filterTasks()">
+							<option value="">All Statuses</option>
+							<option value="done">Done</option>
+							<option value="in-progress">In Progress</option>
+							<option value="pending">Pending</option>
+						</select>
 					</div>
 				</div>
 				<div class="table-wrap">
@@ -93,8 +121,8 @@
 								<th>Created By</th>
 							</tr>
 						</thead>
-						<tbody>
-							<tr th:each="task, stat : ${tasks}">
+						<tbody id="taskTbody">
+							<tr th:each="task, stat : ${tasks}" th:attr="data-priority=${task.priority},data-status=${task.status}">
 								<td th:text="${stat.count}">1</td>
 								<td style="font-weight:600;" th:text="${task.title}">Task</td>
 								<td><span class="priority-badge high"
@@ -108,7 +136,7 @@
 										class="status-badge inactive" th:if="${task.status == 'pending'}">Pending</span>
 								</td>
 								<td style="color:#6b7280;font-size:13px;" th:text="${task.dueDate} ?: '—'">—</td>
-								<td th:text="${task.assignedTo} ?: 'Unassigned'">Unassigned</td><td th:text="${task.createdBy} ?: '�'">�</td>
+								<td th:text="${task.assignedTo} ?: 'Unassigned'">Unassigned</td><td th:text="${task.createdBy} ?: '—'">—</td>
 							</tr>
 							<tr th:if="${tasks == null or #lists.isEmpty(tasks)}">
 								<td colspan="7">
@@ -122,6 +150,23 @@
 						</tbody>
 					</table>
 				</div>
+				<!-- Pagination bar -->
+				<div class="pagination-bar" style="display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-top: 1px solid #f0f4f8; font-size: 13px; color: #64748b; flex-wrap: wrap; gap: 10px;">
+					<span id="pageInfo">Showing tasks</span>
+					<div class="page-btns" style="display: flex; align-items: center; gap: 6px;">
+						<button class="page-btn" id="prevPage" onclick="changePage(-1)" disabled style="width: 32px; height: 32px; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #334155;">&#8249;</button>
+						<button class="page-btn active" id="pageNum" style="width: 32px; height: 32px; border: 1.5px solid #17455e; border-radius: 8px; background: #17455e; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600;">1</button>
+						<button class="page-btn" id="nextPage" onclick="changePage(1)" style="width: 32px; height: 32px; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #334155;">&#8250;</button>
+					</div>
+					<div style="display:flex;align-items:center;gap:8px;">
+						<span style="font-size:13px;color:#64748b;">Rows per page:</span>
+						<select class="rows-select" id="rowsPerPage" onchange="changeRows()" style="height: 32px; padding: 0 28px 0 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; font-family: inherit; color: #334155; background: #fff; appearance: none; cursor: pointer; outline: none;">
+							<option value="10" selected>10</option>
+							<option value="25">25</option>
+							<option value="50">50</option>
+						</select>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -131,9 +176,81 @@
 		function closeSidebar() {sidebar.classList.remove('open'); overlay.classList.remove('active'); document.body.style.overflow = '';}
 		if (hamburger) hamburger.addEventListener('click', openSidebar);
 		if (overlay) overlay.addEventListener('click', closeSidebar);
-		var gs = document.getElementById('globalSearch'); if (gs) gs.addEventListener('input', function () {var q = this.value.toLowerCase(); document.querySelectorAll('#taskTable tbody tr').forEach(r => {r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none';});});
+		
 		document.querySelectorAll('.toast').forEach(function (t) {requestAnimationFrame(function () {t.classList.add('toast-show');}); setTimeout(function () {t.classList.remove('toast-show'); t.classList.add('toast-hide'); t.addEventListener('transitionend', function () {t.remove();}, {once: true});}, 3500);});
 		lucide.createIcons();
+
+		var currentPage = 1;
+		var rowsPerPage = 10;
+
+		function getVisibleRows() {
+			return Array.from(document.querySelectorAll('#taskTbody tr:not([colspan])'));
+		}
+
+		function filterTasks() {
+			var pri = (document.getElementById('priorityFilter') || {}).value || '';
+			var status = (document.getElementById('statusFilter') || {}).value || '';
+			var q = (document.getElementById('globalSearch') || {}).value.toLowerCase() || '';
+
+			getVisibleRows().forEach(function (r) {
+				var rPri = r.getAttribute('data-priority') || '';
+				var priMatch = !pri || rPri.toLowerCase() === pri.toLowerCase();
+
+				var rStatus = r.getAttribute('data-status') || '';
+				var statusMatch = !status || rStatus.toLowerCase() === status.toLowerCase();
+
+				var qMatch = !q || r.textContent.toLowerCase().includes(q);
+
+				r.style.display = (priMatch && statusMatch && qMatch) ? '' : 'none';
+			});
+			currentPage = 1;
+			renderPage();
+		}
+
+		function renderPage() {
+			var rows = getVisibleRows().filter(function (r) { return r.style.display !== 'none'; });
+			var total = rows.length;
+			var start = (currentPage - 1) * rowsPerPage;
+			var end = start + rowsPerPage;
+
+			rows.forEach(function (r, i) {
+				r.style.display = (i >= start && i < end) ? '' : 'none';
+			});
+
+			var infoEl = document.getElementById('pageInfo');
+			if (infoEl) {
+				if (total === 0) {
+					infoEl.textContent = 'Showing 0 to 0 of 0 tasks';
+				} else {
+					infoEl.textContent = 'Showing ' + (start + 1) + ' to ' + Math.min(end, total) + ' of ' + total + ' tasks';
+				}
+			}
+
+			var prevBtn = document.getElementById('prevPage');
+			var nextBtn = document.getElementById('nextPage');
+			var numBtn = document.getElementById('pageNum');
+
+			if (prevBtn) prevBtn.disabled = currentPage <= 1;
+			if (nextBtn) nextBtn.disabled = end >= total;
+			if (numBtn) numBtn.textContent = currentPage;
+		}
+
+		function changePage(dir) {
+			currentPage += dir;
+			renderPage();
+		}
+
+		function changeRows() {
+			rowsPerPage = parseInt(document.getElementById('rowsPerPage').value, 10);
+			currentPage = 1;
+			renderPage();
+		}
+
+		// Initialize filtering
+		filterTasks();
+
+		var gs = document.getElementById('globalSearch');
+		if (gs) gs.addEventListener('input', filterTasks);
 	</script>
 	<script th:src="@{/auth.js}"></script>
 	<script th:src="@{/notifications.js}"></script>
