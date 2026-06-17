@@ -38,13 +38,50 @@ public class NotificationService {
 
     public Notification notify(User user, String title, String message, String type, String link) {
         if (user == null || user.getId() == null) return null;
+
+        // Enforce role-based notification policies
+        String role = roleOf(user);
+        String normType = type != null ? type.toUpperCase() : "";
+
+        boolean allowed = false;
+        switch (role) {
+            case "ADMIN" -> {
+                if ("REPORT".equals(normType) || "HOLIDAY".equals(normType)) {
+                    allowed = true;
+                }
+            }
+            case "HR" -> {
+                if ("LEAVE".equals(normType) || "MEETING".equals(normType) 
+                        || "HOLIDAY".equals(normType) || "REPORT".equals(normType)) {
+                    allowed = true;
+                }
+            }
+            case "MANAGER" -> {
+                if ("TEAM".equals(normType) || "TASK".equals(normType) 
+                        || "MEETING".equals(normType) || "HOLIDAY".equals(normType)) {
+                    allowed = true;
+                }
+            }
+            case "EMPLOYEE" -> {
+                if ("TASK".equals(normType) || "LEAVE".equals(normType) 
+                        || "MEETING".equals(normType) || "HOLIDAY".equals(normType) 
+                        || "REPORT".equals(normType)) {
+                    allowed = true;
+                }
+            }
+        }
+
+        if (!allowed) {
+            return null;
+        }
+
         try {
             Notification n = new Notification();
             n.setUserId(user.getId());
             n.setTitle(title);
             n.setMessage(message);
             n.setType(type);
-            n.setLink(link);
+            n.setLink(resolveLink(user, type));
             Notification saved = notificationRepository.save(n);
 
             if (TransactionSynchronizationManager.isActualTransactionActive()) {
@@ -166,13 +203,6 @@ public class NotificationService {
                             "MEETING",
                             meetingsLink(user));
                 });
-
-        // Broadcast to all users in the tenant
-        User creator = userRepository.findByUsername(scheduledBy);
-        if (creator != null) {
-            String tenant = getTenantSegment(creator);
-            sendLiveUpdateToTenant(tenant, "MEETING", "Meeting Scheduled", "Meeting: " + meeting.getTitle(), "/meetings");
-        }
     }
 
     public void notifyTaskAssigned(User employee, String assignerName, String taskTitle) {
@@ -182,7 +212,6 @@ public class NotificationService {
                 assignerName + " assigned you: \"" + taskTitle + "\"",
                 "TASK",
                 tasksLink(employee));
-        sendLiveUpdateToTenant(getTenantSegment(employee), "TASK", "New Task Assigned", assignerName + " assigned you a task", "/tasks");
     }
 
     public void notifyTaskSubmittedForReview(User employee, Task task) {
@@ -219,7 +248,6 @@ public class NotificationService {
                     "TASK",
                     tasksLink(manager));
         }
-        sendLiveUpdateToTenant(tenant, "TASK", title, message, "/tasks");
     }
 
     private void addTaskStatusRecipient(Map<Long, User> recipients, User manager, User employee, Task task) {
@@ -260,21 +288,18 @@ public class NotificationService {
                     "TASK",
                     tasksLink(employee));
         }
-        sendLiveUpdateToTenant(getTenantSegment(employee), "TASK", "Task Verified", managerName + " verified task: " + taskTitle, "/tasks");
     }
 
     public void notifyLeaveSubmitted(LeaveRequest leave) {
         if (leave == null || leave.getTenantSegment() == null) return;
         String employeeName = leave.getEmployeeName() != null ? leave.getEmployeeName() : "An employee";
-        String period = leave.getFromDate() + " to " + leave.getToDate();
         notifyUsersInTenantByRole(
                 leave.getTenantSegment(),
                 "HR",
                 "New Leave Request",
-                employeeName + " submitted " + leave.getType() + " leave (" + period + ").",
+                employeeName + " applied for leave.",
                 "LEAVE",
                 "/hr/leaves");
-        sendLiveUpdateToTenant(leave.getTenantSegment(), "LEAVE", "Leave Request Submitted", employeeName + " submitted leave request", "/leaves");
     }
 
     public void notifyLeaveReviewed(User employee, String status, String leaveType,
@@ -294,7 +319,6 @@ public class NotificationService {
                     "LEAVE",
                     leavesLink(employee));
         }
-        sendLiveUpdateToTenant(getTenantSegment(employee), "LEAVE", "Leave Request Reviewed", "Leave request was " + status.toLowerCase(), "/leaves");
     }
 
     public void notifyTeamAdded(User employee, String teamName) {
@@ -304,7 +328,6 @@ public class NotificationService {
                 "You have been added to team \"" + teamName + "\".",
                 "TEAM",
                 dashboardLink(employee));
-        sendLiveUpdateToTenant(getTenantSegment(employee), "TEAM", "Team Updated", "Employee added to team " + teamName, "/teams");
     }
 
     public void notifyManagerAssigned(User manager, String teamName) {
@@ -314,7 +337,6 @@ public class NotificationService {
                 "You have been assigned as manager of team \"" + teamName + "\".",
                 "TEAM",
                 teamLink(manager));
-        sendLiveUpdateToTenant(getTenantSegment(manager), "TEAM", "Team Updated", "Manager assigned to team " + teamName, "/teams");
     }
 
     public void notifyPerformanceReview(User employee, String reviewer, String reviewMonth, int rating) {
@@ -325,7 +347,6 @@ public class NotificationService {
                         + " (Rating: " + rating + "/5).",
                 "PERFORMANCE",
                 performanceLink(employee));
-        sendLiveUpdateToTenant(getTenantSegment(employee), "PERFORMANCE", "Performance Review Updated", reviewer + " updated performance review", "/performance");
     }
 
     public void notifyReportReceived(User recipient, String senderName, String reportTitle) {
@@ -335,7 +356,6 @@ public class NotificationService {
                 senderName + " sent you a report: \"" + reportTitle + "\".",
                 "REPORT",
                 reportsLink(recipient));
-        sendLiveUpdateToTenant(getTenantSegment(recipient), "REPORT", "Report Received", "Report received from " + senderName, "/reports");
     }
 
     public void notifyHolidayAdded(String tenant, String holidayName, String date) {
@@ -371,23 +391,7 @@ public class NotificationService {
     }
 
     public void notifyAttendanceUpdated(User employee, String action) {
-        if (employee == null) return;
-        String tenant = getTenantSegment(employee);
-        
-        // Notify all HR users in the same tenant
-        sendLiveUpdateToTenantRole(tenant, "HR", "ATTENDANCE", 
-            "Attendance Updated", 
-            employee.getUsername() + " performed " + action, 
-            "/hr/attendance");
-
-        // Notify all Manager users in the same tenant
-        sendLiveUpdateToTenantRole(tenant, "MANAGER", "ATTENDANCE", 
-            "Attendance Updated", 
-            employee.getUsername() + " performed " + action, 
-            "/manager/attendance");
-
-        // Notify the entire tenant for instant UI update
-        sendLiveUpdateToTenant(tenant, "ATTENDANCE", "Attendance Updated", employee.getUsername() + " performed " + action, "/attendance");
+        // Disabled "Attendance Updated" notifications entirely to reduce spam
     }
 
     public void notifyAttendanceModified(User employee, String reviewerName) {
@@ -396,19 +400,10 @@ public class NotificationService {
             "Attendance Record Updated", 
             reviewerName + " updated your attendance record.", 
             "/employee/attendance");
-        sendLiveUpdateToTenant(getTenantSegment(employee), "ATTENDANCE", "Attendance Updated", reviewerName + " updated attendance record.", "/attendance");
     }
 
     public void notifyEmployeeManagementChanged(String tenant, String action, String employeeName) {
-        sendLiveUpdateToTenantRole(tenant, "HR", "EMPLOYEE", 
-            "Employee List Updated", 
-            "Employee " + employeeName + " was " + action, 
-            "/hr/employees");
-        sendLiveUpdateToTenantRole(tenant, "MANAGER", "EMPLOYEE", 
-            "Employee List Updated", 
-            "Employee " + employeeName + " was " + action, 
-            "/manager/team");
-        sendLiveUpdateToTenant(tenant, "EMPLOYEE", "Employee List Updated", "Employee " + employeeName + " was " + action, "/employees");
+        // Disabled "Employee List Updated" notifications entirely for all roles and dashboards
     }
 
     private String linkFor(User user, String page) {
@@ -491,6 +486,26 @@ public class NotificationService {
 
     private String teamLink(User user) {
         return "MANAGER".equals(roleOf(user)) ? "/manager/team" : dashboardLink(user);
+    }
+
+    private String resolveLink(User user, String type) {
+        String normType = type != null ? type.toUpperCase() : "";
+        return switch (normType) {
+            case "TASK" -> tasksLink(user);
+            case "LEAVE" -> leavesLink(user);
+            case "MEETING" -> meetingsLink(user);
+            case "REPORT" -> reportsLink(user);
+            case "HOLIDAY" -> calendarLink(user);
+            case "TEAM" -> {
+                String role = roleOf(user);
+                yield switch (role) {
+                    case "MANAGER" -> "/manager/team";
+                    case "HR" -> "/hr/teams";
+                    default -> dashboardLink(user);
+                };
+            }
+            default -> dashboardLink(user);
+        };
     }
 
     private String roleOf(User user) {

@@ -673,10 +673,14 @@
 
 		function renderList() {
 			var list = document.getElementById('holidayList'), count = document.getElementById('holidayCount');
-			count.textContent = '(' + holidays.length + ')';
-			if (holidays.length === 0) {list.innerHTML = '<div class="empty-holidays">No holidays added yet.</div>'; return;}
+			var todayStr = today.getFullYear() + '-' + pad(today.getMonth() + 1) + '-' + pad(today.getDate());
+			var futureHolidays = holidays.filter(function (h) {
+				return h.date >= todayStr;
+			});
+			count.textContent = '(' + futureHolidays.length + ')';
+			if (futureHolidays.length === 0) {list.innerHTML = '<div class="empty-holidays">No holidays added yet.</div>'; return;}
 			list.innerHTML = '';
-			holidays.forEach(function (h) {
+			futureHolidays.forEach(function (h) {
 				var isPast = new Date(h.date + 'T00:00:00') < new Date(today.getFullYear(), today.getMonth(), today.getDate());
 				var item = document.createElement('div'); item.className = 'holiday-item';
 				item.innerHTML =
