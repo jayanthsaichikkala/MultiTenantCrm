@@ -287,13 +287,51 @@ public class AdminController {
 	                      HttpServletRequest request,
 	                      RedirectAttributes ra) {
 
+		if (username == null || username.trim().isBlank()) {
+			ra.addFlashAttribute("errorMessage", "Username is required.");
+			return "redirect:/admin/add-employee";
+		}
+		if (!username.trim().matches("^[A-Za-z0-9._-]{3,50}$")) {
+			ra.addFlashAttribute("errorMessage", "Username must be 3-50 characters and contain only letters, numbers, dots, hyphens, or underscores.");
+			return "redirect:/admin/add-employee";
+		}
+		if (email == null || email.trim().isBlank()) {
+			ra.addFlashAttribute("errorMessage", "Email is required.");
+			return "redirect:/admin/add-employee";
+		}
+		if (!email.trim().matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
+			ra.addFlashAttribute("errorMessage", "Please provide a valid email address.");
+			return "redirect:/admin/add-employee";
+		}
+		if (password == null || password.length() < 4) {
+			ra.addFlashAttribute("errorMessage", "Password must be at least 4 characters long.");
+			return "redirect:/admin/add-employee";
+		}
+		if (!password.matches("^[A-Za-z0-9]+$")) {
+			ra.addFlashAttribute("errorMessage", "Password must contain only letters and numbers (no special characters).");
+			return "redirect:/admin/add-employee";
+		}
+		if (!password.equals(confirmPassword)) {
+			ra.addFlashAttribute("errorMessage", "Passwords do not match.");
+			return "redirect:/admin/add-employee";
+		}
+		if (role == null || role.trim().isBlank() || (!"HR".equalsIgnoreCase(role) && !"MANAGER".equalsIgnoreCase(role) && !"EMPLOYEE".equalsIgnoreCase(role))) {
+			ra.addFlashAttribute("errorMessage", "Please select a valid role (HR, Manager, or Employee).");
+			return "redirect:/admin/add-employee";
+		}
+
 		String adminUser = (String) request.getAttribute("loggedInUser");
 		if (adminUser == null) {
 			adminUser = SecurityContextHolder.getContext().getAuthentication().getName();
 		}
 		User currentAdmin = userRepository.findByUsername(adminUser);
+		String tenant = getTenantSegment(adminUser);
+		if (tenant != null && !tenant.isBlank() && !email.trim().contains("." + tenant + "@")) {
+			ra.addFlashAttribute("errorMessage", "Email must belong to your tenant domain (expected format: name." + tenant + "@crm.com).");
+			return "redirect:/admin/add-employee";
+		}
+
 		if (currentAdmin != null) {
-			String tenant = getTenantSegment(adminUser);
 			long employeeCount = userRepository.findByTenantSegment(tenant).stream()
 					.filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole()) && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
 					.count();
@@ -304,31 +342,25 @@ public class AdminController {
 			}
 		}
 
-		if (!password.equals(confirmPassword)) {
-			ra.addFlashAttribute("errorMessage", "Passwords do not match.");
-			return "redirect:/admin/add-employee";
-		}
-
-		if (userRepository.findByEmail(email) != null) {
+		if (userRepository.findByEmail(email.trim()) != null) {
 			ra.addFlashAttribute("errorMessage", "Email already in use.");
 			return "redirect:/admin/add-employee";
 		}
 
-		if (userRepository.findByUsername(username) != null) {
+		if (userRepository.findByUsername(username.trim()) != null) {
 			ra.addFlashAttribute("errorMessage", "Username already in use.");
 			return "redirect:/admin/add-employee";
 		}
 
 		User user = new User();
-		user.setEmail(email);
-		user.setUsername(username);
+		user.setEmail(email.trim());
+		user.setUsername(username.trim());
 		user.setPassword(passwordEncoder.encode(password));
 		user.setRole(role.toUpperCase());
 		user.setStatus("active");
 		userRepository.save(user);
 
-		String tenant = getTenantSegment(adminUser);
-		notificationService.notifyEmployeeManagementChanged(tenant, "added", username);
+		notificationService.notifyEmployeeManagementChanged(tenant, "added", username.trim());
 
 		ra.addFlashAttribute("successMessage", "Employee added successfully.");
 		return "redirect:/admin/employees";
@@ -557,23 +589,68 @@ public class AdminController {
 			ra.addFlashAttribute("errorMessage", "User not found or cannot be edited.");
 			return "redirect:/admin/employees";
 		}
-		// Block promoting to ADMIN / SUPER_ADMIN
-		if ("ADMIN".equalsIgnoreCase(role) || "SUPER_ADMIN".equalsIgnoreCase(role)) {
+
+		if (username == null || username.trim().isBlank()) {
+			ra.addFlashAttribute("errorMessage", "Username is required.");
+			return "redirect:/admin/edit-employee/" + id;
+		}
+		if (!username.trim().matches("^[A-Za-z0-9._-]{3,50}$")) {
+			ra.addFlashAttribute("errorMessage", "Username must be 3-50 characters and contain only letters, numbers, dots, hyphens, or underscores.");
+			return "redirect:/admin/edit-employee/" + id;
+		}
+		if (email == null || email.trim().isBlank()) {
+			ra.addFlashAttribute("errorMessage", "Email is required.");
+			return "redirect:/admin/edit-employee/" + id;
+		}
+		if (!email.trim().matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
+			ra.addFlashAttribute("errorMessage", "Please provide a valid email address.");
+			return "redirect:/admin/edit-employee/" + id;
+		}
+		if (role == null || role.trim().isBlank() || ("ADMIN".equalsIgnoreCase(role) || "SUPER_ADMIN".equalsIgnoreCase(role))) {
 			ra.addFlashAttribute("errorMessage", "You cannot assign that role.");
 			return "redirect:/admin/edit-employee/" + id;
 		}
+
+		String adminName = SecurityContextHolder.getContext().getAuthentication().getName();
+		String tenant = getTenantSegment(adminName);
+		if (tenant != null && !tenant.isBlank() && !email.trim().contains("." + tenant + "@")) {
+			ra.addFlashAttribute("errorMessage", "Email must belong to your tenant domain (expected format: name." + tenant + "@crm.com).");
+			return "redirect:/admin/edit-employee/" + id;
+		}
+
+		// Check uniqueness
+		User existingUserByUname = userRepository.findByUsername(username.trim());
+		if (existingUserByUname != null && !existingUserByUname.getId().equals(emp.getId())) {
+			ra.addFlashAttribute("errorMessage", "Username is already taken.");
+			return "redirect:/admin/edit-employee/" + id;
+		}
+		User existingUserByEmail = userRepository.findByEmail(email.trim());
+		if (existingUserByEmail != null && !existingUserByEmail.getId().equals(emp.getId())) {
+			ra.addFlashAttribute("errorMessage", "Email is already taken.");
+			return "redirect:/admin/edit-employee/" + id;
+		}
+
+		emp.setUsername(username.trim());
+		emp.setEmail(email.trim());
+
 		if (password != null && !password.isBlank()) {
+			if (password.length() < 4) {
+				ra.addFlashAttribute("errorMessage", "Password must be at least 4 characters long.");
+				return "redirect:/admin/edit-employee/" + id;
+			}
+			if (!password.matches("^[A-Za-z0-9]+$")) {
+				ra.addFlashAttribute("errorMessage", "Password must contain only letters and numbers (no special characters).");
+				return "redirect:/admin/edit-employee/" + id;
+			}
 			if (!password.equals(confirmPassword)) {
 				ra.addFlashAttribute("errorMessage", "Passwords do not match.");
 				return "redirect:/admin/edit-employee/" + id;
 			}
 			emp.setPassword(passwordEncoder.encode(password));
 		}
-		emp.setRole(role);
+		emp.setRole(role.toUpperCase());
 		userRepository.save(emp);
 
-		String adminName = SecurityContextHolder.getContext().getAuthentication().getName();
-		String tenant = getTenantSegment(adminName);
 		notificationService.notifyEmployeeManagementChanged(tenant, "updated", emp.getUsername());
 
 		ra.addFlashAttribute("successMessage", "'" + emp.getUsername() + "' updated successfully.");
@@ -787,6 +864,10 @@ public class AdminController {
 		String username = (String) request.getAttribute("loggedInUser");
 		String tenant   = getTenantSegment(username);
 
+		if ("in-person".equalsIgnoreCase(meetingForm.getMeetingType()) && (meetingForm.getLocation() == null || meetingForm.getLocation().isBlank())) {
+			result.rejectValue("location", "NotBlank", "Location is required for in-person meetings.");
+		}
+
 		if (result.hasErrors()) {
 			injectUser(request, model);
 			model.addAttribute("upcomingMeetings", getUpcomingMeetingsForUser(tenant, username != null ? username : ""));
@@ -855,6 +936,10 @@ public class AdminController {
 
 		String username = (String) request.getAttribute("loggedInUser");
 		String tenant   = getTenantSegment(username);
+
+		if ("in-person".equalsIgnoreCase(meetingForm.getMeetingType()) && (meetingForm.getLocation() == null || meetingForm.getLocation().isBlank())) {
+			result.rejectValue("location", "NotBlank", "Location is required for in-person meetings.");
+		}
 
 		if (result.hasErrors()) {
 			injectUser(request, model);

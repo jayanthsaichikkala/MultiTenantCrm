@@ -43,8 +43,16 @@ public class PasswordController {
 	// Process Forgot Password
 	@PostMapping("/forgot-password")
 	public String processForgotPassword(@RequestParam String email, Model model) {
+		if (email == null || email.trim().isBlank()) {
+			model.addAttribute("error", "Email is required");
+			return "forgot-password";
+		}
+		if (!email.trim().matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
+			model.addAttribute("error", "Please provide a valid email address");
+			return "forgot-password";
+		}
 
-		User user = userRepository.findByEmail(email);
+		User user = userRepository.findByEmail(email.trim());
 
 		// Check if user exists
 		if (user == null) {
@@ -117,6 +125,17 @@ public class PasswordController {
 	@PostMapping("/reset-password")
 	public String resetPassword(@RequestParam String token, @RequestParam String password,
 			@RequestParam String confirmPassword, Model model) {
+
+		if (password == null || password.length() < 4) {
+			model.addAttribute("error", "Password must be at least 4 characters long.");
+			model.addAttribute("token", token);
+			return "reset-password";
+		}
+		if (!password.matches("^[A-Za-z0-9]+$")) {
+			model.addAttribute("error", "Password must contain only letters and numbers (no special characters).");
+			model.addAttribute("token", token);
+			return "reset-password";
+		}
 
 		// Password match validation
 		if (!password.equals(confirmPassword)) {

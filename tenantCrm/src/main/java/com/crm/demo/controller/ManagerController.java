@@ -516,6 +516,59 @@ public class ManagerController {
 			return "redirect:/manager/tasks";
 		}
 
+		if (title == null || title.trim().isBlank()) {
+			ra.addFlashAttribute("errorMessage", "Task title is required.");
+			return "redirect:/manager/tasks";
+		}
+		if (title.trim().length() > 255) {
+			ra.addFlashAttribute("errorMessage", "Task title cannot exceed 255 characters.");
+			return "redirect:/manager/tasks";
+		}
+		if (description != null && description.length() > 255) {
+			ra.addFlashAttribute("errorMessage", "Description cannot exceed 255 characters.");
+			return "redirect:/manager/tasks";
+		}
+		if (priority == null || (!"High".equalsIgnoreCase(priority) && !"Medium".equalsIgnoreCase(priority) && !"Low".equalsIgnoreCase(priority))) {
+			ra.addFlashAttribute("errorMessage", "Invalid priority selected.");
+			return "redirect:/manager/tasks";
+		}
+		if (status == null || (!"pending".equalsIgnoreCase(status) && !"in-progress".equalsIgnoreCase(status) && !"done".equalsIgnoreCase(status))) {
+			ra.addFlashAttribute("errorMessage", "Invalid status selected.");
+			return "redirect:/manager/tasks";
+		}
+		if (dueDate == null || dueDate.trim().isBlank() || !dueDate.trim().matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+			ra.addFlashAttribute("errorMessage", "Please select a valid due date.");
+			return "redirect:/manager/tasks";
+		}
+		LocalDate due;
+		try {
+			due = LocalDate.parse(dueDate.trim());
+		} catch (java.time.format.DateTimeParseException e) {
+			ra.addFlashAttribute("errorMessage", "Invalid due date value.");
+			return "redirect:/manager/tasks";
+		}
+		if (due.isBefore(LocalDate.now())) {
+			ra.addFlashAttribute("errorMessage", "Due date cannot be in the past.");
+			return "redirect:/manager/tasks";
+		}
+		LocalDate start = null;
+		if (startDate != null && !startDate.trim().isEmpty()) {
+			if (!startDate.trim().matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+				ra.addFlashAttribute("errorMessage", "Invalid start date format.");
+				return "redirect:/manager/tasks";
+			}
+			try {
+				start = LocalDate.parse(startDate.trim());
+			} catch (java.time.format.DateTimeParseException e) {
+				ra.addFlashAttribute("errorMessage", "Invalid start date value.");
+				return "redirect:/manager/tasks";
+			}
+			if (start.isAfter(due)) {
+				ra.addFlashAttribute("errorMessage", "Start date cannot be after due date.");
+				return "redirect:/manager/tasks";
+			}
+		}
+
 		String tenant = getTenantSegment(manager);
 
 		// Verify the assigned employee is actually in this manager's team
@@ -680,12 +733,20 @@ public class ManagerController {
 			ra.addFlashAttribute("successMessage", "Task verified and marked as done.");
 
 		} else if ("reject".equalsIgnoreCase(action)) {
+			if (reason == null || reason.trim().isBlank()) {
+				ra.addFlashAttribute("errorMessage", "Reason for return is required.");
+				return "redirect:/manager/tasks";
+			}
+			if (reason.trim().length() > 255) {
+				ra.addFlashAttribute("errorMessage", "Reason cannot exceed 255 characters.");
+				return "redirect:/manager/tasks";
+			}
 			// Manager returns the task — employee must redo and resubmit
 			task.setStatus("in-progress");
 			task.setVerificationStatus("rejected");
 			task.setLastVerifiedBy(manager.getUsername());
 			task.setLastVerifiedAt(timestamp);
-			task.setVerificationReason(reason != null ? reason.trim() : null);
+			task.setVerificationReason(reason.trim());
 			ra.addFlashAttribute("successMessage", "Task returned to employee for rework.");
 
 		} else if ("reopen".equalsIgnoreCase(action)) {
@@ -795,14 +856,39 @@ public class ManagerController {
 			return "redirect:/manager/leaves";
 		}
 
-		LocalDate from = LocalDate.parse(fromDate);
-		LocalDate to = LocalDate.parse(toDate);
-		if (to.isBefore(from)) {
-			ra.addFlashAttribute("errorMessage", "To date cannot be before from date.");
+		if (type == null || type.isBlank()) {
+			ra.addFlashAttribute("errorMessage", "Leave type is required.");
 			return "redirect:/manager/leaves";
 		}
-		if (type == null || type.isBlank() || reason == null || reason.isBlank()) {
-			ra.addFlashAttribute("errorMessage", "Please fill all required leave details.");
+		if (reason == null || reason.isBlank()) {
+			ra.addFlashAttribute("errorMessage", "Leave reason is required.");
+			return "redirect:/manager/leaves";
+		}
+		if (reason.trim().length() > 255) {
+			ra.addFlashAttribute("errorMessage", "Reason cannot exceed 255 characters.");
+			return "redirect:/manager/leaves";
+		}
+		if (fromDate == null || fromDate.isBlank() || !fromDate.matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+			ra.addFlashAttribute("errorMessage", "Invalid start date format.");
+			return "redirect:/manager/leaves";
+		}
+		if (toDate == null || toDate.isBlank() || !toDate.matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+			ra.addFlashAttribute("errorMessage", "Invalid end date format.");
+			return "redirect:/manager/leaves";
+		}
+
+		LocalDate from;
+		LocalDate to;
+		try {
+			from = LocalDate.parse(fromDate);
+			to = LocalDate.parse(toDate);
+		} catch (java.time.format.DateTimeParseException e) {
+			ra.addFlashAttribute("errorMessage", "Invalid date value.");
+			return "redirect:/manager/leaves";
+		}
+
+		if (to.isBefore(from)) {
+			ra.addFlashAttribute("errorMessage", "To date cannot be before from date.");
 			return "redirect:/manager/leaves";
 		}
 
@@ -969,6 +1055,14 @@ public class ManagerController {
 			ra.addFlashAttribute("errorMessage", "Report title is required.");
 			return "redirect:/manager/reports";
 		}
+		if (title.trim().length() > 200) {
+			ra.addFlashAttribute("errorMessage", "Report title cannot exceed 200 characters.");
+			return "redirect:/manager/reports";
+		}
+		if (message != null && message.length() > 255) {
+			ra.addFlashAttribute("errorMessage", "Message cannot exceed 255 characters.");
+			return "redirect:/manager/reports";
+		}
 		if (recipientIds == null || recipientIds.isEmpty()) {
 			ra.addFlashAttribute("errorMessage", "Please select at least one recipient.");
 			return "redirect:/manager/reports";
@@ -984,8 +1078,8 @@ public class ManagerController {
 				.filter(u -> "HR".equalsIgnoreCase(u.getRole()) || "ADMIN".equalsIgnoreCase(u.getRole()) || teamMembers.contains(u))
 				.toList();
 
-		if (validRecipients.isEmpty()) {
-			ra.addFlashAttribute("errorMessage", "None of the selected recipients are valid or in your tenant.");
+		if (validRecipients.size() != recipientIds.size()) {
+			ra.addFlashAttribute("errorMessage", "One or more selected recipients are invalid or outside your tenant.");
 			return "redirect:/manager/reports";
 		}
 
@@ -1155,6 +1249,10 @@ public class ManagerController {
 		String tenant   = manager != null ? getTenantSegment(manager) : "";
 		String username = manager != null ? manager.getUsername() : "";
 
+		if ("in-person".equalsIgnoreCase(meetingForm.getMeetingType()) && (meetingForm.getLocation() == null || meetingForm.getLocation().isBlank())) {
+			result.rejectValue("location", "NotBlank", "Location is required for in-person meetings.");
+		}
+
 		if (result.hasErrors()) {
 			injectStats(model);
 			if (manager != null) {
@@ -1208,6 +1306,10 @@ public class ManagerController {
 		User manager = getCurrentManager();
 		String tenant   = manager != null ? getTenantSegment(manager) : "";
 		String username = manager != null ? manager.getUsername() : "";
+
+		if ("in-person".equalsIgnoreCase(meetingForm.getMeetingType()) && (meetingForm.getLocation() == null || meetingForm.getLocation().isBlank())) {
+			result.rejectValue("location", "NotBlank", "Location is required for in-person meetings.");
+		}
 
 		if (result.hasErrors()) {
 			injectStats(model);
@@ -1816,6 +1918,16 @@ public class ManagerController {
 		if (manager == null) {
 			ra.addFlashAttribute("errorMessage", "Session expired.");
 			return "redirect:/manager/performance";
+		}
+
+		if (reviewMonth == null || reviewMonth.trim().isBlank() || !reviewMonth.trim().matches("^\\d{4}-\\d{2}$")) {
+			ra.addFlashAttribute("errorMessage", "Invalid review month format.");
+			return "redirect:/manager/performance";
+		}
+
+		if (remarks != null && remarks.length() > 255) {
+			ra.addFlashAttribute("errorMessage", "Remarks cannot exceed 255 characters.");
+			return "redirect:/manager/performance?month=" + reviewMonth;
 		}
 
 		String tenant = getTenantSegment(manager);

@@ -336,7 +336,7 @@
 								<label>Agenda / Notes</label>
 								<div class="input-wrap">
 									<textarea th:field="*{agenda}"
-										placeholder="Add meeting agenda, objectives, or any notes…" rows="4"
+										placeholder="Add meeting agenda, objectives, or any notes…" rows="4" maxlength="255"
 										style="height:auto;padding:12px 16px;resize:vertical;"></textarea>
 								</div>
 							</div>
@@ -478,7 +478,7 @@
 							<div class="form-group" style="grid-column:1/-1;">
 								<label>Description</label>
 								<div class="input-wrap"><textarea name="description" placeholder="Task description…"
-										rows="2" style="height:auto;padding:12px 16px;resize:vertical;"></textarea>
+										rows="2" maxlength="255" style="height:auto;padding:12px 16px;resize:vertical;"></textarea>
 								</div>
 							</div>
 						</div>

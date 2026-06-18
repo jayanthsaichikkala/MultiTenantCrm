@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.security.core.context.SecurityContextHolder;
+import jakarta.servlet.http.HttpServletRequest;
 
 import com.crm.demo.model.User;
 import com.crm.demo.repository.UserRepository;
@@ -38,7 +40,7 @@ public class LoginController {
         String username = body.get("username");
         String password = body.get("password");
 
-        if (username == null || password == null) {
+        if (username == null || username.trim().isEmpty() || password == null || password.isEmpty()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Username and password are required."));
         }
@@ -88,6 +90,87 @@ public class LoginController {
     @GetMapping("/logout")
     public String logout() {
         // Nothing to invalidate server-side — token lives only in the browser
+        return "redirect:/login";
+    }
+
+    @GetMapping({"/dashboard", "/tasks", "/meetings", "/leaves", "/leave", "/teams", "/team", "/performance", "/reports", "/attendance", "/calendar"})
+    public String handleLegacyRedirects(HttpServletRequest request) {
+        org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return "redirect:/login";
+        }
+        String username = auth.getName();
+        User user = userRepository.findByUsername(username);
+        if (user == null) {
+            return "redirect:/login";
+        }
+
+        String role = user.getRole() != null ? user.getRole().toUpperCase() : "";
+        String path = request.getRequestURI().toLowerCase();
+
+        if (path.endsWith("/dashboard")) {
+            return "redirect:" + dashboardFor(role);
+        } else if (path.endsWith("/tasks")) {
+            return switch (role) {
+                case "EMPLOYEE" -> "redirect:/employee/tasks";
+                case "MANAGER" -> "redirect:/manager/tasks";
+                case "HR" -> "redirect:/hr/tasks";
+                case "ADMIN" -> "redirect:/admin/tasks";
+                default -> "redirect:" + dashboardFor(role);
+            };
+        } else if (path.endsWith("/meetings")) {
+            return switch (role) {
+                case "EMPLOYEE" -> "redirect:/employee/meetings";
+                case "MANAGER" -> "redirect:/manager/meetings";
+                case "HR" -> "redirect:/hr/meetings";
+                case "ADMIN" -> "redirect:/admin/schedule-meeting";
+                default -> "redirect:" + dashboardFor(role);
+            };
+        } else if (path.endsWith("/leaves") || path.endsWith("/leave")) {
+            return switch (role) {
+                case "EMPLOYEE" -> "redirect:/employee/leaves";
+                case "MANAGER" -> "redirect:/manager/leaves";
+                case "HR" -> "redirect:/hr/leaves";
+                default -> "redirect:" + dashboardFor(role);
+            };
+        } else if (path.endsWith("/teams") || path.endsWith("/team")) {
+            return switch (role) {
+                case "MANAGER" -> "redirect:/manager/team";
+                case "HR" -> "redirect:/hr/teams";
+                default -> "redirect:" + dashboardFor(role);
+            };
+        } else if (path.endsWith("/performance")) {
+            return switch (role) {
+                case "EMPLOYEE" -> "redirect:/employee/performance";
+                case "MANAGER" -> "redirect:/manager/performance";
+                case "HR" -> "redirect:/hr/performance";
+                default -> "redirect:" + dashboardFor(role);
+            };
+        } else if (path.endsWith("/reports")) {
+            return switch (role) {
+                case "EMPLOYEE" -> "redirect:/employee/reports";
+                case "MANAGER" -> "redirect:/manager/reports";
+                case "HR" -> "redirect:/hr/reports";
+                case "ADMIN" -> "redirect:/admin/reports";
+                default -> "redirect:" + dashboardFor(role);
+            };
+        } else if (path.endsWith("/attendance")) {
+            return switch (role) {
+                case "EMPLOYEE" -> "redirect:/employee/attendance";
+                case "MANAGER" -> "redirect:/manager/attendance";
+                case "HR" -> "redirect:/hr/attendance";
+                default -> "redirect:" + dashboardFor(role);
+            };
+        } else if (path.endsWith("/calendar")) {
+            return switch (role) {
+                case "EMPLOYEE" -> "redirect:/employee/calendar";
+                case "MANAGER" -> "redirect:/manager/calendar";
+                case "HR" -> "redirect:/hr/calendar";
+                case "ADMIN" -> "redirect:/admin/calendar";
+                default -> "redirect:" + dashboardFor(role);
+            };
+        }
+
         return "redirect:/login";
     }
 

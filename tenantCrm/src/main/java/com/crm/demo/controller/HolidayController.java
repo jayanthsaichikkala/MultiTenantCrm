@@ -61,6 +61,27 @@ public class HolidayController {
         String tenant = getTenant(request);
         java.util.Map<String, Object> resp = new java.util.LinkedHashMap<>();
 
+        if (date == null || date.isBlank() || !date.matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+            resp.put("success", false);
+            resp.put("message", "Please select a valid holiday date.");
+            return resp;
+        }
+        if (name == null || name.trim().isBlank()) {
+            resp.put("success", false);
+            resp.put("message", "Holiday name is required.");
+            return resp;
+        }
+        if (name.trim().length() > 255) {
+            resp.put("success", false);
+            resp.put("message", "Holiday name cannot exceed 255 characters.");
+            return resp;
+        }
+        if (type == null || type.isBlank()) {
+            resp.put("success", false);
+            resp.put("message", "Holiday type is required.");
+            return resp;
+        }
+
         if (holidayService.dateExists(date, tenant)) {
             resp.put("success", false);
             resp.put("message", "A holiday already exists on " + date + " for your company.");
@@ -69,11 +90,11 @@ public class HolidayController {
 
         Holiday h = new Holiday();
         h.setDate(date);
-        h.setName(name);
+        h.setName(name.trim());
         h.setType(type);
         h.setTenantSegment(tenant);
         holidayService.save(h);
-        notificationService.notifyHolidayAdded(tenant, name, date);
+        notificationService.notifyHolidayAdded(tenant, name.trim(), date);
 
         resp.put("success", true);
         resp.put("message", "Holiday added.");
@@ -93,6 +114,27 @@ public class HolidayController {
         String tenant = getTenant(request);
         java.util.Map<String, Object> resp = new java.util.LinkedHashMap<>();
 
+        if (date == null || date.isBlank() || !date.matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+            resp.put("success", false);
+            resp.put("message", "Please select a valid holiday date.");
+            return resp;
+        }
+        if (name == null || name.trim().isBlank()) {
+            resp.put("success", false);
+            resp.put("message", "Holiday name is required.");
+            return resp;
+        }
+        if (name.trim().length() > 255) {
+            resp.put("success", false);
+            resp.put("message", "Holiday name cannot exceed 255 characters.");
+            return resp;
+        }
+        if (type == null || type.isBlank()) {
+            resp.put("success", false);
+            resp.put("message", "Holiday type is required.");
+            return resp;
+        }
+
         Holiday h = holidayService.getById(id).orElse(null);
         if (h == null || !tenant.equals(h.getTenantSegment())) {
             resp.put("success", false);
@@ -107,7 +149,7 @@ public class HolidayController {
         }
 
         h.setDate(date);
-        h.setName(name);
+        h.setName(name.trim());
         h.setType(type);
         holidayService.save(h);
         notificationService.sendLiveUpdateToTenant(tenant, "HOLIDAY", "Holiday Updated", "Holiday was updated", "/calendar");

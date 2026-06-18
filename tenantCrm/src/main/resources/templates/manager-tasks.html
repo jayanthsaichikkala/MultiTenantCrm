@@ -1211,7 +1211,7 @@
 			<div class="modal-body">
 				<form id="rejectForm" method="post"><input type="hidden" name="action" value="reject"><label
 						style="font-weight:600;">Reason <span class="req">*</span></label><textarea id="rejectReason"
-						name="reason" rows="4"
+						name="reason" rows="4" maxlength="255"
 						style="width:100%;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px;margin-top:8px;"></textarea><span
 						id="rejectReasonErr" style="display:none;color:#d11a2a;font-size:12px;">Please enter a
 						reason.</span>
@@ -1413,8 +1413,8 @@
 							</select></div>
 						<div class="form-group full"><label>Description</label><textarea id="taskDesc"
 								name="description" placeholder="Add instructions, context, or criteria..."
-								maxlength="1000"></textarea>
-							<div class="char-counter"><span id="descCount">0</span>/1000</div>
+								maxlength="255"></textarea>
+							<div class="char-counter"><span id="descCount">0</span>/255</div>
 						</div>
 						<div class="section-divider">📎 ATTACHMENTS</div>
 						<div class="form-group full">

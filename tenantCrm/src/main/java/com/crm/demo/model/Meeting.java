@@ -10,6 +10,11 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.FutureOrPresent;
 
 @Entity
 @Table(name = "meetings")
@@ -19,19 +24,32 @@ public class Meeting {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	@NotBlank
+	@NotBlank(message = "Title is required")
+	@Size(max = 255, message = "Title cannot exceed 255 characters")
 	private String title;
 
+	@NotNull(message = "Meeting date is required")
+	@FutureOrPresent(message = "Meeting date cannot be in the past")
 	private LocalDate meetingDate;
+
+	@NotNull(message = "Meeting time is required")
 	private LocalTime meetingTime;
+
+	@NotNull(message = "Duration is required")
+	@Min(value = 1, message = "Duration must be at least 1 minute")
+	@Max(value = 1440, message = "Duration cannot exceed 24 hours (1440 minutes)")
 	private Integer duration;
+
+	@NotBlank(message = "Meeting type is required")
 	private String meetingType;
+
 	private String location;
 
-	@NotBlank
+	@NotBlank(message = "Participants are required")
 	private String participants;
 
 	@Column(length = 2000)
+	@Size(max = 255, message = "Agenda cannot exceed 255 characters")
 	private String agenda;
 
 	private boolean sendNotification;

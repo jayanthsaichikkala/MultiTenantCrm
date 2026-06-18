@@ -771,14 +771,39 @@ public class EmployeeController {
             return "redirect:/employee/leaves";
         }
 
-        LocalDate from = LocalDate.parse(fromDate);
-        LocalDate to = LocalDate.parse(toDate);
-        if (to.isBefore(from)) {
-            ra.addFlashAttribute("errorMessage", "To date cannot be before from date.");
+        if (type == null || type.isBlank()) {
+            ra.addFlashAttribute("errorMessage", "Leave type is required.");
             return "redirect:/employee/leaves";
         }
-        if (type == null || type.isBlank() || reason == null || reason.isBlank()) {
-            ra.addFlashAttribute("errorMessage", "Please fill all required leave details.");
+        if (reason == null || reason.isBlank()) {
+            ra.addFlashAttribute("errorMessage", "Leave reason is required.");
+            return "redirect:/employee/leaves";
+        }
+        if (reason.trim().length() > 255) {
+            ra.addFlashAttribute("errorMessage", "Reason cannot exceed 255 characters.");
+            return "redirect:/employee/leaves";
+        }
+        if (fromDate == null || fromDate.isBlank() || !fromDate.matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+            ra.addFlashAttribute("errorMessage", "Invalid start date format.");
+            return "redirect:/employee/leaves";
+        }
+        if (toDate == null || toDate.isBlank() || !toDate.matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+            ra.addFlashAttribute("errorMessage", "Invalid end date format.");
+            return "redirect:/employee/leaves";
+        }
+
+        LocalDate from;
+        LocalDate to;
+        try {
+            from = LocalDate.parse(fromDate);
+            to = LocalDate.parse(toDate);
+        } catch (java.time.format.DateTimeParseException e) {
+            ra.addFlashAttribute("errorMessage", "Invalid date value.");
+            return "redirect:/employee/leaves";
+        }
+
+        if (to.isBefore(from)) {
+            ra.addFlashAttribute("errorMessage", "To date cannot be before from date.");
             return "redirect:/employee/leaves";
         }
 

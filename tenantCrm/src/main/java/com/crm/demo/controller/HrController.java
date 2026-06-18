@@ -367,6 +367,30 @@ public class HrController {
                           @RequestParam String role,
                           HttpServletRequest request,
                           RedirectAttributes ra) {
+        if (username == null || username.trim().isBlank()) {
+            ra.addFlashAttribute("errorMessage", "Username is required.");
+            return "redirect:/hr/add-user";
+        }
+        if (!username.trim().matches("^[A-Za-z0-9._-]{3,50}$")) {
+            ra.addFlashAttribute("errorMessage", "Username must be 3-50 characters and contain only letters, numbers, dots, hyphens, or underscores.");
+            return "redirect:/hr/add-user";
+        }
+        if (email == null || email.trim().isBlank()) {
+            ra.addFlashAttribute("errorMessage", "Email is required.");
+            return "redirect:/hr/add-user";
+        }
+        if (!email.trim().matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
+            ra.addFlashAttribute("errorMessage", "Please provide a valid email address.");
+            return "redirect:/hr/add-user";
+        }
+        if (password == null || password.length() < 4) {
+            ra.addFlashAttribute("errorMessage", "Password must be at least 4 characters long.");
+            return "redirect:/hr/add-user";
+        }
+        if (!password.matches("^[A-Za-z0-9]+$")) {
+            ra.addFlashAttribute("errorMessage", "Password must contain only letters and numbers (no special characters).");
+            return "redirect:/hr/add-user";
+        }
         if (!password.equals(confirmPassword)) {
             ra.addFlashAttribute("errorMessage", "Passwords do not match.");
             return "redirect:/hr/add-user";
@@ -396,26 +420,26 @@ public class HrController {
             }
         }
 
-        if (segment != null && !segment.isBlank() && !email.contains("." + segment + "@")) {
+        if (segment != null && !segment.isBlank() && !email.trim().contains("." + segment + "@")) {
             ra.addFlashAttribute("errorMessage",
                     "Email must belong to your tenant domain (e.g. user." + segment + "@crm.com).");
             return "redirect:/hr/add-user";
         }
 
-        if (userRepository.existsByUsernameOrEmail(username, email)) {
+        if (userRepository.existsByUsernameOrEmail(username.trim(), email.trim())) {
             ra.addFlashAttribute("errorMessage", "Username or email already exists.");
             return "redirect:/hr/add-user";
         }
 
         User user = new User();
-        user.setUsername(username);
-        user.setEmail(email);
+        user.setUsername(username.trim());
+        user.setEmail(email.trim());
         user.setPassword(passwordEncoder.encode(password));
-        user.setRole(role);
+        user.setRole(role.toUpperCase());
         user.setStatus("active");
         userRepository.save(user);
-        notificationService.notifyEmployeeManagementChanged(getTenantSegment(request), "added", username);
-        ra.addFlashAttribute("successMessage", "User '" + username + "' added successfully.");
+        notificationService.notifyEmployeeManagementChanged(getTenantSegment(request), "added", username.trim());
+        ra.addFlashAttribute("successMessage", "User '" + username.trim() + "' added successfully.");
         return "redirect:/hr/employees";
     }
 
@@ -649,14 +673,60 @@ public class HrController {
             return "redirect:/hr/employees";
         }
 
+        if (username == null || username.trim().isBlank()) {
+            ra.addFlashAttribute("errorMessage", "Username is required.");
+            return "redirect:/hr/edit-employee/" + id;
+        }
+        if (!username.trim().matches("^[A-Za-z0-9._-]{3,50}$")) {
+            ra.addFlashAttribute("errorMessage", "Username must be 3-50 characters and contain only letters, numbers, dots, hyphens, or underscores.");
+            return "redirect:/hr/edit-employee/" + id;
+        }
+        if (email == null || email.trim().isBlank()) {
+            ra.addFlashAttribute("errorMessage", "Email is required.");
+            return "redirect:/hr/edit-employee/" + id;
+        }
+        if (!email.trim().matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
+            ra.addFlashAttribute("errorMessage", "Please provide a valid email address.");
+            return "redirect:/hr/edit-employee/" + id;
+        }
+
         // Block promoting to ADMIN / SUPER_ADMIN
         if ("ADMIN".equalsIgnoreCase(role) || "SUPER_ADMIN".equalsIgnoreCase(role)) {
             ra.addFlashAttribute("errorMessage", "You cannot assign that role.");
             return "redirect:/hr/edit-employee/" + id;
         }
 
+        String segment = getTenantSegment(request);
+        if (segment != null && !segment.isBlank() && !email.trim().contains("." + segment + "@")) {
+            ra.addFlashAttribute("errorMessage", "Email must belong to your tenant domain (expected format: name." + segment + "@crm.com).");
+            return "redirect:/hr/edit-employee/" + id;
+        }
+
+        // Check uniqueness
+        User existingUserByUname = userRepository.findByUsername(username.trim());
+        if (existingUserByUname != null && !existingUserByUname.getId().equals(emp.getId())) {
+            ra.addFlashAttribute("errorMessage", "Username is already taken.");
+            return "redirect:/hr/edit-employee/" + id;
+        }
+        User existingUserByEmail = userRepository.findByEmail(email.trim());
+        if (existingUserByEmail != null && !existingUserByEmail.getId().equals(emp.getId())) {
+            ra.addFlashAttribute("errorMessage", "Email is already taken.");
+            return "redirect:/hr/edit-employee/" + id;
+        }
+
+        emp.setUsername(username.trim());
+        emp.setEmail(email.trim());
+
         // Optional password change
         if (password != null && !password.isBlank()) {
+            if (password.length() < 4) {
+                ra.addFlashAttribute("errorMessage", "Password must be at least 4 characters long.");
+                return "redirect:/hr/edit-employee/" + id;
+            }
+            if (!password.matches("^[A-Za-z0-9]+$")) {
+                ra.addFlashAttribute("errorMessage", "Password must contain only letters and numbers (no special characters).");
+                return "redirect:/hr/edit-employee/" + id;
+            }
             if (!password.equals(confirmPassword)) {
                 ra.addFlashAttribute("errorMessage", "Passwords do not match.");
                 return "redirect:/hr/edit-employee/" + id;
@@ -664,7 +734,7 @@ public class HrController {
             emp.setPassword(passwordEncoder.encode(password));
         }
 
-        emp.setRole(role);
+        emp.setRole(role.toUpperCase());
         userRepository.save(emp);
         notificationService.notifyEmployeeManagementChanged(getTenantSegment(request), "updated", emp.getUsername());
         ra.addFlashAttribute("successMessage", "'" + emp.getUsername() + "' updated successfully.");
@@ -1001,8 +1071,16 @@ public class HrController {
             leave.setStatus("Approved");
             ra.addFlashAttribute("successMessage", "Leave request approved.");
         } else if ("reject".equalsIgnoreCase(action)) {
+            if (rejectionMessage == null || rejectionMessage.trim().isBlank()) {
+                ra.addFlashAttribute("errorMessage", "Rejection message/reason is required.");
+                return "redirect:/hr/leaves";
+            }
+            if (rejectionMessage.trim().length() > 255) {
+                ra.addFlashAttribute("errorMessage", "Rejection message/reason cannot exceed 255 characters.");
+                return "redirect:/hr/leaves";
+            }
             leave.setStatus("Rejected");
-            leave.setRejectionMessage(rejectionMessage != null ? rejectionMessage.trim() : null);
+            leave.setRejectionMessage(rejectionMessage.trim());
             ra.addFlashAttribute("successMessage", "Leave request rejected.");
         } else {
             ra.addFlashAttribute("errorMessage", "Invalid leave action.");
@@ -1142,6 +1220,10 @@ public class HrController {
 
         if (name == null || name.isBlank()) {
             ra.addFlashAttribute("errorMessage", "Team name is required.");
+            return "redirect:/hr/teams";
+        }
+        if (name.trim().length() > 255) {
+            ra.addFlashAttribute("errorMessage", "Team name cannot exceed 255 characters.");
             return "redirect:/hr/teams";
         }
         if (teamRepository.existsByNameAndTenantSegment(name.trim(), tenant)) {
@@ -1346,6 +1428,10 @@ public class HrController {
         String tenant   = getTenantSegment(request);
         String username = (String) request.getAttribute("loggedInUser");
 
+        if ("in-person".equalsIgnoreCase(meetingForm.getMeetingType()) && (meetingForm.getLocation() == null || meetingForm.getLocation().isBlank())) {
+            result.rejectValue("location", "NotBlank", "Location is required for in-person meetings.");
+        }
+
         if (result.hasErrors()) {
             injectUser(request, model);
             model.addAttribute("upcomingMeetings", getUpcomingMeetings(tenant, username != null ? username : ""));
@@ -1408,6 +1494,10 @@ public class HrController {
                                 RedirectAttributes ra) {
         String tenant   = getTenantSegment(request);
         String username = (String) request.getAttribute("loggedInUser");
+
+        if ("in-person".equalsIgnoreCase(meetingForm.getMeetingType()) && (meetingForm.getLocation() == null || meetingForm.getLocation().isBlank())) {
+            result.rejectValue("location", "NotBlank", "Location is required for in-person meetings.");
+        }
 
         if (result.hasErrors()) {
             injectUser(request, model);

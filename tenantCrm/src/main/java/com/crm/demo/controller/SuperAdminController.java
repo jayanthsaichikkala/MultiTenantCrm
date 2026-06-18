@@ -148,25 +148,60 @@ public class SuperAdminController {
                            @RequestParam(defaultValue = "10") Integer employeeLimit,
                            RedirectAttributes ra) {
 
+        if (username == null || username.trim().isBlank()) {
+            ra.addFlashAttribute("errorMessage", "Username is required.");
+            return "redirect:/superadmin/add-admin";
+        }
+        if (!username.trim().matches("^[A-Za-z0-9._-]{3,50}$")) {
+            ra.addFlashAttribute("errorMessage", "Username must be 3-50 characters and contain only letters, numbers, dots, hyphens, or underscores.");
+            return "redirect:/superadmin/add-admin";
+        }
+        if (email == null || email.trim().isBlank()) {
+            ra.addFlashAttribute("errorMessage", "Email is required.");
+            return "redirect:/superadmin/add-admin";
+        }
+        if (!email.trim().matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
+            ra.addFlashAttribute("errorMessage", "Please provide a valid email address.");
+            return "redirect:/superadmin/add-admin";
+        }
+        // Admin email must contain a dot in local part to establish a tenant segment
+        String local = email.trim().substring(0, email.trim().indexOf('@'));
+        if (local.lastIndexOf('.') < 0) {
+            ra.addFlashAttribute("errorMessage", "Admin email must follow the pattern name.tenant@domain.com (e.g. admin.wipro@crm.com) to establish a tenant segment.");
+            return "redirect:/superadmin/add-admin";
+        }
+        if (password == null || password.length() < 4) {
+            ra.addFlashAttribute("errorMessage", "Password must be at least 4 characters long.");
+            return "redirect:/superadmin/add-admin";
+        }
+        if (!password.matches("^[A-Za-z0-9]+$")) {
+            ra.addFlashAttribute("errorMessage", "Password must contain only letters and numbers (no special characters).");
+            return "redirect:/superadmin/add-admin";
+        }
         if (!password.equals(confirmPassword)) {
             ra.addFlashAttribute("errorMessage", "Passwords do not match.");
             return "redirect:/superadmin/add-admin";
         }
-        if (userRepository.existsByUsernameOrEmail(username, email)) {
+        if (employeeLimit == null || employeeLimit < 1) {
+            ra.addFlashAttribute("errorMessage", "Employee limit must be a positive integer.");
+            return "redirect:/superadmin/add-admin";
+        }
+
+        if (userRepository.existsByUsernameOrEmail(username.trim(), email.trim())) {
             ra.addFlashAttribute("errorMessage", "Username or email already exists.");
             return "redirect:/superadmin/add-admin";
         }
 
         User newAdmin = new User();
-        newAdmin.setUsername(username);
-        newAdmin.setEmail(email);
+        newAdmin.setUsername(username.trim());
+        newAdmin.setEmail(email.trim());
         newAdmin.setPassword(passwordEncoder.encode(password));
         newAdmin.setRole("ADMIN");
         newAdmin.setStatus(status);
         newAdmin.setEmployeeLimit(employeeLimit);
         userRepository.save(newAdmin);
 
-        ra.addFlashAttribute("successMessage", "Admin '" + username + "' added successfully.");
+        ra.addFlashAttribute("successMessage", "Admin '" + username.trim() + "' added successfully.");
         return "redirect:/superadmin/admins";
     }
 
@@ -202,7 +237,7 @@ public class SuperAdminController {
         return "superadmin-edit-admin";
     }
 
-    // ── Edit Admin (POST) — no password change, only username/email/status ────
+    // ── Edit Admin (POST) ──────────────────────────────────────────────────────
     @PostMapping("/edit-admin/{id}")
     public String editAdmin(@PathVariable Long id,
                             @RequestParam String email,
@@ -216,6 +251,47 @@ public class SuperAdminController {
             return "redirect:/superadmin/admins";
         }
 
+        if (username == null || username.trim().isBlank()) {
+            ra.addFlashAttribute("errorMessage", "Username is required.");
+            return "redirect:/superadmin/edit-admin/" + id;
+        }
+        if (!username.trim().matches("^[A-Za-z0-9._-]{3,50}$")) {
+            ra.addFlashAttribute("errorMessage", "Username must be 3-50 characters and contain only letters, numbers, dots, hyphens, or underscores.");
+            return "redirect:/superadmin/edit-admin/" + id;
+        }
+        if (email == null || email.trim().isBlank()) {
+            ra.addFlashAttribute("errorMessage", "Email is required.");
+            return "redirect:/superadmin/edit-admin/" + id;
+        }
+        if (!email.trim().matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
+            ra.addFlashAttribute("errorMessage", "Please provide a valid email address.");
+            return "redirect:/superadmin/edit-admin/" + id;
+        }
+        // Admin email must contain a dot in local part to establish a tenant segment
+        String local = email.trim().substring(0, email.trim().indexOf('@'));
+        if (local.lastIndexOf('.') < 0) {
+            ra.addFlashAttribute("errorMessage", "Admin email must follow the pattern name.tenant@domain.com (e.g. admin.wipro@crm.com) to establish a tenant segment.");
+            return "redirect:/superadmin/edit-admin/" + id;
+        }
+        if (employeeLimit == null || employeeLimit < 1) {
+            ra.addFlashAttribute("errorMessage", "Employee limit must be a positive integer.");
+            return "redirect:/superadmin/edit-admin/" + id;
+        }
+
+        // Check uniqueness
+        User existingUserByUname = userRepository.findByUsername(username.trim());
+        if (existingUserByUname != null && !existingUserByUname.getId().equals(admin.getId())) {
+            ra.addFlashAttribute("errorMessage", "Username is already taken.");
+            return "redirect:/superadmin/edit-admin/" + id;
+        }
+        User existingUserByEmail = userRepository.findByEmail(email.trim());
+        if (existingUserByEmail != null && !existingUserByEmail.getId().equals(admin.getId())) {
+            ra.addFlashAttribute("errorMessage", "Email is already taken.");
+            return "redirect:/superadmin/edit-admin/" + id;
+        }
+
+        admin.setUsername(username.trim());
+        admin.setEmail(email.trim());
         admin.setStatus(status);
         admin.setEmployeeLimit(employeeLimit);
         userRepository.save(admin);
