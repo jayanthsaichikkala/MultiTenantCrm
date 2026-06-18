@@ -730,6 +730,31 @@
 				padding: 0 12px;
 			}
 		}
+
+		@media (max-width: 768px) {
+			.table-wrap {
+				margin: 0 -16px;
+				padding: 0 16px;
+				overflow-x: auto;
+				-webkit-overflow-scrolling: touch;
+				scrollbar-width: auto !important;
+			}
+			.table-wrap::-webkit-scrollbar {
+				display: block !important;
+				height: 6px !important;
+			}
+			.table-wrap::-webkit-scrollbar-thumb {
+				background: rgba(23, 69, 94, 0.25) !important;
+				border-radius: 10px !important;
+			}
+			.table-wrap::-webkit-scrollbar-track {
+				background: rgba(0, 0, 0, 0.02) !important;
+				border-radius: 10px !important;
+			}
+			#meetingsTable, #historyTable {
+				min-width: 600px;
+			}
+		}
 	</style>
 </head>
 

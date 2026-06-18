@@ -55,7 +55,7 @@ html {
 }
 
 body {
-	min-height: 100%;
+	min-height: 100vh;
 	display: flex;
 	justify-content: center;
 	align-items: center;
@@ -457,7 +457,7 @@ button[type="submit"]:disabled::before {
    RESPONSIVE — SHORT SCREENS (height ≤ 680px)
    FIXED: was pushing card off-top; now scrollable
 ========================= */
-@media (max-height: 680px) {
+@media (max-height: 480px) {
 	body {
 		align-items: flex-start;
 		padding-top: 24px;

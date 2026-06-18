@@ -577,6 +577,110 @@
 				max-width: calc(100% - 110px);
 			}
 		}
+
+		@media (max-width: 768px) {
+			.tasks-scroll {
+				overflow: visible;
+			}
+			.tasks-scroll table {
+				min-width: 0 !important;
+			}
+			.tasks-table thead {
+				display: none;
+			}
+			.tasks-table tbody tr {
+				display: flex;
+				flex-direction: column;
+				padding: 16px;
+				background: #fff;
+				border-radius: 16px;
+				margin-bottom: 16px;
+				border: 1.5px solid #edf2f7;
+				box-shadow: 0 4px 12px rgba(22, 54, 71, 0.04);
+			}
+			.tasks-table tbody td {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				padding: 10px 0 !important;
+				border-bottom: 1px solid #f1f5f9 !important;
+				width: 100% !important;
+				background: transparent !important;
+			}
+			.tasks-table tbody td:last-child {
+				border-bottom: none !important;
+				flex-direction: column;
+				align-items: stretch;
+				gap: 8px;
+				padding-top: 14px !important;
+			}
+			
+			.tasks-table .col-num, 
+			.tasks-table td.td-num {
+				display: none !important;
+			}
+			
+			.tasks-table td:nth-child(2) {
+				flex-direction: column;
+				align-items: flex-start;
+				border-bottom: 2px solid #e2e8f0 !important;
+				padding-bottom: 12px !important;
+			}
+			
+			.tasks-table td:nth-child(3)::before {
+				content: "Priority";
+				font-weight: 700;
+				color: #94a3b8;
+				font-size: 11px;
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+			}
+			.tasks-table td:nth-child(4)::before {
+				content: "Due Date";
+				font-weight: 700;
+				color: #94a3b8;
+				font-size: 11px;
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+			}
+			.tasks-table td:nth-child(5)::before {
+				content: "Assigned By";
+				font-weight: 700;
+				color: #94a3b8;
+				font-size: 11px;
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+			}
+			.tasks-table td:nth-child(6)::before {
+				content: "Status & Actions";
+				font-weight: 700;
+				color: #94a3b8;
+				font-size: 11px;
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+				margin-bottom: 8px;
+				align-self: flex-start;
+			}
+			
+			.status-wrap {
+				width: 100%;
+				justify-content: flex-start;
+			}
+			.status-form-row {
+				width: 100%;
+				flex-direction: column;
+				align-items: stretch;
+				gap: 8px;
+			}
+			.task-status-select, 
+			.task-upload-control, 
+			.task-update-btn {
+				width: 100% !important;
+			}
+			.task-upload-control {
+				justify-content: space-between;
+			}
+		}
 	</style>
 </head>
 

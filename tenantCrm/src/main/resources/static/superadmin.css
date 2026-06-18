@@ -1546,6 +1546,29 @@ tbody tr:hover {
 	.form-grid {
 		grid-template-columns: 1fr;
 	}
+
+	.table-wrap {
+		margin: 0 -16px;
+		padding: 0 16px;
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: auto !important;
+	}
+	.table-wrap::-webkit-scrollbar {
+		display: block !important;
+		height: 6px !important;
+	}
+	.table-wrap::-webkit-scrollbar-thumb {
+		background: rgba(23, 69, 94, 0.25) !important;
+		border-radius: 10px !important;
+	}
+	.table-wrap::-webkit-scrollbar-track {
+		background: rgba(0, 0, 0, 0.02) !important;
+		border-radius: 10px !important;
+	}
+
+	table {
+		min-width: 600px;
+	}
 }
 
 /* =========================
