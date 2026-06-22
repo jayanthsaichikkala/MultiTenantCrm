@@ -31,14 +31,20 @@ import com.crm.demo.model.Report;
 import com.crm.demo.model.ReportAttachment;
 import com.crm.demo.model.Task;
 import com.crm.demo.model.User;
+import com.crm.demo.model.Attendance;
+import com.crm.demo.model.AttendanceDay;
+import com.crm.demo.model.Holiday;
 import com.crm.demo.repository.MeetingRepository;
 import com.crm.demo.repository.ProjectRepository;
 import com.crm.demo.repository.ReportAttachmentRepository;
 import com.crm.demo.repository.ReportRepository;
 import com.crm.demo.repository.TaskRepository;
 import com.crm.demo.repository.UserRepository;
+import com.crm.demo.repository.HolidayRepository;
+import com.crm.demo.repository.AttendanceRepository;
 import com.crm.demo.service.NotificationService;
 import com.crm.demo.service.ProfileUpdateService;
+import java.time.DayOfWeek;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -74,6 +80,12 @@ public class AdminController {
 
 	@Autowired
 	private NotificationService notificationService;
+
+	@Autowired
+	private HolidayRepository holidayRepository;
+
+	@Autowired
+	private AttendanceRepository attendanceRepository;
 
 	// =========================================================
 	// COMMON USER DETAILS
@@ -257,6 +269,102 @@ public class AdminController {
 		model.addAttribute("activeEmployees",   active);
 		model.addAttribute("inactiveEmployees", inactive);
 		return "add-users";
+	}
+
+	/**
+	 * REST: GET /admin/api/employee/{id}
+	 * Returns employee profile + last 30 days attendance as JSON for the modal.
+	 */
+	@GetMapping("/api/employee/{id}")
+	@ResponseBody
+	public Map<String, Object> employeeDetail(@PathVariable Long id, HttpServletRequest request) {
+		Map<String, Object> resp = new LinkedHashMap<>();
+		String username = (String) request.getAttribute("loggedInUser");
+		String tenant   = getTenantSegment(username);
+
+		User user = userRepository.findById(id).orElse(null);
+		if (user == null || (!"EMPLOYEE".equalsIgnoreCase(user.getRole())
+				&& !"MANAGER".equalsIgnoreCase(user.getRole())
+				&& !"HR".equalsIgnoreCase(user.getRole()))) {
+			resp.put("error", "User not found.");
+			return resp;
+		}
+
+		// Profile
+		resp.put("id",       user.getId());
+		resp.put("username", user.getUsername());
+		resp.put("email",    user.getEmail());
+		resp.put("role",     user.getRole());
+		resp.put("status",   user.getStatus());
+
+		// Last 30 days attendance
+		LocalDate today = LocalDate.now();
+		LocalDate from  = today.minusDays(29);
+		Map<LocalDate, String> holidays = fetchHolidays(tenant, from, today);
+		List<Attendance> records = attendanceRepository.findByUserAndDateBetweenOrderByDateDesc(user, from, today);
+		List<AttendanceDay> days = buildDayList(records, from, today, holidays);
+
+		// Stats
+		long present  = days.stream().filter(d -> "present".equals(d.getStatus()) || "late".equals(d.getStatus())).count();
+		long absent   = days.stream().filter(d -> "absent".equals(d.getStatus())).count();
+		long halfDay  = days.stream().filter(d -> "half-day".equals(d.getStatus())).count();
+		long holiday  = days.stream().filter(d -> "holiday".equals(d.getStatus())).count();
+		resp.put("presentDays", present);
+		resp.put("absentDays",  absent);
+		resp.put("halfDays",    halfDay);
+		resp.put("holidays",    holiday);
+
+		// Attendance rows (last 30 days, newest first)
+		List<Map<String, String>> rows = new ArrayList<>();
+		for (AttendanceDay d : days) {
+			Map<String, String> row = new LinkedHashMap<>();
+			row.put("date",      d.getDate().toString());
+			row.put("checkIn",   d.getCheckInDisplay());
+			row.put("checkOut",  d.getCheckOutDisplay());
+			row.put("worked",    d.getWorkedHours());
+			row.put("breakTime", d.getBreakDuration());
+			row.put("dayType",   d.isReal() && d.getRecord().getCheckOut() != null ? d.getRecord().getDayType() : "—");
+			row.put("status",    d.getStatus());
+			rows.add(row);
+		}
+		resp.put("attendance", rows);
+		return resp;
+	}
+
+	private List<AttendanceDay> buildDayList(List<Attendance> records,
+											  LocalDate from, LocalDate to,
+											  Map<LocalDate, String> holidays) {
+		Map<LocalDate, Attendance> byDate = new LinkedHashMap<>();
+		for (Attendance a : records) byDate.put(a.getDate(), a);
+
+		List<AttendanceDay> days = new ArrayList<>();
+		LocalDate today  = LocalDate.now();
+		LocalDate cursor = to;
+		while (!cursor.isBefore(from)) {
+			if (holidays.containsKey(cursor)) {
+				days.add(new AttendanceDay(cursor, holidays.get(cursor), true));
+			} else {
+				DayOfWeek dow = cursor.getDayOfWeek();
+				if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
+					days.add(new AttendanceDay(cursor, "weekend"));
+				} else if (byDate.containsKey(cursor)) {
+					days.add(new AttendanceDay(byDate.get(cursor)));
+				} else if (!cursor.isAfter(today)) {
+					days.add(new AttendanceDay(cursor, "absent"));
+				}
+			}
+			cursor = cursor.minusDays(1);
+		}
+		return days;
+	}
+
+	private Map<LocalDate, String> fetchHolidays(String tenant, LocalDate from, LocalDate to) {
+		Map<LocalDate, String> map = new LinkedHashMap<>();
+		if (tenant == null || tenant.isBlank()) return map;
+		List<Holiday> list = holidayRepository.findByTenantAndDateRange(
+				tenant, from.toString(), to.toString());
+		for (Holiday h : list) map.put(LocalDate.parse(h.getDate()), h.getName());
+		return map;
 	}
 
 	// =========================================================

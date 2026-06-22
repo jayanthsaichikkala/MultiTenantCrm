@@ -1403,13 +1403,15 @@ public class HrController {
         model.addAttribute("upcomingMeetings", getUpcomingMeetings(tenant, username != null ? username : ""));
         model.addAttribute("pastMeetings", getPastMeetings(tenant, username != null ? username : ""));
 
-        // All non-admin users in this tenant as potential participants
+        // All non-admin users in this tenant as potential participants (excluding the host)
         List<User> tenantUsers = tenant.isEmpty()
                 ? userRepository.findAll()
                 : userRepository.findByTenantSegment(tenant);
+        final String currentUsername = username != null ? username : "";
         model.addAttribute("tenantUsers", tenantUsers.stream()
                 .filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
-                          && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
+                          && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole())
+                          && !u.getUsername().equalsIgnoreCase(currentUsername))
                 .toList());
 
         if (!model.containsAttribute("meetingForm")) {
@@ -1439,9 +1441,11 @@ public class HrController {
             List<User> tenantUsers = tenant.isEmpty()
                     ? userRepository.findAll()
                     : userRepository.findByTenantSegment(tenant);
+            final String currentUsername = username != null ? username : "";
             model.addAttribute("tenantUsers", tenantUsers.stream()
                     .filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
-                              && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
+                              && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole())
+                              && !u.getUsername().equalsIgnoreCase(currentUsername))
                     .toList());
             model.addAttribute("errorMessage", "Please fix the errors below.");
             return "hr-meetings";
@@ -1477,9 +1481,11 @@ public class HrController {
         List<User> tenantUsers = tenant.isEmpty()
                 ? userRepository.findAll()
                 : userRepository.findByTenantSegment(tenant);
+        final String currentUsername = username != null ? username : "";
         model.addAttribute("tenantUsers", tenantUsers.stream()
                 .filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
-                          && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
+                          && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole())
+                          && !u.getUsername().equalsIgnoreCase(currentUsername))
                 .toList());
         return "hr-meetings";
     }
@@ -1506,9 +1512,11 @@ public class HrController {
             List<User> tenantUsers = tenant.isEmpty()
                     ? userRepository.findAll()
                     : userRepository.findByTenantSegment(tenant);
+            final String currentUsername = username != null ? username : "";
             model.addAttribute("tenantUsers", tenantUsers.stream()
                     .filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
-                              && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
+                              && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole())
+                              && !u.getUsername().equalsIgnoreCase(currentUsername))
                     .toList());
             model.addAttribute("errorMessage", "Please fix the errors below.");
             return "hr-meetings";

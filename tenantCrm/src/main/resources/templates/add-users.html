@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,6 +22,286 @@
         }
         .toggle-btn.active   .toggle-knob { transform:translateX(18px); }
         .toggle-btn.inactive .toggle-knob { transform:translateX(0); }
+
+		/* ── Employee Detail Modal ── */
+		.emp-modal-overlay {
+			display: none;
+			position: fixed;
+			inset: 0;
+			background: rgba(0, 0, 0, .45);
+			backdrop-filter: blur(3px);
+			z-index: 2000;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.emp-modal-overlay.open {
+			display: flex;
+		}
+
+		.emp-modal {
+			background: white;
+			border-radius: 24px;
+			width: 90%;
+			max-width: 860px;
+			max-height: 88vh;
+			display: flex;
+			flex-direction: column;
+			box-shadow: 0 20px 60px rgba(0, 0, 0, .2);
+			overflow: hidden;
+			animation: modalIn .25s ease;
+		}
+
+		@keyframes modalIn {
+			from {
+				opacity: 0;
+				transform: translateY(20px) scale(.97)
+			}
+
+			to {
+				opacity: 1;
+				transform: translateY(0) scale(1)
+			}
+		}
+
+		.emp-modal-header {
+			display: flex;
+			align-items: center;
+			gap: 18px;
+			padding: 24px 28px 20px;
+			border-bottom: 1px solid #edf3f6;
+			flex-shrink: 0;
+		}
+
+		.emp-modal-avatar {
+			width: 64px;
+			height: 64px;
+			border-radius: 50%;
+			background: #17455e;
+			color: white;
+			font-size: 26px;
+			font-weight: 700;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-shrink: 0;
+		}
+
+		.emp-modal-title {
+			flex: 1;
+		}
+
+		.emp-modal-title h2 {
+			font-size: 20px;
+			font-weight: 700;
+			color: #163647;
+			margin: 0 0 4px;
+		}
+
+		.emp-modal-title p {
+			font-size: 13px;
+			color: #6b7280;
+			margin: 0;
+		}
+
+		.emp-modal-close {
+			width: 36px;
+			height: 36px;
+			border-radius: 50%;
+			border: none;
+			background: #f3f8fb;
+			color: #6b7280;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			transition: background .2s;
+		}
+
+		.emp-modal-close:hover {
+			background: #fdecec;
+			color: #d11a2a;
+		}
+
+		.emp-modal-body {
+			flex: 1;
+			overflow-y: auto;
+			padding: 24px 28px;
+			display: flex;
+			flex-direction: column;
+			gap: 22px;
+		}
+
+		.emp-info-grid {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 14px;
+		}
+
+		.emp-info-tile {
+			background: #f5f9fb;
+			border-radius: 14px;
+			padding: 14px 16px;
+		}
+
+		.emp-info-tile .label {
+			font-size: 11px;
+			color: #6b7280;
+			font-weight: 600;
+			text-transform: uppercase;
+			letter-spacing: .04em;
+			margin-bottom: 6px;
+		}
+
+		.emp-info-tile .value {
+			font-size: 15px;
+			font-weight: 700;
+			color: #163647;
+		}
+
+		.emp-att-stats {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 12px;
+		}
+
+		.emp-att-stat {
+			border-radius: 14px;
+			padding: 14px 16px;
+			text-align: center;
+		}
+
+		.emp-att-stat .num {
+			font-size: 26px;
+			font-weight: 700;
+			line-height: 1;
+		}
+
+		.emp-att-stat .lbl {
+			font-size: 11px;
+			font-weight: 600;
+			margin-top: 4px;
+			text-transform: uppercase;
+			letter-spacing: .04em;
+		}
+
+		.emp-att-stat.green {
+			background: #dff5ea;
+			color: #1b7a46;
+		}
+
+		.emp-att-stat.red {
+			background: #fdecec;
+			color: #d11a2a;
+		}
+
+		.emp-att-stat.amber {
+			background: #fef3c7;
+			color: #92400e;
+		}
+
+		.emp-att-stat.purple {
+			background: #fce7f3;
+			color: #9d174d;
+		}
+
+		.emp-att-table {
+			width: 100%;
+			border-collapse: collapse;
+			font-size: 13px;
+		}
+
+		.emp-att-table thead th {
+			text-align: left;
+			padding: 10px 12px;
+			font-size: 11px;
+			font-weight: 600;
+			color: #6b7280;
+			border-bottom: 1px solid #e5edf2;
+			text-transform: uppercase;
+			letter-spacing: .04em;
+		}
+
+		.emp-att-table tbody td {
+			padding: 11px 12px;
+			border-bottom: 1px solid #edf3f6;
+		}
+
+		.emp-att-table tbody tr:last-child td {
+			border-bottom: none;
+		}
+
+		.emp-att-table tbody tr:hover {
+			background: #f7fbfd;
+		}
+
+		.emp-att-table tbody tr.row-weekend {
+			background: #f5f3ff;
+		}
+
+		.emp-att-table tbody tr.row-absent {
+			background: #fff8f8;
+		}
+
+		.emp-att-table tbody tr.row-holiday {
+			background: #fdf2f8;
+		}
+
+		#usersTable tbody tr.emp-row {
+			cursor: pointer;
+			transition: background .15s;
+		}
+
+		#usersTable tbody tr.emp-row:hover {
+			background: #f0f7fb;
+		}
+
+		#usersTable tbody tr.emp-row td.no-row-click {
+			cursor: default;
+		}
+
+		.modal-loading {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 48px;
+			color: #6b7280;
+			gap: 12px;
+			font-size: 14px;
+		}
+
+		.spinner {
+			width: 22px;
+			height: 22px;
+			border: 3px solid #e5edf2;
+			border-top-color: #17455e;
+			border-radius: 50%;
+			animation: spin .7s linear infinite;
+		}
+
+		@keyframes spin {
+			to {
+				transform: rotate(360deg);
+			}
+		}
+
+		@media (max-width:600px) {
+			.emp-info-grid {
+				grid-template-columns: 1fr 1fr;
+			}
+
+			.emp-att-stats {
+				grid-template-columns: 1fr 1fr;
+			}
+
+			.emp-modal {
+				border-radius: 16px;
+			}
+
+			.emp-modal-body {
+				padding: 16px;
+			}
+		}
     </style>
 </head>
 <body>
@@ -112,7 +392,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr th:each="mgr, stat : ${managers}">
+                        <tr th:each="mgr, stat : ${managers}" th:data-id="${mgr.id}" th:data-name="${mgr.username}" th:data-status="${mgr.status}" class="emp-row">
                             <td style="color:#6b7280;font-weight:600;" th:text="${stat.count}">1</td>
                             <td>
                                 <div class="member-cell">
@@ -122,7 +402,7 @@
                             </td>
                             <td style="color:#6b7280;font-size:13px;" th:text="${mgr.email}">email</td>
                             <td><span class="role-badge" th:text="${mgr.role} ?: '—'">Role</span></td>
-                            <td>
+                            <td class="no-row-click">
                                 <div class="table-status-cell">
                                     <span class="status-badge active"   th:if="${mgr.status == 'active' or mgr.status == null}">Active</span>
                                     <span class="status-badge inactive" th:unless="${mgr.status == 'active' or mgr.status == null}">Inactive</span>
@@ -136,7 +416,7 @@
                                     </form>
                                 </div>
                             </td>
-                            <td>
+                            <td class="no-row-click">
                                 <div class="action-btns">
                                     <a th:href="@{/admin/edit-employee/{id}(id=${mgr.id})}" class="btn-action edit">
                                         <i data-lucide="pencil"></i> Edit
@@ -174,6 +454,25 @@
                     <form id="deleteEmployeeForm" method="post" style="display:contents;">
                         <button type="submit" class="btn btn-danger"><i data-lucide="trash-2"></i> Yes, Delete</button>
                     </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Employee Detail Modal ── -->
+        <div class="emp-modal-overlay" id="empModalOverlay" onclick="closeEmpModal(event)">
+            <div class="emp-modal" id="empModal">
+                <div class="emp-modal-header">
+                    <div class="emp-modal-avatar" id="modalAvatar">?</div>
+                    <div class="emp-modal-title">
+                        <h2 id="modalName">Loading…</h2>
+                        <p id="modalEmail"></p>
+                    </div>
+                    <button class="emp-modal-close" onclick="closeModal()"><i data-lucide="x"></i></button>
+                </div>
+                <div class="emp-modal-body" id="modalBody">
+                    <div class="modal-loading">
+                        <div class="spinner"></div> Loading details…
+                    </div>
                 </div>
             </div>
         </div>
@@ -233,6 +532,103 @@
             t.addEventListener('transitionend', function(){ t.remove(); }, { once: true });
         }, 3500);
     });
+
+    // ── Employee Detail Modal ──
+    var empModalOverlay = document.getElementById('empModalOverlay');
+
+    // Use event delegation on the table body — ignore clicks on no-row-click cells
+    var empTableBody = document.querySelector('#usersTable tbody');
+    if (empTableBody) {
+        empTableBody.addEventListener('click', function (e) {
+            // If the click originated inside a no-row-click cell, do nothing
+            if (e.target.closest('td.no-row-click')) return;
+            var row = e.target.closest('tr.emp-row');
+            if (row) openEmpModal(row);
+        });
+    }
+
+    function openEmpModal(row) {
+        var id = row.getAttribute('data-id');
+        var name = row.getAttribute('data-name');
+        document.getElementById('modalName').textContent = name;
+        document.getElementById('modalEmail').textContent = '';
+        document.getElementById('modalAvatar').textContent = name.charAt(0).toUpperCase();
+        document.getElementById('modalBody').innerHTML = '<div class="modal-loading"><div class="spinner"></div> Loading details…</div>';
+        empModalOverlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
+        fetch('/admin/api/employee/' + id)
+            .then(r => r.json())
+            .then(data => renderModal(data))
+            .catch(() => {document.getElementById('modalBody').innerHTML = '<p style="padding:24px;color:#d11a2a;">Failed to load details.</p>';});
+    }
+    function closeModal() {empModalOverlay.classList.remove('open'); document.body.style.overflow = '';}
+    function closeEmpModal(e) {if (e.target === empModalOverlay) closeModal();}
+
+    function statusBadge(s) {
+        var map = {
+            'present': '<span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#dff5ea;color:#1b7a46;">Present</span>',
+            'late': '<span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#fce9d8;color:#b45309;">Late</span>',
+            'absent': '<span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#fdecec;color:#d11a2a;">Absent</span>',
+            'half-day': '<span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#fef3c7;color:#92400e;">Half Day</span>',
+            'weekend': '<span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#e9e2ff;color:#6b46c1;">Weekend</span>',
+            'holiday': '<span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#fce7f3;color:#9d174d;">Holiday</span>'
+        };
+        return map[s] || '<span style="color:#9ca3af;">—</span>';
+    }
+
+    function renderModal(d) {
+        if (d.error) {
+            document.getElementById('modalBody').innerHTML = '<p style="padding:24px;color:#d11a2a;">' + d.error + '</p>';
+            return;
+        }
+        document.getElementById('modalName').textContent = d.username;
+        document.getElementById('modalEmail').textContent = d.email;
+        document.getElementById('modalAvatar').textContent = d.username.charAt(0).toUpperCase();
+
+        var rows = '';
+        (d.attendance || []).forEach(function (a) {
+            var rowClass = a.status === 'weekend' ? 'row-weekend' : (a.status === 'absent' ? 'row-absent' : (a.status === 'holiday' ? 'row-holiday' : ''));
+            var checkIn = a.checkIn !== '—' ? '<span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#dff5ea;color:#1b7a46;">' + a.checkIn + '</span>' : '<span style="color:#9ca3af;">—</span>';
+            var checkOut = a.checkOut !== '—' ? '<span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#dcecf5;color:#17455e;">' + a.checkOut + '</span>' : '<span style="color:#9ca3af;">—</span>';
+            rows += '<tr class="' + rowClass + '">'
+                + '<td style="font-weight:600;">' + a.date + '</td>'
+                + '<td>' + checkIn + '</td>'
+                + '<td>' + checkOut + '</td>'
+                + '<td style="font-weight:600;color:#17455e;">' + a.worked + '</td>'
+                + '<td style="color:#b45309;">' + a.breakTime + '</td>'
+                + '<td>' + (a.dayType !== '—' ? '<span style="font-size:12px;font-weight:600;color:#17455e;">' + a.dayType + '</span>' : '<span style="color:#9ca3af;">—</span>') + '</td>'
+                + '<td>' + statusBadge(a.status) + '</td>'
+                + '</tr>';
+        });
+
+        var roleColor = d.role === 'MANAGER' ? 'background:#dcecf5;color:#17455e;' : (d.role === 'HR' ? 'background:#e9e2ff;color:#6b46c1;' : 'background:#f3f8fb;color:#163647;');
+        document.getElementById('modalBody').innerHTML =
+            '<div class="emp-info-grid">'
+            + '  <div class="emp-info-tile"><div class="label">Username</div><div class="value">' + d.username + '</div></div>'
+            + '  <div class="emp-info-tile"><div class="label">Email</div><div class="value" style="font-size:13px;word-break:break-all;">' + d.email + '</div></div>'
+            + '  <div class="emp-info-tile"><div class="label">Role</div><div class="value"><span style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;' + roleColor + '">' + d.role + '</span></div></div>'
+            + '  <div class="emp-info-tile"><div class="label">Status</div><div class="value">'
+            + (d.status === 'active' ? '<span style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;background:#dff5ea;color:#1b7a46;">Active</span>'
+                : '<span style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;background:#fdecec;color:#d11a2a;">Inactive</span>')
+            + '  </div></div>'
+            + '</div>'
+            + '<div>'
+            + '  <h3 style="font-size:15px;font-weight:700;color:#163647;margin:0 0 12px;">Last 30 Days Attendance</h3>'
+            + '  <div class="emp-att-stats">'
+            + '    <div class="emp-att-stat green"><div class="num">' + d.presentDays + '</div><div class="lbl">Present</div></div>'
+            + '    <div class="emp-att-stat red"><div class="num">' + d.absentDays + '</div><div class="lbl">Absent</div></div>'
+            + '    <div class="emp-att-stat amber"><div class="num">' + d.halfDays + '</div><div class="lbl">Half Days</div></div>'
+            + '    <div class="emp-att-stat purple"><div class="num">' + d.holidays + '</div><div class="lbl">Holidays</div></div>'
+            + '  </div>'
+            + '</div>'
+            + '<div style="overflow-x:auto;">'
+            + '  <table class="emp-att-table">'
+            + '    <thead><tr><th>Date</th><th>Check In</th><th>Check Out</th><th>Worked</th><th>Break</th><th>Day Type</th><th>Status</th></tr></thead>'
+            + '    <tbody>' + (rows || '<tr><td colspan="7" style="text-align:center;padding:24px;color:#9ca3af;">No records found.</td></tr>') + '</tbody>'
+            + '  </table>'
+            + '</div>';
+        lucide.createIcons();
+    }
 
     lucide.createIcons();
 </script>
