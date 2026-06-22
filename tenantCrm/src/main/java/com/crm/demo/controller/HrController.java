@@ -62,6 +62,7 @@ import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
 import com.crm.demo.service.NotificationService;
 import com.crm.demo.service.ProfileUpdateService;
+import com.crm.demo.service.AttendanceService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -71,6 +72,7 @@ import jakarta.validation.Valid;
 @RequestMapping("/hr")
 public class HrController {
 
+    @Autowired private AttendanceService     attendanceService;
     @Autowired private UserRepository        userRepository;
     @Autowired private TeamRepository        teamRepository;
     @Autowired private AttendanceRepository  attendanceRepository;
@@ -748,6 +750,7 @@ public class HrController {
     @GetMapping("/api/employee/{id}")
     @ResponseBody
     public Map<String, Object> employeeDetail(@PathVariable Long id, HttpServletRequest request) {
+        attendanceService.processAutoPunchOuts();
         Map<String, Object> resp = new LinkedHashMap<>();
         String tenant = getTenantSegment(request);
 
@@ -816,6 +819,7 @@ public class HrController {
             @RequestParam(required = false) String to,
             @RequestParam(required = false) String status,
             Model model) {
+        attendanceService.processAutoPunchOuts();
         injectUser(request, model);
         injectStats(request, model);
 
@@ -953,6 +957,15 @@ public class HrController {
         }
         LocalTime now = LocalTime.now();
         att.setCheckOut(now);
+        
+        // Recalculate status based on worked hours:
+        long mins = att.getWorkedMinutes();
+        if (mins >= 0 && mins < 240) {
+            att.setStatus("absent");
+        } else if (mins >= 240 && mins < 360) {
+            att.setStatus("half-day");
+        }
+        
         attendanceRepository.save(att);
         notificationService.notifyAttendanceUpdated(hr, "punch-out");
         ra.addFlashAttribute("successMessage",
@@ -1071,16 +1084,12 @@ public class HrController {
             leave.setStatus("Approved");
             ra.addFlashAttribute("successMessage", "Leave request approved.");
         } else if ("reject".equalsIgnoreCase(action)) {
-            if (rejectionMessage == null || rejectionMessage.trim().isBlank()) {
-                ra.addFlashAttribute("errorMessage", "Rejection message/reason is required.");
-                return "redirect:/hr/leaves";
-            }
-            if (rejectionMessage.trim().length() > 255) {
+            if (rejectionMessage != null && rejectionMessage.trim().length() > 255) {
                 ra.addFlashAttribute("errorMessage", "Rejection message/reason cannot exceed 255 characters.");
                 return "redirect:/hr/leaves";
             }
             leave.setStatus("Rejected");
-            leave.setRejectionMessage(rejectionMessage.trim());
+            leave.setRejectionMessage(rejectionMessage != null ? rejectionMessage.trim() : "");
             ra.addFlashAttribute("successMessage", "Leave request rejected.");
         } else {
             ra.addFlashAttribute("errorMessage", "Invalid leave action.");

@@ -1,0 +1,89 @@
+package com.crm.demo.service;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.LocalDateTime;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.crm.demo.model.Attendance;
+import com.crm.demo.repository.AttendanceRepository;
+
+@Service
+public class AttendanceService {
+
+    @Autowired
+    private AttendanceRepository attendanceRepository;
+
+    @Autowired
+    private NotificationService notificationService;
+
+    /**
+     * Run every 10 minutes to auto-punchout active sessions older than 9 hours.
+     */
+    @Scheduled(fixedRate = 600000) // 10 minutes
+    @Transactional
+    public void scheduleAutoPunchOut() {
+        processAutoPunchOuts();
+    }
+
+    /**
+     * Scans for open attendance sessions and auto-punches them out if they exceed 9 hours or are from past days.
+     * Also repairs any incorrect auto-punchouts caused by the previous midnight-wrap bug.
+     */
+    @Transactional
+    public void processAutoPunchOuts() {
+        List<Attendance> active = attendanceRepository.findByCheckOutIsNull();
+        LocalDateTime now = LocalDateTime.now();
+        
+        // 1. Process active records that need auto punch-out
+        for (Attendance a : active) {
+            if (a.getDate() == null || a.getCheckIn() == null) {
+                continue;
+            }
+            LocalDateTime checkInDateTime = LocalDateTime.of(a.getDate(), a.getCheckIn());
+            LocalDateTime limit = checkInDateTime.plusHours(9);
+            
+            if (now.isAfter(limit)) {
+                LocalTime autoCheckOutTime = a.getCheckIn().plusHours(9);
+                a.setCheckOut(autoCheckOutTime);
+                
+                // Recalculate status based on worked hours:
+                long mins = a.getWorkedMinutes();
+                if (mins >= 0 && mins < 240) {
+                    a.setStatus("absent");
+                } else if (mins >= 240 && mins < 360) {
+                    a.setStatus("half-day");
+                }
+                
+                attendanceRepository.save(a);
+                if (a.getUser() != null) {
+                    notificationService.notifyAttendanceUpdated(a.getUser(), "punch-out");
+                }
+            }
+        }
+
+        // 2. Self-healing: Repair any incorrect auto-punch-outs that were triggered today by the midnight-wrap bug
+        List<Attendance> allRecords = attendanceRepository.findAll();
+        for (Attendance a : allRecords) {
+            if (a.getCheckIn() != null && a.getCheckOut() != null && a.getDate() != null) {
+                LocalDateTime checkInDateTime = LocalDateTime.of(a.getDate(), a.getCheckIn());
+                LocalDateTime limit = checkInDateTime.plusHours(9);
+                
+                if (limit.isAfter(now)) {
+                    LocalTime expectedAutoCheckOut = a.getCheckIn().plusHours(9);
+                    if (expectedAutoCheckOut.equals(a.getCheckOut())) {
+                        // Restore back to active checked-in state
+                        a.setCheckOut(null);
+                        String originalStatus = a.getCheckIn().isAfter(LocalTime.of(9, 30)) ? "late" : "present";
+                        a.setStatus(originalStatus);
+                        attendanceRepository.save(a);
+                    }
+                }
+            }
+        }
+    }
+}

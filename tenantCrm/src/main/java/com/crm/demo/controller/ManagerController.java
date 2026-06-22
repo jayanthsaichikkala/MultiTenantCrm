@@ -66,6 +66,7 @@ import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
 import com.crm.demo.service.NotificationService;
 import com.crm.demo.service.ProfileUpdateService;
+import com.crm.demo.service.AttendanceService;
 
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -76,6 +77,10 @@ public class ManagerController {
 
 	@Value("${app.upload.dir:uploads/tasks}")
 	private String uploadDir;
+
+	@Autowired
+	private AttendanceService attendanceService;
+
 	@Autowired
 	private UserRepository userRepository;
 
@@ -412,6 +417,7 @@ public class ManagerController {
 	@GetMapping("/api/member/{id}")
 	@ResponseBody
 	public Map<String, Object> memberDetail(@PathVariable Long id) {
+		attendanceService.processAutoPunchOuts();
 		Map<String, Object> resp = new LinkedHashMap<>();
 
 		User manager = getCurrentManager();
@@ -1486,6 +1492,7 @@ public class ManagerController {
 			@RequestParam(required = false) String to,
 			@RequestParam(required = false) String status,
 			Model model) {
+		attendanceService.processAutoPunchOuts();
 		injectStats(model);
 
 		User manager = getCurrentManager();
@@ -1640,6 +1647,15 @@ public class ManagerController {
 
 		LocalTime now = LocalTime.now();
 		att.setCheckOut(now);
+		
+		// Recalculate status based on worked hours:
+		long mins = att.getWorkedMinutes();
+		if (mins >= 0 && mins < 240) {
+			att.setStatus("absent");
+		} else if (mins >= 240 && mins < 360) {
+			att.setStatus("half-day");
+		}
+		
 		attendanceRepository.save(att);
 		notificationService.notifyAttendanceUpdated(manager, "punch-out");
 
@@ -1783,6 +1799,7 @@ public class ManagerController {
 			@RequestParam(required = false) String month,
 			Model model) {
 
+		attendanceService.processAutoPunchOuts();
 		injectStats(model);
 
 		User manager = getCurrentManager();

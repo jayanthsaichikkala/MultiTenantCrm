@@ -49,6 +49,7 @@ import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
 import com.crm.demo.service.NotificationService;
 import com.crm.demo.service.ProfileUpdateService;
+import com.crm.demo.service.AttendanceService;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -85,6 +86,7 @@ public class EmployeeController {
     @Autowired private BCryptPasswordEncoder passwordEncoder;
     @Autowired private ProfileUpdateService  profileUpdateService;
     @Autowired private NotificationService   notificationService;
+    @Autowired private AttendanceService     attendanceService;
 
     // ── helpers ───────────────────────────────────────────────────────────
 
@@ -454,6 +456,8 @@ public class EmployeeController {
             @RequestParam(required = false) String status,
             Model model) {
 
+        attendanceService.processAutoPunchOuts();
+
         injectUser(model);
         injectStats(model);
 
@@ -606,6 +610,15 @@ public class EmployeeController {
 
         LocalTime now = LocalTime.now();
         att.setCheckOut(now);
+        
+        // Recalculate status based on worked hours:
+        long mins = att.getWorkedMinutes();
+        if (mins >= 0 && mins < 240) {
+            att.setStatus("absent");
+        } else if (mins >= 240 && mins < 360) {
+            att.setStatus("half-day");
+        }
+        
         attendanceRepository.save(att);
         notificationService.notifyAttendanceUpdated(emp, "punch-out");
 

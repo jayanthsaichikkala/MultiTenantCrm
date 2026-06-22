@@ -168,7 +168,9 @@ public class Attendance {
     public long getWorkedMinutes() {
         if (checkIn == null || checkOut == null) return -1;
         long total = java.time.Duration.between(checkIn, checkOut).toMinutes();
-        if (total < 0) return -1;
+        if (total < 0) {
+            total += 1440; // support midnight wrap
+        }
         total -= getTotalBreakMinutes();
         return Math.max(total, 0);
     }
@@ -180,10 +182,12 @@ public class Attendance {
         return (mins / 60) + "h " + (mins % 60) + "m";
     }
 
-    /** Half Day / Full Day label based on worked time (< 4h = Half Day) */
+    /** Half Day / Full Day/ Absent label based on worked time */
     public String getDayType() {
         long mins = getWorkedMinutes();
         if (mins < 0) return "—";
-        return mins < 240 ? "Half Day" : "Full Day";
+        if (mins < 240) return "Absent";
+        if (mins < 360) return "Half Day";
+        return "Full Day";
     }
 }

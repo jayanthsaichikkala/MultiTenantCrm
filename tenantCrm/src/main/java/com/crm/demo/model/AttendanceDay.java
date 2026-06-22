@@ -19,11 +19,17 @@ public class AttendanceDay {
         this.date        = record.getDate();
         this.record      = record;
         this.holidayName = null;
-        // Derive status: if worked < 4h and punched out → half-day
+        // Derive status: if worked < 4h -> absent, 4-6h -> half-day, 6+h -> base status (present/late)
         long mins = record.getWorkedMinutes();
         String base = record.getStatus(); // "present" or "late"
-        if (mins >= 0 && mins < 240 && record.getCheckOut() != null) {
-            this.status = "half-day";
+        if (record.getCheckOut() != null) {
+            if (mins >= 0 && mins < 240) {
+                this.status = "absent";
+            } else if (mins >= 240 && mins < 360) {
+                this.status = "half-day";
+            } else {
+                this.status = "absent".equals(base) || "half-day".equals(base) ? "present" : base;
+            }
         } else {
             this.status = base;
         }

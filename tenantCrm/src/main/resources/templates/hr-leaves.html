@@ -726,7 +726,7 @@
 			document.getElementById('mdRejectMessage').value = '';
 			var isPending = ds.status === 'Pending' || !ds.status;
 			document.getElementById('mdRejectMessageRow').style.display = isPending ? 'block' : 'none';
-			document.getElementById('mdRejectionRow').style.display = rejectionText ? 'block' : 'none';
+			document.getElementById('mdRejectionRow').style.display = (ds.status === 'Rejected' || rejectionText) ? 'block' : 'none';
 			var footer = document.getElementById('mdFooter');
 			footer.style.display = isPending ? 'flex' : 'none';
 			if (ds.id) {

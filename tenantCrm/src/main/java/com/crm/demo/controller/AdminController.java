@@ -44,6 +44,7 @@ import com.crm.demo.repository.HolidayRepository;
 import com.crm.demo.repository.AttendanceRepository;
 import com.crm.demo.service.NotificationService;
 import com.crm.demo.service.ProfileUpdateService;
+import com.crm.demo.service.AttendanceService;
 import java.time.DayOfWeek;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -53,6 +54,9 @@ import jakarta.validation.Valid;
 @Controller
 @RequestMapping("/admin")
 public class AdminController {
+
+	@Autowired
+	private AttendanceService attendanceService;
 
 	@Autowired
 	private MeetingRepository meetingRepository;
@@ -278,6 +282,7 @@ public class AdminController {
 	@GetMapping("/api/employee/{id}")
 	@ResponseBody
 	public Map<String, Object> employeeDetail(@PathVariable Long id, HttpServletRequest request) {
+		attendanceService.processAutoPunchOuts();
 		Map<String, Object> resp = new LinkedHashMap<>();
 		String username = (String) request.getAttribute("loggedInUser");
 		String tenant   = getTenantSegment(username);

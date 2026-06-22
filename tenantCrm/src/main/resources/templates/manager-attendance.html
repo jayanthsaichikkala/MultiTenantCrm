@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 
 <head>
@@ -242,6 +242,8 @@
 								th:if="${todayRecord != null and todayRecord.status == 'present'}">Present</span>
 							<span class="status-badge late"
 								th:if="${todayRecord != null and todayRecord.status == 'late'}">Late</span>
+							<span class="status-badge att-half-day"
+								th:if="${todayRecord != null and todayRecord.status == 'half-day'}">Half Day</span>
 							<span class="status-badge inactive"
 								th:if="${todayRecord != null and todayRecord.status == 'absent'}">Absent</span>
 						</div>
@@ -350,7 +352,7 @@
 								<td style="font-weight:500;color:#b45309;" th:utext="${day.breakSummary}">—</td>
 								<td>
 									<span th:if="${day.real and day.record.checkOut != null}"
-										th:class="${day.record.workedMinutes >= 240} ? 'status-badge active' : 'status-badge att-half-day'"
+										th:class="${day.record.workedMinutes >= 360} ? 'status-badge active' : (${day.record.workedMinutes >= 240} ? 'status-badge att-half-day' : 'status-badge inactive')"
 										th:text="${day.record.dayType}">—</span>
 									<span th:unless="${day.real and day.record.checkOut != null}"
 										style="color:#9ca3af;">—</span>

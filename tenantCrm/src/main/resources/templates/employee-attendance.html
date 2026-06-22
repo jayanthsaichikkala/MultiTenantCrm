@@ -224,6 +224,7 @@
                         <span class="status-badge inactive" th:if="${todayOnLeave}">On Leave</span>
                         <span class="status-badge active"   th:if="${todayRecord != null and todayRecord.status == 'present'}">Present</span>
                         <span class="status-badge att-late" th:if="${todayRecord != null and todayRecord.status == 'late'}">Late</span>
+                        <span class="status-badge att-half-day" th:if="${todayRecord != null and todayRecord.status == 'half-day'}">Half Day</span>
                         <span class="status-badge inactive" th:if="${todayRecord != null and todayRecord.status == 'absent'}">Absent</span>
                     </div>
                 </div>
@@ -330,6 +331,7 @@
                             <td>
                                 <span class="status-badge active"   th:if="${day.status == 'present'}">Present</span>
                                 <span class="status-badge att-late" th:if="${day.status == 'late'}">Late</span>
+                                <span class="status-badge att-half-day" th:if="${day.status == 'half-day'}">Half Day</span>
                                 <span class="status-badge inactive" th:if="${day.status == 'absent'}">Absent</span>
                                 <span class="status-badge inactive" th:if="${day.status == 'leave'}">On Leave</span>
                                 <span class="status-badge weekend"  th:if="${day.status == 'weekend'}">Weekend</span>

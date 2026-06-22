@@ -19,6 +19,9 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     /** Today's record for a specific user (used for punch-in/out state) */
     Optional<Attendance> findByUserAndDate(User user, LocalDate date);
 
+    /** All active attendance records (no checkout yet) */
+    List<Attendance> findByCheckOutIsNull();
+
     /** All records for a specific user */
     List<Attendance> findByUserOrderByDateDesc(User user);
 
