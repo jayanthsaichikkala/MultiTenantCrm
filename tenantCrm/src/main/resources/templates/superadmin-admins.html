@@ -397,8 +397,17 @@ const ADMINS_DB = {
     }
 
     // ── Auto-dismiss toasts — collapse space after fade ────────────────────────
-    document.querySelectorAll('.toast').forEach(function(t) {
-        setTimeout(function() { t.classList.add('fade-out'); }, 4000);
+    document.querySelectorAll('.toast').forEach(function (t) {
+        requestAnimationFrame(function () {
+            t.classList.add('toast-show');
+        });
+        setTimeout(function () {
+            t.classList.remove('toast-show');
+            t.classList.add('toast-hide');
+            t.addEventListener('transitionend', function () {
+                t.remove();
+            }, {once: true});
+        }, 3500);
     });
 
     // ── Analytics ───────────────────────────────────────────────────────────────

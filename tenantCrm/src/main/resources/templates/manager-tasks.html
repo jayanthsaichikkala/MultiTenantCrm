@@ -1928,6 +1928,7 @@
 		document.getElementById('rejectModal')?.addEventListener('click', function (e) {if (e.target === this) closeRejectModal();});
 		document.getElementById('taskDetailsModal')?.addEventListener('click', function (e) {if (e.target === this) closeTaskDetailsModal();});
 		document.getElementById('previewModal')?.addEventListener('click', function (e) {if (e.target === this) closePreviewModal();});
+		(function(){var s=document.getElementById('flashSuccess'),e=document.getElementById('flashError'),t=document.getElementById('toastMsg'),tt=document.getElementById('toastText');if(t&&tt){if(s&&s.textContent.trim()){tt.textContent=s.textContent.trim();t.className='toast success toast-show';setTimeout(function(){t.classList.remove('toast-show');t.classList.add('toast-hide');t.addEventListener('transitionend',function(){t.remove();},{once:true});},3500);}else if(e&&e.textContent.trim()){tt.textContent=e.textContent.trim();t.className='toast error toast-show';setTimeout(function(){t.classList.remove('toast-show');t.classList.add('toast-hide');t.addEventListener('transitionend',function(){t.remove();},{once:true});},3500);}}})();
 	</script>
 	<script th:src="@{/auth.js}"></script>
 	<script th:src="@{/notifications.js}"></script>

@@ -245,6 +245,7 @@
                 updateBadge();
                 renderList();
                 renderDashboardFeed();
+                showFeedbackToast('Notification deleted successfully', 'success');
             });
     }
 
@@ -311,6 +312,7 @@
                     updateBadge();
                     renderList();
                     renderDashboardFeed();
+                    showFeedbackToast('All notifications cleared', 'success');
                 });
         });
     }
@@ -857,6 +859,53 @@
                 toast.parentNode.removeChild(toast);
             }
         }, 400);
+    }
+
+    function showFeedbackToast(message, type) {
+        var container = getToastContainer();
+        var toast = document.createElement('div');
+        toast.className = 'notif-toast';
+        var color = '#17455e';
+        var icon = 'info';
+        var bg = '#dcecf5';
+        if (type === 'success') {
+            color = '#1b7a46';
+            icon = 'check-circle';
+            bg = '#dff5ea';
+        } else if (type === 'error') {
+            color = '#d11a2a';
+            icon = 'alert-triangle';
+            bg = '#fdecec';
+        }
+        
+        toast.style.borderLeftColor = color;
+        toast.innerHTML =
+            '<div class="notif-toast-icon" style="background:' + bg + ';color:' + color + ';">' +
+                '<i data-lucide="' + icon + '"></i>' +
+            '</div>' +
+            '<div class="notif-toast-content">' +
+                '<span class="notif-toast-title">' + (type === 'success' ? 'Success' : 'Notification') + '</span>' +
+                '<span class="notif-toast-message">' + escapeHtml(message || '') + '</span>' +
+            '</div>' +
+            '<button type="button" class="notif-toast-close" aria-label="Close">' +
+                '<i data-lucide="x"></i>' +
+            '</button>';
+
+        container.appendChild(toast);
+        if (window.lucide) lucide.createIcons();
+
+        setTimeout(function () {
+            toast.classList.add('show');
+        }, 10);
+
+        toast.querySelector('.notif-toast-close').addEventListener('click', function (e) {
+            e.stopPropagation();
+            hideToast(toast);
+        });
+
+        setTimeout(function () {
+            hideToast(toast);
+        }, 3000);
     }
 
     function init(attempt) {

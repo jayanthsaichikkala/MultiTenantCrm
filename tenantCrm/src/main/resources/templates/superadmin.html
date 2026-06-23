@@ -898,14 +898,17 @@
 		}
 
 		// ── Auto-dismiss toasts ────────────────────────────────────────────────────
-		document.querySelectorAll('.toast').forEach(function (toast) {
+		document.querySelectorAll('.toast').forEach(function (t) {
+			requestAnimationFrame(function () {
+				t.classList.add('toast-show');
+			});
 			setTimeout(function () {
-				toast.style.transition = 'opacity .5s ease, max-height .5s ease, margin .5s ease, padding .5s ease';
-				toast.style.opacity = '0';
-				toast.style.maxHeight = '0';
-				toast.style.margin = '0';
-				toast.style.padding = '0';
-			}, 4000);
+				t.classList.remove('toast-show');
+				t.classList.add('toast-hide');
+				t.addEventListener('transitionend', function () {
+					t.remove();
+				}, {once: true});
+			}, 3500);
 		});
 	</script>
 	<script th:src="@{/auth.js}"></script>

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 
 <head>
@@ -377,12 +377,8 @@
 		<div class="page-content">
 
 			<!-- Flash messages -->
-			<div th:if="${successMessage}"
-				style="background:#dff5ea;color:#1b7a46;border-radius:12px;padding:12px 18px;margin-bottom:16px;font-size:14px;font-weight:600;"
-				th:text="${successMessage}"></div>
-			<div th:if="${errorMessage}"
-				style="background:#fdecec;color:#d11a2a;border-radius:12px;padding:12px 18px;margin-bottom:16px;font-size:14px;font-weight:600;"
-				th:text="${errorMessage}"></div>
+			<div class="toast success" th:if="${successMessage}"><i data-lucide="check-circle"></i> <span th:text="${successMessage}"></span></div>
+			<div class="toast error"   th:if="${errorMessage}"><i data-lucide="alert-triangle"></i> <span th:text="${errorMessage}"></span></div>
 
 			<!-- Stats -->
 			<div class="stats-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;">
@@ -700,6 +696,19 @@
 			clearTimeout(t._timer);
 			t._timer = setTimeout(function () {t.className = '';}, 3200);
 		}
+
+		document.querySelectorAll('.toast').forEach(function (t) {
+			requestAnimationFrame(function () {
+				t.classList.add('toast-show');
+			});
+			setTimeout(function () {
+				t.classList.remove('toast-show');
+				t.classList.add('toast-hide');
+				t.addEventListener('transitionend', function () {
+					t.remove();
+				}, {once: true});
+			}, 3500);
+		});
 
 		lucide.createIcons();
 	</script>

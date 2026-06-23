@@ -246,8 +246,17 @@
     }
 
     // Auto-dismiss toasts
-    document.querySelectorAll('.toast').forEach(function(t) {
-        setTimeout(function() { t.style.opacity = '0'; t.style.transition = 'opacity .5s'; }, 4000);
+    document.querySelectorAll('.toast').forEach(function (t) {
+        requestAnimationFrame(function () {
+            t.classList.add('toast-show');
+        });
+        setTimeout(function () {
+            t.classList.remove('toast-show');
+            t.classList.add('toast-hide');
+            t.addEventListener('transitionend', function () {
+                t.remove();
+            }, {once: true});
+        }, 3500);
     });
 
     lucide.createIcons();

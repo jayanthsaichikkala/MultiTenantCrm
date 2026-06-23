@@ -423,6 +423,37 @@
 			.lf-filter-bar select, .lf-filter-bar input[type=text] { width: 100%; }
 			.btn-approve, .btn-reject, .btn-view { height: 36px; padding: 0 10px; font-size: 12px; min-width: unset; }
 		}
+
+		/* ── Toast Notifications ── */
+		.toast {
+			position: fixed;
+			bottom: 28px;
+			right: 24px;
+			z-index: 99999;
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			padding: 14px 22px;
+			border-radius: 14px;
+			font-size: 14px;
+			font-weight: 600;
+			min-width: 280px;
+			max-width: 460px;
+			box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+			opacity: 0;
+			transform: translateY(20px);
+			transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+			pointer-events: none;
+		}
+		.toast.toast-show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+		.toast.toast-hide { opacity: 0; transform: translateY(20px); }
+		.toast.success { background: #dff5ea; color: #1b7a46; border: 1.5px solid #6ee7b7; }
+		.toast.error   { background: #fdecec; color: #be123c; border: 1.5px solid #fca5a5; }
+		.toast i {
+			width: 18px;
+			height: 18px;
+			flex-shrink: 0;
+		}
 	</style>
 </head>
 
@@ -470,6 +501,9 @@
 		</div>
 
 		<div class="page-content">
+			<!-- Toast messages -->
+			<div class="toast success" th:if="${successMessage}"><i data-lucide="check-circle"></i> <span th:text="${successMessage}"></span></div>
+			<div class="toast error"   th:if="${errorMessage}"><i data-lucide="alert-triangle"></i> <span th:text="${errorMessage}"></span></div>
 
 			<!-- Stats Row -->
 			<div class="stats-row" style="grid-template-columns:repeat(3,1fr);">
@@ -795,6 +829,20 @@
 			if (s === 'Approved' || s === 'Rejected') {
 				el.querySelectorAll('.btn-approve, .btn-reject').forEach(function (b) {b.style.display = 'none';});
 			}
+		});
+
+		/* ── Auto-dismiss toasts ── */
+		document.querySelectorAll('.toast').forEach(function (t) {
+			requestAnimationFrame(function () {
+				t.classList.add('toast-show');
+			});
+			setTimeout(function () {
+				t.classList.remove('toast-show');
+				t.classList.add('toast-hide');
+				t.addEventListener('transitionend', function () {
+					t.remove();
+				}, {once: true});
+			}, 3500);
 		});
 
 		/* â”€â”€ Init stats â”€â”€ */
