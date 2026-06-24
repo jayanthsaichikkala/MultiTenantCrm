@@ -499,6 +499,9 @@ public class ManagerController {
 			// Pass team members as "employees" for the assign dropdown
 			List<User> teamMembers = getManagedTeamMembers(manager);
 			model.addAttribute("employees", teamMembers);
+
+			List<Team> teams = getManagedTeams(manager);
+			model.addAttribute("teams", teams);
 		}
 
 		return "manager-tasks";
@@ -515,7 +518,9 @@ public class ManagerController {
 			@RequestParam String status,
 			@RequestParam(required = false) String startDate,
 			@RequestParam(required = false) String dueDate,
-			@RequestParam Long assignedToId,
+			@RequestParam(value = "assignedToIds", required = false) List<Long> assignedToIds,
+			@RequestParam(value = "assignToTeam", required = false, defaultValue = "false") boolean assignToTeam,
+			@RequestParam(value = "assignedToTeamId", required = false) String assignedToTeamId,
 			@RequestParam(value = "attachments", required = false) MultipartFile[] attachments,
 			RedirectAttributes ra) {
 
@@ -580,70 +585,125 @@ public class ManagerController {
 
 		String tenant = getTenantSegment(manager);
 
-		// Verify the assigned employee is actually in this manager's team
+		// Verify team members list
 		List<User> teamMembers = getManagedTeamMembers(manager);
-		User assignedUser = teamMembers.stream()
-				.filter(u -> u.getId().equals(assignedToId))
-				.findFirst()
-				.orElse(null);
+		List<User> targetUsers = new ArrayList<>();
+		String groupName = "";
 
-		if (assignedUser == null) {
-			ra.addFlashAttribute("errorMessage", "Selected employee is not in your team.");
-			return "redirect:/manager/tasks";
-		}
+		if (assignToTeam) {
+			if (assignedToTeamId == null || "all".equalsIgnoreCase(assignedToTeamId)) {
+				if (teamMembers == null || teamMembers.isEmpty()) {
+					ra.addFlashAttribute("errorMessage", "You do not have any employees in your team to assign tasks to.");
+					return "redirect:/manager/tasks";
+				}
+				targetUsers.addAll(teamMembers);
+				groupName = "entire team";
+			} else {
+				try {
+					Long teamId = Long.parseLong(assignedToTeamId);
+					List<Team> managedTeams = getManagedTeams(manager);
+					Team targetTeam = managedTeams.stream()
+							.filter(t -> t.getId().equals(teamId))
+							.findFirst()
+							.orElse(null);
 
-		Task task = new Task();
-		task.setTitle(title.trim());
-		task.setDescription(description);
-		task.setPriority(priority);
-		task.setStatus(status);
-		task.setStartDate(startDate);
-		task.setDueDate(dueDate);
-		task.setAssignedTo(assignedUser.getUsername());
-		task.setAssignedToId(assignedUser.getId());
-		task.setTenantSegment(tenant);
-		task.setCreatedBy(manager.getUsername());
-		taskRepository.save(task);
+					if (targetTeam == null) {
+						ra.addFlashAttribute("errorMessage", "Selected team is not managed by you.");
+						return "redirect:/manager/tasks";
+					}
 
-// Save uploaded files to database and update task metadata
-        if (attachments != null) {
-            List<String> uploadedNames = new ArrayList<>();
-            for (MultipartFile file : attachments) {
-                if (file == null || file.isEmpty()) continue;
-                try {
-                    byte[] fileData = file.getBytes();
-                    String contentType = file.getContentType();
-                    if (contentType == null) contentType = "application/octet-stream";
-                    
-                    // Create and save attachment in database
-                    TaskAttachment taskAttachment = new TaskAttachment(
-                        task,
-                        file.getOriginalFilename(),
-                        fileData,
-                        contentType,
-                        manager.getUsername()
-                    );
-                    taskAttachmentRepository.save(taskAttachment);
-                    uploadedNames.add(file.getOriginalFilename());
-                } catch (IOException e) {
-                    ra.addFlashAttribute("errorMessage", "File upload failed: " + e.getMessage());
-                    return "redirect:/manager/tasks";
-                }
-            }
-            if (!uploadedNames.isEmpty()) {
-                List<String> existingNames = new ArrayList<>();
-                if (task.getAttachmentPaths() != null && !task.getAttachmentPaths().isBlank()) {
-                    existingNames.addAll(java.util.Arrays.asList(task.getAttachmentPaths().split(",")));
-                }
-                existingNames.addAll(uploadedNames);
-                task.setAttachmentPaths(String.join(",", existingNames));
-                taskRepository.save(task);
+					List<User> members = targetTeam.getMembers();
+					if (members == null || members.isEmpty()) {
+						ra.addFlashAttribute("errorMessage", "Selected team '" + targetTeam.getName() + "' does not have any members.");
+						return "redirect:/manager/tasks";
+					}
+					targetUsers.addAll(members);
+					groupName = "team " + targetTeam.getName();
+				} catch (NumberFormatException e) {
+					ra.addFlashAttribute("errorMessage", "Invalid team ID selected.");
+					return "redirect:/manager/tasks";
+				}
+			}
+		} else {
+			if (assignedToIds == null || assignedToIds.isEmpty()) {
+				ra.addFlashAttribute("errorMessage", "Please select at least one employee to assign the task.");
+				return "redirect:/manager/tasks";
+			}
+			for (Long empId : assignedToIds) {
+				User assignedUser = teamMembers.stream()
+						.filter(u -> u.getId().equals(empId))
+						.findFirst()
+						.orElse(null);
+
+				if (assignedUser == null) {
+					ra.addFlashAttribute("errorMessage", "One or more selected employees are not in your team.");
+					return "redirect:/manager/tasks";
+				}
+				targetUsers.add(assignedUser);
 			}
 		}
 
-		notificationService.notifyTaskAssigned(assignedUser, manager.getUsername(), task.getTitle());
+		// Save uploaded files to in-memory cache to avoid duplicate streams parsing
+		List<TaskAttachmentInfo> attachmentInfos = new ArrayList<>();
+		if (attachments != null) {
+			for (MultipartFile file : attachments) {
+				if (file == null || file.isEmpty()) continue;
+				try {
+					byte[] fileData = file.getBytes();
+					String contentType = file.getContentType();
+					if (contentType == null) contentType = "application/octet-stream";
+					attachmentInfos.add(new TaskAttachmentInfo(file.getOriginalFilename(), fileData, contentType));
+				} catch (IOException e) {
+					ra.addFlashAttribute("errorMessage", "File upload failed: " + e.getMessage());
+					return "redirect:/manager/tasks";
+				}
+			}
+		}
 
-		ra.addFlashAttribute("successMessage", "Task assigned to " + assignedUser.getUsername() + " successfully.");
+		for (User targetUser : targetUsers) {
+			Task task = new Task();
+			task.setTitle(title.trim());
+			task.setDescription(description);
+			task.setPriority(priority);
+			task.setStatus(status);
+			task.setStartDate(startDate);
+			task.setDueDate(dueDate);
+			task.setAssignedTo(targetUser.getUsername());
+			task.setAssignedToId(targetUser.getId());
+			task.setTenantSegment(tenant);
+			task.setCreatedBy(manager.getUsername());
+			taskRepository.save(task);
+
+			List<String> uploadedNames = new ArrayList<>();
+			for (TaskAttachmentInfo info : attachmentInfos) {
+				TaskAttachment taskAttachment = new TaskAttachment(
+					task,
+					info.filename(),
+					info.fileData(),
+					info.contentType(),
+					manager.getUsername()
+				);
+				taskAttachmentRepository.save(taskAttachment);
+				uploadedNames.add(info.filename());
+			}
+
+			if (!uploadedNames.isEmpty()) {
+				task.setAttachmentPaths(String.join(",", uploadedNames));
+				taskRepository.save(task);
+			}
+
+			notificationService.notifyTaskAssigned(targetUser, manager.getUsername(), task.getTitle());
+		}
+
+		if (assignToTeam) {
+			ra.addFlashAttribute("successMessage", "Task assigned to the " + groupName + " successfully.");
+		} else {
+			if (targetUsers.size() == 1) {
+				ra.addFlashAttribute("successMessage", "Task assigned to " + targetUsers.get(0).getUsername() + " successfully.");
+			} else {
+				ra.addFlashAttribute("successMessage", "Task assigned to " + targetUsers.size() + " employees successfully.");
+			}
+		}
 		return "redirect:/manager/tasks";
 	}
 
@@ -1997,4 +2057,6 @@ public class ManagerController {
 				"Performance review submitted successfully.");
 		return "redirect:/manager/performance?month=" + reviewMonth;
 	}
+
+	private static record TaskAttachmentInfo(String filename, byte[] fileData, String contentType) {}
 }

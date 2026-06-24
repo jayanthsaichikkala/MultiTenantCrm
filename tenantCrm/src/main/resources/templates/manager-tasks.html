@@ -9,6 +9,82 @@
 	<link rel="stylesheet" th:href="@{/notifications.css}">
 	<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 	<style>
+		/* Custom Toggle Switch */
+		.switch-container {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			background: #f8fafc;
+			padding: 12px 16px;
+			border-radius: 12px;
+			border: 1px solid #e2e8f0;
+			margin-bottom: 16px;
+			transition: all 0.3s ease;
+		}
+		.switch-container:hover {
+			border-color: #cbd5e1;
+			background: #f1f5f9;
+		}
+		.switch {
+			position: relative;
+			display: inline-block;
+			width: 48px;
+			height: 24px;
+		}
+		.switch input {
+			opacity: 0;
+			width: 0;
+			height: 0;
+		}
+		.slider {
+			position: absolute;
+			cursor: pointer;
+			top: 0; left: 0; right: 0; bottom: 0;
+			background-color: #cbd5e1;
+			transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+			border-radius: 24px;
+		}
+		.slider:before {
+			position: absolute;
+			content: "";
+			height: 18px;
+			width: 18px;
+			left: 3px;
+			bottom: 3px;
+			background-color: white;
+			transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+			border-radius: 50%;
+			box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+		}
+		input:checked + .slider {
+			background-color: #0284c7;
+		}
+		input:checked + .slider:before {
+			transform: translateX(24px);
+		}
+		.switch-label {
+			font-size: 14px;
+			font-weight: 600;
+			color: #334155;
+			user-select: none;
+		}
+		.employee-checkbox-list {
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+			max-height: 160px;
+			overflow-y: auto;
+			border: 1px solid #cbd5e1;
+			border-radius: 12px;
+			padding: 12px;
+			background: #f8fafc;
+			transition: all 0.3s ease;
+		}
+		.employee-checkbox-list:focus-within {
+			border-color: #0284c7;
+			box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+		}
+
 		/* ── Modal Overlay ── */
 		.modal-overlay {
 			display: none;
@@ -2218,13 +2294,34 @@
 								maxlength="120"><span class="err-msg" id="errTitle">Required</span>
 							<div class="char-counter"><span id="titleCount">0</span>/120</div>
 						</div>
-						<div class="form-group full"><label>Assign To <span class="req">*</span></label><select
-								id="assignTo" name="assignedToId">
-								<option value="">— Select Employee —</option>
+						<div class="form-group full">
+							<div class="switch-container">
+								<span class="switch-label">Assign to Team / All Members</span>
+								<label class="switch">
+									<input type="checkbox" id="assignToTeam" name="assignToTeam" value="true">
+									<span class="slider"></span>
+								</label>
+							</div>
+						</div>
+						<div class="form-group full" id="assignToContainer">
+							<label>Assign To Employees <span class="req">*</span></label>
+							<div class="employee-checkbox-list">
 								<th:block th:each="emp : ${employees}">
-									<option th:value="${emp.id}" th:text="${emp.username}"></option>
+									<label style="display: flex; align-items: center; gap: 10px; font-weight: 500; text-transform: none; cursor: pointer; margin: 0; padding: 4px 0; user-select: none;">
+										<input type="checkbox" name="assignedToIds" th:value="${emp.id}" class="emp-checkbox" style="width: 16px; height: 16px; cursor: pointer; margin: 0;">
+										<span th:text="${emp.username}"></span>
+									</label>
 								</th:block>
-							</select><span class="err-msg" id="errAssign">Required</span></div>
+							</div>
+							<span class="err-msg" id="errAssign">Required (Select at least one employee)</span>
+						</div>
+						<div class="form-group full" id="teamAssignContainer" style="display:none;"><label>Assign To Team <span class="req">*</span></label><select
+								id="assignToTeamId" name="assignedToTeamId">
+								<option value="all">Entire Team (All Members)</option>
+								<th:block th:each="t : ${teams}">
+									<option th:value="${t.id}" th:text="${t.name}"></option>
+								</th:block>
+							</select><span class="err-msg" id="errTeamAssign">Required</span></div>
 						<div class="section-divider">⚡ TASK DETAILS</div>
 						<div class="form-group"><label>Priority <span class="req">*</span></label><select
 								id="taskPriority" name="priority">
@@ -2643,6 +2740,21 @@
 			if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
 			modal.addEventListener('click', function (e) {if (e.target === modal) closeModal();});
 
+			var assignToTeamCheckbox = document.getElementById('assignToTeam');
+			var assignToContainer = document.getElementById('assignToContainer');
+			var teamAssignContainer = document.getElementById('teamAssignContainer');
+			if (assignToTeamCheckbox && assignToContainer && teamAssignContainer) {
+				assignToTeamCheckbox.addEventListener('change', function () {
+					if (this.checked) {
+						assignToContainer.style.display = 'none';
+						teamAssignContainer.style.display = '';
+					} else {
+						assignToContainer.style.display = '';
+						teamAssignContainer.style.display = 'none';
+					}
+				});
+			}
+
 			var titleInput = document.getElementById('taskTitle'), titleCount = document.getElementById('titleCount');
 			if (titleInput) titleInput.addEventListener('input', function () {titleCount.textContent = this.value.length;});
 			var descInput = document.getElementById('taskDesc'), descCount = document.getElementById('descCount');
@@ -2654,8 +2766,21 @@
 				var valid = true;
 				var title = document.getElementById('taskTitle'), errTitle = document.getElementById('errTitle');
 				if (!title.value.trim()) {showFieldError(errTitle, 'Required'); valid = false;} else {clearFieldError(errTitle, title);}
-				var assignTo = document.getElementById('assignTo'), errAssign = document.getElementById('errAssign');
-				if (!assignTo.value) {showFieldError(errAssign, 'Required'); valid = false;} else {clearFieldError(errAssign, assignTo);}
+				var assignToTeam = document.getElementById('assignToTeam');
+				var errAssign = document.getElementById('errAssign');
+				if (assignToTeam && assignToTeam.checked) {
+					clearFieldError(errAssign);
+				} else {
+					var checkboxes = document.querySelectorAll('.emp-checkbox');
+					var checkedCount = 0;
+					checkboxes.forEach(function (cb) { if (cb.checked) checkedCount++; });
+					if (checkedCount === 0) {
+						showFieldError(errAssign, 'Required (Select at least one employee)');
+						valid = false;
+					} else {
+						clearFieldError(errAssign);
+					}
+				}
 				var priority = document.getElementById('taskPriority'), errPriority = document.getElementById('errPriority');
 				if (!priority.value) {showFieldError(errPriority, 'Required'); valid = false;} else {clearFieldError(errPriority, priority);}
 				var dueDate = document.getElementById('dueDate'), errDueDate = document.getElementById('errDueDate'), today = new Date().toISOString().split('T')[0];
@@ -2671,7 +2796,22 @@
 			if (fileInput) fileInput.addEventListener('change', function () {addFiles(this.files); this.value = '';});
 			if (dropZone) {dropZone.addEventListener('dragover', function (e) {e.preventDefault(); dropZone.classList.add('dragover');}); dropZone.addEventListener('dragleave', function () {dropZone.classList.remove('dragover');}); dropZone.addEventListener('drop', function (e) {e.preventDefault(); dropZone.classList.remove('dragover'); addFiles(e.dataTransfer.files);});}
 			if (submitBtn) submitBtn.addEventListener('click', function () {if (!validateForm()) return; syncFileInput(); document.getElementById('assignTaskForm').submit();});
-			function resetForm() {document.getElementById('assignTaskForm').reset(); selectedFiles = []; if (fileList) fileList.innerHTML = ''; document.querySelectorAll('.err-msg').forEach(function (e) {e.classList.remove('show');}); if (titleCount) titleCount.textContent = '0'; if (descCount) descCount.textContent = '0';}
+			function resetForm() {
+				document.getElementById('assignTaskForm').reset();
+				selectedFiles = [];
+				if (fileList) fileList.innerHTML = '';
+				document.querySelectorAll('.err-msg').forEach(function (e) {e.classList.remove('show');});
+				if (titleCount) titleCount.textContent = '0';
+				if (descCount) descCount.textContent = '0';
+				var assignToContainer = document.getElementById('assignToContainer');
+				var teamAssignContainer = document.getElementById('teamAssignContainer');
+				if (assignToContainer) assignToContainer.style.display = '';
+				if (teamAssignContainer) teamAssignContainer.style.display = 'none';
+
+				// Reset all employee checkboxes
+				var checkboxes = document.querySelectorAll('.emp-checkbox');
+				checkboxes.forEach(function (cb) { cb.checked = false; });
+			}
 			window.filterTasks = filterTasks;
 			window.changePage = changePage;
 			window.changeRows = changeRows;
