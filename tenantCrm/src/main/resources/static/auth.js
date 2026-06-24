@@ -27,6 +27,48 @@
     const USERNAME_KEY = 'jwt_username';
     const COOKIE_NAME  = 'jwt_token';
 
+    function setPageTitleByRole() {
+        const role = localStorage.getItem(ROLE_KEY);
+        if (role) {
+            let title = "";
+            switch (role.toUpperCase()) {
+                case "SUPER_ADMIN":
+                    title = "Super Admin Dashboard";
+                    break;
+                case "ADMIN":
+                    title = "Admin Dashboard";
+                    break;
+                case "MANAGER":
+                    title = "Manager Dashboard";
+                    break;
+                case "HR":
+                    title = "HR Dashboard";
+                    break;
+                case "EMPLOYEE":
+                    title = "Employee Dashboard";
+                    break;
+                default:
+                    return;
+            }
+            document.title = title;
+        }
+    }
+
+    function injectFavicon() {
+        let link = document.querySelector("link[rel~='icon']");
+        if (!link) {
+            link = document.createElement('link');
+            link.rel = 'icon';
+            if (document.head) {
+                document.head.appendChild(link);
+            } else {
+                document.documentElement.appendChild(link);
+            }
+        }
+        link.type = 'image/svg+xml';
+        link.href = '/favicon.svg';
+    }
+
     // ── Guard: redirect to login if no valid token ────────────────────────────
     function guardPage() {
         const token = localStorage.getItem(TOKEN_KEY);
@@ -48,6 +90,8 @@
         }
         // Ensure cookie is in sync (e.g. after a page refresh)
         syncCookie(token);
+        setPageTitleByRole();
+        injectFavicon();
         return true;
     }
 
