@@ -47,6 +47,8 @@ import com.crm.demo.repository.TaskRepository;
 import com.crm.demo.repository.TaskAttachmentRepository;
 import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
+import com.crm.demo.model.PayrollTemplate;
+import com.crm.demo.repository.PayrollTemplateRepository;
 import com.crm.demo.service.NotificationService;
 import com.crm.demo.service.ProfileUpdateService;
 import com.crm.demo.service.AttendanceService;
@@ -87,6 +89,7 @@ public class EmployeeController {
     @Autowired private ProfileUpdateService  profileUpdateService;
     @Autowired private NotificationService   notificationService;
     @Autowired private AttendanceService     attendanceService;
+    @Autowired private PayrollTemplateRepository payrollTemplateRepository;
 
     // ── helpers ───────────────────────────────────────────────────────────
 
@@ -943,5 +946,20 @@ public class EmployeeController {
                 .body(attachment.getFileData());
     }
 
+    // ── PAYROLL ───────────────────────────────────────────────────────────
+
+    @GetMapping("/payroll")
+    public String payrollPage(Model model) {
+        User emp = getCurrentEmployee();
+        if (emp == null) return "redirect:/login";
+
+        injectUser(model);
+        injectStats(model);
+        String tenant = getTenantSegment(emp);
+        Optional<PayrollTemplate> ptOpt = payrollTemplateRepository.findByEmployeeAndTenantSegment(emp, tenant);
+        model.addAttribute("payroll", ptOpt.orElse(null));
+        model.addAttribute("activePage", "payroll");
+        return "employee-payroll";
+    }
 
 }

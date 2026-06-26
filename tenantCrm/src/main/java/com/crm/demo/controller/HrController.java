@@ -60,6 +60,8 @@ import com.crm.demo.repository.ReportRepository;
 import com.crm.demo.repository.TaskRepository;
 import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
+import com.crm.demo.model.PayrollTemplate;
+import com.crm.demo.repository.PayrollTemplateRepository;
 import com.crm.demo.service.NotificationService;
 import com.crm.demo.service.ProfileUpdateService;
 import com.crm.demo.service.AttendanceService;
@@ -87,6 +89,8 @@ public class HrController {
     @Autowired private BCryptPasswordEncoder passwordEncoder;
     @Autowired private ProfileUpdateService  profileUpdateService;
     @Autowired private NotificationService   notificationService;
+
+    @Autowired private PayrollTemplateRepository payrollTemplateRepository;
 
     // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -1588,5 +1592,166 @@ public class HrController {
         }
         
         return "hr-performance";
+    }
+
+    // ── PAYROLL ───────────────────────────────────────────────────────────
+
+    @GetMapping("/payroll")
+    public String payrollPage(HttpServletRequest request, Model model) {
+        injectUser(request, model);
+        injectStats(request, model);
+        String tenant = getTenantSegment(request);
+        List<PayrollTemplate> payrolls = payrollTemplateRepository.findByTenantSegmentOrderByCreatedAtDesc(tenant);
+        model.addAttribute("payrolls", payrolls);
+        model.addAttribute("totalPayroll", payrolls.size());
+        java.math.BigDecimal totalNet = payrolls.stream()
+                .map(PayrollTemplate::getNetSalary)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        model.addAttribute("totalNetSalary", totalNet);
+        // For the create/edit modal — list of employees without a template yet
+        List<User> tenantEmployees = userRepository.findEmployeesByTenant(tenant);
+        List<Long> existingIds = payrolls.stream()
+                .map(p -> p.getEmployee().getId()).toList();
+        List<User> unassigned = tenantEmployees.stream()
+                .filter(u -> !existingIds.contains(u.getId())).toList();
+        model.addAttribute("unassignedEmployees", unassigned);
+        model.addAttribute("activePage", "payroll");
+        return "hr-payroll";
+    }
+
+    @PostMapping("/payroll/create")
+    public String createPayroll(HttpServletRequest request,
+                                 @RequestParam Long employeeId,
+                                 @RequestParam(required = false) String designation,
+                                 @RequestParam(required = false) String department,
+                                 @RequestParam(defaultValue = "0") java.math.BigDecimal basicSalary,
+                                 @RequestParam(defaultValue = "0") java.math.BigDecimal hra,
+                                 @RequestParam(defaultValue = "0") java.math.BigDecimal transportAllowance,
+                                 @RequestParam(defaultValue = "0") java.math.BigDecimal otherAllowance,
+                                 @RequestParam(defaultValue = "0") java.math.BigDecimal taxDeduction,
+                                 @RequestParam(defaultValue = "0") java.math.BigDecimal pfDeduction,
+                                 @RequestParam(defaultValue = "0") java.math.BigDecimal otherDeduction,
+                                 @RequestParam(required = false) String bankAccount,
+                                 @RequestParam(required = false) Integer paymentMonth,
+                                 @RequestParam(required = false) Integer paymentYear,
+                                 RedirectAttributes ra) {
+        String tenant = getTenantSegment(request);
+        Optional<User> empOpt = userRepository.findById(employeeId);
+        if (empOpt.isEmpty()) {
+            ra.addFlashAttribute("errorMessage", "Employee not found.");
+            return "redirect:/hr/payroll";
+        }
+        User emp = empOpt.get();
+        // Check if template already exists
+        Optional<PayrollTemplate> existing = payrollTemplateRepository.findByEmployeeAndTenantSegment(emp, tenant);
+        if (existing.isPresent()) {
+            ra.addFlashAttribute("errorMessage", "Payroll template already exists for this employee. Use Edit.");
+            return "redirect:/hr/payroll";
+        }
+        PayrollTemplate pt = new PayrollTemplate();
+        pt.setEmployee(emp);
+        pt.setTenantSegment(tenant);
+        pt.setDesignation(designation);
+        pt.setDepartment(department);
+        pt.setBasicSalary(basicSalary);
+        pt.setHra(hra);
+        pt.setTransportAllowance(transportAllowance);
+        pt.setOtherAllowance(otherAllowance);
+        pt.setTaxDeduction(taxDeduction);
+        pt.setPfDeduction(pfDeduction);
+        pt.setOtherDeduction(otherDeduction);
+        pt.setBankAccount(bankAccount);
+        pt.setPaymentMonth(paymentMonth != null ? paymentMonth : LocalDate.now().getMonthValue());
+        pt.setPaymentYear(paymentYear != null ? paymentYear : LocalDate.now().getYear());
+        pt.setCreatedAt(LocalDateTime.now());
+        pt.setUpdatedAt(LocalDateTime.now());
+        payrollTemplateRepository.save(pt);
+        ra.addFlashAttribute("successMessage", "Payroll template created for " + emp.getUsername() + ".");
+        return "redirect:/hr/payroll";
+    }
+
+    @PostMapping("/payroll/edit/{id}")
+    public String editPayroll(HttpServletRequest request,
+                               @PathVariable Long id,
+                               @RequestParam(required = false) String designation,
+                               @RequestParam(required = false) String department,
+                               @RequestParam(defaultValue = "0") java.math.BigDecimal basicSalary,
+                               @RequestParam(defaultValue = "0") java.math.BigDecimal hra,
+                               @RequestParam(defaultValue = "0") java.math.BigDecimal transportAllowance,
+                               @RequestParam(defaultValue = "0") java.math.BigDecimal otherAllowance,
+                               @RequestParam(defaultValue = "0") java.math.BigDecimal taxDeduction,
+                               @RequestParam(defaultValue = "0") java.math.BigDecimal pfDeduction,
+                               @RequestParam(defaultValue = "0") java.math.BigDecimal otherDeduction,
+                               @RequestParam(required = false) String bankAccount,
+                               @RequestParam(required = false) Integer paymentMonth,
+                               @RequestParam(required = false) Integer paymentYear,
+                               RedirectAttributes ra) {
+        String tenant = getTenantSegment(request);
+        Optional<PayrollTemplate> opt = payrollTemplateRepository.findById(id);
+        if (opt.isEmpty() || !tenant.equals(opt.get().getTenantSegment())) {
+            ra.addFlashAttribute("errorMessage", "Payroll template not found.");
+            return "redirect:/hr/payroll";
+        }
+        PayrollTemplate pt = opt.get();
+        pt.setDesignation(designation);
+        pt.setDepartment(department);
+        pt.setBasicSalary(basicSalary);
+        pt.setHra(hra);
+        pt.setTransportAllowance(transportAllowance);
+        pt.setOtherAllowance(otherAllowance);
+        pt.setTaxDeduction(taxDeduction);
+        pt.setPfDeduction(pfDeduction);
+        pt.setOtherDeduction(otherDeduction);
+        pt.setBankAccount(bankAccount);
+        if (paymentMonth != null) pt.setPaymentMonth(paymentMonth);
+        if (paymentYear != null) pt.setPaymentYear(paymentYear);
+        pt.setUpdatedAt(LocalDateTime.now());
+        payrollTemplateRepository.save(pt);
+        ra.addFlashAttribute("successMessage", "Payroll template updated.");
+        return "redirect:/hr/payroll";
+    }
+
+    @PostMapping("/payroll/delete/{id}")
+    public String deletePayroll(HttpServletRequest request,
+                                 @PathVariable Long id,
+                                 RedirectAttributes ra) {
+        String tenant = getTenantSegment(request);
+        Optional<PayrollTemplate> opt = payrollTemplateRepository.findById(id);
+        if (opt.isPresent() && tenant.equals(opt.get().getTenantSegment())) {
+            payrollTemplateRepository.deleteById(id);
+            ra.addFlashAttribute("successMessage", "Payroll template deleted.");
+        } else {
+            ra.addFlashAttribute("errorMessage", "Template not found.");
+        }
+        return "redirect:/hr/payroll";
+    }
+
+    /** Returns payroll data as JSON for the edit modal. */
+    @GetMapping("/payroll/data/{id}")
+    @ResponseBody
+    public Map<String, Object> getPayrollData(HttpServletRequest request, @PathVariable Long id) {
+        String tenant = getTenantSegment(request);
+        Optional<PayrollTemplate> opt = payrollTemplateRepository.findById(id);
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        if (opt.isEmpty() || !tenant.equals(opt.get().getTenantSegment())) {
+            result.put("error", "Not found");
+            return result;
+        }
+        PayrollTemplate pt = opt.get();
+        result.put("id", pt.getId());
+        result.put("employeeName", pt.getEmployee().getUsername());
+        result.put("designation", pt.getDesignation());
+        result.put("department", pt.getDepartment());
+        result.put("basicSalary", pt.getBasicSalary());
+        result.put("hra", pt.getHra());
+        result.put("transportAllowance", pt.getTransportAllowance());
+        result.put("otherAllowance", pt.getOtherAllowance());
+        result.put("taxDeduction", pt.getTaxDeduction());
+        result.put("pfDeduction", pt.getPfDeduction());
+        result.put("otherDeduction", pt.getOtherDeduction());
+        result.put("bankAccount", pt.getBankAccount());
+        result.put("paymentMonth", pt.getPaymentMonth());
+        result.put("paymentYear", pt.getPaymentYear());
+        return result;
     }
 }

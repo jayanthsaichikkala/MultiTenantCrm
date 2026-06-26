@@ -64,6 +64,8 @@ import com.crm.demo.repository.TaskRepository;
 import com.crm.demo.repository.TaskAttachmentRepository;
 import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
+import com.crm.demo.model.PayrollTemplate;
+import com.crm.demo.repository.PayrollTemplateRepository;
 import com.crm.demo.service.NotificationService;
 import com.crm.demo.service.ProfileUpdateService;
 import com.crm.demo.service.AttendanceService;
@@ -126,8 +128,8 @@ public class ManagerController {
 	@Autowired
 	private NotificationService notificationService;
 
-	// =========================
-	// COMMON STATS METHOD
+	@Autowired
+	private PayrollTemplateRepository payrollTemplateRepository;
 	// =========================
 	private void injectStats(Model model) {
 
@@ -2059,4 +2061,21 @@ public class ManagerController {
 	}
 
 	private static record TaskAttachmentInfo(String filename, byte[] fileData, String contentType) {}
+
+	// ── PAYROLL ───────────────────────────────────────────────────────────
+
+	@GetMapping("/payroll")
+	public String payrollPage(Model model) {
+		User manager = getCurrentManager();
+		if (manager == null) return "redirect:/login";
+
+		injectStats(model);
+		String tenant = getTenantSegment(manager);
+		List<User> teamMembers = getManagedTeamMembers(manager);
+		List<PayrollTemplate> payrolls = payrollTemplateRepository.findByEmployeesAndTenant(teamMembers, tenant);
+		model.addAttribute("payrolls", payrolls);
+		model.addAttribute("teamMembers", teamMembers);
+		model.addAttribute("activePage", "payroll");
+		return "manager-payroll";
+	}
 }

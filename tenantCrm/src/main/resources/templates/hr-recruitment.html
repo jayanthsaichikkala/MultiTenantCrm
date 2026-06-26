@@ -1,10 +1,10 @@
-ï»¿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>HR â€” Recruitment</title>
+	<title>HR — Recruitment</title>
 	<link rel="stylesheet" th:href="@{/hr.css}">
 	<link rel="stylesheet" th:href="@{/notifications.css}">
 	<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -36,6 +36,7 @@
 			<li><a th:href="@{/hr/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
 			<li><a th:href="@{/hr/performance}"><i data-lucide="bar-chart-2"></i> Performance</a></li>
 			<li><a th:href="@{/hr/reports}"><i data-lucide="file-bar-chart"></i> Reports</a></li>
+			<li><a th:href="@{/hr/payroll}"><i data-lucide="banknote"></i> Payroll</a></li>
 			<li><a th:href="@{/hr/profile}"><i data-lucide="user"></i> Profile</a></li>
 		</ul>
 		<a href="#" data-logout style="text-decoration:none;"><button class="logout-btn"><i data-lucide="log-out"></i>
@@ -45,7 +46,7 @@
 		<div class="topbar">
 			<h1>Recruitment</h1>
 			<div class="topbar-right">
-				<div class="search-box"><input type="text" placeholder="Search positionsâ€¦"></div>
+				<div class="search-box"><input type="text" placeholder="Search positions…"></div>
 				<div class="user-badge" th:text="${#strings.substring(adminName ?: 'H', 0, 1).toUpperCase()}">H</div>
 			</div>
 		</div>
