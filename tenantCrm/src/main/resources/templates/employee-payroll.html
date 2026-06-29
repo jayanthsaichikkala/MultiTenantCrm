@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee — Payroll</title>
+    <link rel="stylesheet" th:href="@{/employee.css}">
+	<link rel="stylesheet" th:href="@{/notifications.css}">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+    <div class="mobile-topbar"><button class="hamburger" id="hamburgerBtn"><span></span><span></span><span></span></button><span class="mobile-title">Employee</span><div class="mobile-topbar-right" id="mobileTopbarRight"></div></div>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="sidebar" id="sidebar">
+    <a th:href="@{/employee/dashboard}" style="text-decoration: none; color: inherit; display: block;">
+        <div class="sidebar-logo"><div class="logo-icon"><i data-lucide="user"></i></div><h2>Employee</h2></div>
+    </a>
+    <div class="profile-box">
+        <div class="profile-avatar" th:text="${#strings.substring(employeeName ?: 'E', 0, 1).toUpperCase()}">E</div>
+        <h3 th:text="${employeeName} ?: 'Employee'">Employee</h3>
+        <p th:text="${employeeRole} ?: 'Employee'">Employee</p>
+    </div>
+    <ul class="sidebar-menu">
+        <li><a th:href="@{/employee/dashboard}"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
+        <li><a th:href="@{/employee/tasks}"><i data-lucide="check-square"></i> My Tasks</a></li>
+        <li><a th:href="@{/employee/attendance}"><i data-lucide="calendar-check"></i> Attendance</a></li>
+        <li><a th:href="@{/employee/leaves}"><i data-lucide="file-text"></i> Leave Request</a></li>
+        <li><a th:href="@{/employee/meetings}"><i data-lucide="calendar-clock"></i> Meetings</a></li>
+        <li><a th:href="@{/employee/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
+        <li><a th:href="@{/employee/reports}"><i data-lucide="file-bar-chart"></i> Reports</a></li>
+        <li class="active"><a th:href="@{/employee/payroll}"><i data-lucide="banknote"></i> Payroll</a></li>
+		<li><a th:href="@{/employee/profile}"><i data-lucide="user"></i> Profile</a></li>
+    </ul>
+    <a href="#" data-logout style="text-decoration:none;"><button class="logout-btn"><i data-lucide="log-out"></i> Logout</button></a>
+</div>
+<div class="main-wrapper">
+    <div class="topbar">
+        <h1>Payroll Details</h1>
+        <div class="topbar-right">
+            <div class="user-badge" th:text="${#strings.substring(employeeName ?: 'E', 0, 1).toUpperCase()}">E</div>
+        </div>
+    </div>
+    <div class="page-content">
+        <!-- If no payroll is assigned -->
+        <div th:if="${payroll == null}" class="card" style="text-align: center; padding: 60px 20px;">
+            <div style="background: #f1f5f9; width: 64px; height: 64px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px; color: #64748b;">
+                <i data-lucide="banknote" style="width: 32px; height: 32px;"></i>
+            </div>
+            <h2 style="font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 8px;">No Payroll Template Found</h2>
+            <p style="color: #64748b; font-size: 14px; max-width: 400px; margin: 0 auto 24px;">Your salary structure and payroll template have not been set up by the HR department yet. Please check back later.</p>
+        </div>
+
+        <!-- If payroll is assigned -->
+        <div th:if="${payroll != null}" class="card" style="max-width: 800px; margin: 0 auto; padding: 32px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #f1f5f9; padding-bottom: 24px; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+                <div>
+                    <h2 style="font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 4px;" th:text="${payroll.employee.username}">Employee Name</h2>
+                    <p style="color: #64748b; font-size: 14px;" th:text="${payroll.designation} ?: 'Designation'"></p>
+                    <p style="color: #94a3b8; font-size: 13px;" th:text="${payroll.department} ?: 'Department'"></p>
+                </div>
+                <div style="text-align: right; min-width: 140px;">
+                    <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #10b981; background: #ecfdf5; padding: 4px 10px; border-radius: 20px; display: inline-block; margin-bottom: 8px;">Active Salary Template</div>
+                    <p style="font-size: 13px; color: #64748b;">Effective for:</p>
+                    <p style="font-size: 15px; font-weight: 600; color: #0f172a;" th:text="${T(java.time.Month).of(payroll.paymentMonth).name()} + ' ' + ${payroll.paymentYear}"></p>
+                </div>
+            </div>
+
+            <!-- Payslip content -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;">
+                <!-- Earnings -->
+                <div style="background: #f8fafc; border-radius: 16px; padding: 20px; border: 1px solid #e2e8f0;">
+                    <h3 style="font-size: 16px; font-weight: 700; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 14px;">Earnings</h3>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                            <span style="color: #64748b;">Basic Salary</span>
+                            <span style="font-weight: 600; color: #0f172a;" th:text="'$' + ${payroll.basicSalary}">$0.00</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                            <span style="color: #64748b;">HRA</span>
+                            <span style="font-weight: 600; color: #0f172a;" th:text="'$' + ${payroll.hra}">$0.00</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                            <span style="color: #64748b;">Transport Allowance</span>
+                            <span style="font-weight: 600; color: #0f172a;" th:text="'$' + ${payroll.transportAllowance}">$0.00</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                            <span style="color: #64748b;">Other Allowance</span>
+                            <span style="font-weight: 600; color: #0f172a;" th:text="'$' + ${payroll.otherAllowance}">$0.00</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 14px; border-top: 1px dashed #cbd5e1; padding-top: 10px; margin-top: 4px; font-weight: 700;">
+                            <span style="color: #0f172a;">Gross Salary</span>
+                            <span style="color: #0f172a;" th:text="'$' + ${payroll.getGrossSalary()}">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Deductions -->
+                <div style="background: #fff8f8; border-radius: 16px; padding: 20px; border: 1px solid #fee2e2;">
+                    <h3 style="font-size: 16px; font-weight: 700; color: #991b1b; border-bottom: 1px solid #fee2e2; padding-bottom: 10px; margin-bottom: 14px;">Deductions</h3>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                            <span style="color: #991b1b; opacity: 0.8;">Tax Deduction</span>
+                            <span style="font-weight: 600; color: #991b1b;" th:text="'$' + ${payroll.taxDeduction}">$0.00</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                            <span style="color: #991b1b; opacity: 0.8;">PF Contribution</span>
+                            <span style="font-weight: 600; color: #991b1b;" th:text="'$' + ${payroll.pfDeduction}">$0.00</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                            <span style="color: #991b1b; opacity: 0.8;">Other Deduction</span>
+                            <span style="font-weight: 600; color: #991b1b;" th:text="'$' + ${payroll.otherDeduction}">$0.00</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 14px; border-top: 1px dashed #fecaca; padding-top: 10px; margin-top: 14px; font-weight: 700;">
+                            <span style="color: #991b1b;">Total Deductions</span>
+                            <span style="color: #991b1b;" th:text="'$' + ${payroll.getTotalDeductions()}">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Net Salary Summary Banner -->
+            <div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); border-radius: 16px; padding: 24px; color: white; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+                <div>
+                    <p style="font-size: 13px; opacity: 0.8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Net Take-Home Salary</p>
+                    <h2 style="font-size: 32px; font-weight: 800; margin: 0;" th:text="'$' + ${payroll.getNetSalary()}">$0.00</h2>
+                </div>
+                <div style="text-align: right;">
+                    <p style="font-size: 13px; opacity: 0.8; margin-bottom: 4px;">Bank Account</p>
+                    <p style="font-size: 16px; font-weight: 600; margin: 0;" th:text="${payroll.bankAccount} ?: 'Not Specified'">Account Number</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    <script>
+        var hamburger = document.getElementById('hamburgerBtn'), sidebar = document.getElementById('sidebar'), overlay = document.getElementById('sidebarOverlay');
+        function openSidebar() {sidebar.classList.add('open'); overlay.classList.add('active'); document.body.style.overflow = 'hidden';}
+        function closeSidebar() {sidebar.classList.remove('open'); overlay.classList.remove('active'); document.body.style.overflow = '';}
+        if (hamburger) hamburger.addEventListener('click', openSidebar);
+        if (overlay) overlay.addEventListener('click', closeSidebar);
+        lucide.createIcons();
+    </script>
+	<script th:src="@{/auth.js}"></script>
+	<script th:src="@{/notifications.js}"></script>
+</body>
+</html>

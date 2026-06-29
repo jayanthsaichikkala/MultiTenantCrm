@@ -28,8 +28,7 @@
 
 <body>
 	<div class="mobile-topbar"><button class="hamburger"
-			id="hamburgerBtn"><span></span><span></span><span></span></button><span class="mobile-title">CRM
-			Admin</span></div>
+			id="hamburgerBtn"><span></span><span></span><span></span></button><span class="mobile-title">CRM Admin</span><div class="mobile-topbar-right" id="mobileTopbarRight"></div></div>
 	<div class="sidebar-overlay" id="sidebarOverlay"></div>
 	<div class="sidebar" id="sidebar">
 		<a th:href="@{/admin/dashboard}" style="text-decoration: none; color: inherit; display: block;">
@@ -129,12 +128,7 @@
 					</div>
 				</div>
 				<div class="right-col">
-					<div class="card">
-						<div class="card-header"><div><h2>Notifications</h2><p>Recent updates for you</p></div></div>
-						<div id="dashboardNotifFeed" style="padding:4px 0;">
-							<div class="notif-feed-empty"><i data-lucide="bell-off"></i><p>Loading notifications…</p></div>
-						</div>
-					</div>
+
 					<div class="card">
 						<div class="card-header">
 							<div>
@@ -157,20 +151,7 @@
 							</a>
 						</div>
 					</div>
-					<div class="card">
-						<div class="card-header">
-							<div>
-								<h2>Summary</h2>
-							</div>
-						</div>
-						<div class="summary-list">
-							<div class="summary-row"><span class="summary-label">Total Employees</span><span
-									class="summary-value" th:text="${employeeCount} ?: '0'">0</span></div>
 
-							<div class="summary-row"><span class="summary-label">Pending Tasks</span><span
-									class="summary-value" th:text="${pendingTasks} ?: '0'">0</span></div>
-						</div>
-					</div>
 				</div>
 			</div>
 		</div>

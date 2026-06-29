@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>HR — Payroll Management</title>
+	<link rel="stylesheet" th:href="@{/hr.css}">
+	<link rel="stylesheet" th:href="@{/notifications.css}">
+	<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+	<style>
+		.modal-overlay {
+			display: none;
+			position: fixed;
+			inset: 0;
+			background: rgba(0, 0, 0, 0.4);
+			z-index: 2000;
+			align-items: center;
+			justify-content: center;
+			backdrop-filter: blur(3px);
+		}
+		.modal-overlay.open {
+			display: flex;
+		}
+		.modal {
+			background: white;
+			border-radius: 22px;
+			padding: 28px;
+			width: 500px;
+			max-width: 90vw;
+			max-height: 90vh;
+			overflow-y: auto;
+			box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+		}
+		.modal h3 {
+			font-size: 18px;
+			font-weight: 700;
+			color: #163647;
+			margin-bottom: 18px;
+		}
+		.form-grid {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 12px;
+		}
+		.form-group {
+			margin-bottom: 14px;
+			display: flex;
+			flex-direction: column;
+			gap: 4px;
+		}
+		.form-group.full-width {
+			grid-column: span 2;
+		}
+		.form-group label {
+			font-size: 12px;
+			font-weight: 600;
+			color: #4b6a7a;
+		}
+		.form-group input, .form-group select {
+			height: 38px;
+			border: 1.5px solid #e5edf2;
+			border-radius: 10px;
+			padding: 0 10px;
+			font-size: 13px;
+			font-family: inherit;
+			background: #f3f8fb;
+			color: #163647;
+			outline: none;
+		}
+		.form-group input:focus, .form-group select:focus {
+			border-color: #1c5d6e;
+		}
+		.modal-actions {
+			display: flex;
+			gap: 10px;
+			margin-top: 18px;
+		}
+		.modal-actions button {
+			flex: 1;
+			height: 44px;
+			border-radius: 14px;
+			border: none;
+			font-size: 14px;
+			font-weight: 600;
+			font-family: inherit;
+			cursor: pointer;
+		}
+		.btn-submit {
+			background: #17455e;
+			color: white;
+		}
+		.btn-submit:hover {
+			background: #103346;
+		}
+		.btn-cancel {
+			background: #f3f8fb;
+			color: #4b6a7a;
+			border: 1.5px solid #e5edf2 !important;
+		}
+		.btn-cancel:hover {
+			background: #e5edf2;
+		}
+	</style>
+</head>
+<body>
+	<div class="mobile-topbar"><button class="hamburger" id="hamburgerBtn"><span></span><span></span><span></span></button><span class="mobile-title">HR</span><div class="mobile-topbar-right" id="mobileTopbarRight"></div></div>
+	<div class="sidebar-overlay" id="sidebarOverlay"></div>
+	<div class="sidebar" id="sidebar">
+		<div class="sidebar-logo">
+			<div class="logo-icon"><i data-lucide="users"></i></div>
+			<h2>HR</h2>
+		</div>
+		<div class="profile-box">
+			<div class="profile-avatar" th:text="${#strings.substring(adminName ?: 'H', 0, 1).toUpperCase()}">H</div>
+			<h3 th:text="${adminName} ?: 'HR User'">HR User</h3>
+			<p th:text="${adminRole} ?: 'HR'">HR</p>
+		</div>
+		<ul class="sidebar-menu">
+			<li><a th:href="@{/hr/dashboard}"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
+			<li><a th:href="@{/hr/employees}"><i data-lucide="users"></i> Employees</a></li>
+			<li><a th:href="@{/hr/tasks}"><i data-lucide="check-square"></i> Tasks</a></li>
+			<li><a th:href="@{/hr/recruitment}"><i data-lucide="briefcase"></i> Recruitment</a></li>
+			<li><a th:href="@{/hr/attendance}"><i data-lucide="calendar-check"></i> Attendance</a></li>
+			<li><a th:href="@{/hr/leaves}"><i data-lucide="file-text"></i> Leave Requests</a></li>
+			<li><a th:href="@{/hr/teams}"><i data-lucide="users-round"></i> Teams</a></li>
+			<li><a th:href="@{/hr/meetings}"><i data-lucide="calendar-clock"></i> Meetings</a></li>
+			<li><a th:href="@{/hr/calendar}"><i data-lucide="calendar"></i> Calendar</a></li>
+			<li><a th:href="@{/hr/performance}"><i data-lucide="bar-chart-2"></i> Performance</a></li>
+			<li><a th:href="@{/hr/reports}"><i data-lucide="file-bar-chart"></i> Reports</a></li>
+			<li class="active"><a th:href="@{/hr/payroll}"><i data-lucide="banknote"></i> Payroll</a></li>
+			<li><a th:href="@{/hr/profile}"><i data-lucide="user"></i> Profile</a></li>
+		</ul>
+		<a href="#" data-logout style="text-decoration:none;"><button class="logout-btn"><i data-lucide="log-out"></i> Logout</button></a>
+	</div>
+	<div class="main-wrapper">
+		<div class="topbar">
+			<h1>Payroll Management</h1>
+			<div class="topbar-right">
+				<div class="user-badge" th:text="${#strings.substring(adminName ?: 'H', 0, 1).toUpperCase()}">H</div>
+			</div>
+		</div>
+		<div class="page-content">
+			<!-- Status Row -->
+			<div class="stats-row" style="grid-template-columns: repeat(2, 1fr);">
+				<div class="stat-card">
+					<div class="stat-icon purple"><i data-lucide="banknote"></i></div>
+					<div class="stat-info">
+						<h3 th:text="${totalPayroll} ?: '0'">0</h3>
+						<p>Total Payroll Templates</p>
+					</div>
+				</div>
+				<div class="stat-card">
+					<div class="stat-icon green"><i data-lucide="wallet"></i></div>
+					<div class="stat-info">
+						<h3 th:text="'$' + ${totalNetSalary} ?: '$0.00'">$0.00</h3>
+						<p>Monthly Net Salary Spend</p>
+					</div>
+				</div>
+			</div>
+
+			<!-- Payroll list card -->
+			<div class="card" style="margin-top: 22px;">
+				<div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+					<div>
+						<h2>Salary Structures</h2>
+						<p>Create and edit active salary configurations for employees</p>
+					</div>
+					<button class="btn-sm primary" onclick="openCreateModal()" style="display: inline-flex; align-items: center; gap: 6px; padding: 0 16px; height: 36px; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; color: white; background: #17455e;">
+						<i data-lucide="plus" style="width: 16px; height: 16px;"></i> Create Template
+					</button>
+				</div>
+
+				<!-- Empty state -->
+				<div th:if="${#lists.isEmpty(payrolls)}" class="empty-state" style="padding: 40px; text-align: center;">
+					<i data-lucide="banknote" style="width: 48px; height: 48px; opacity: .3; margin-bottom: 16px;"></i>
+					<h3>No Payroll Templates Found</h3>
+					<p>Click "Create Template" to configure salary structure for employees.</p>
+				</div>
+
+				<!-- Payroll Table -->
+				<div th:if="${!#lists.isEmpty(payrolls)}" class="table-wrap">
+					<table id="payrollTable">
+						<thead>
+							<tr>
+								<th>Employee</th>
+								<th>Designation & Dept</th>
+								<th>Gross Salary</th>
+								<th>Deductions</th>
+								<th>Net Salary</th>
+								<th>Bank Account</th>
+								<th>Period</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr th:each="pt : ${payrolls}">
+								<td>
+									<div style="font-weight: 600; color: #163647;" th:text="${pt.employee.username}">Name</div>
+									<div style="font-size: 12px; color: #6b7280;" th:text="${pt.employee.email}">Email</div>
+								</td>
+								<td>
+									<div th:text="${pt.designation} ?: '—'">Designation</div>
+									<div style="font-size: 12px; color: #6b7280;" th:text="${pt.department} ?: '—'">Department</div>
+								</td>
+								<td style="font-weight: 600; color: #163647;" th:text="'$' + ${pt.getGrossSalary()}">$0.00</td>
+								<td style="font-weight: 600; color: #d11a2a;" th:text="'$' + ${pt.getTotalDeductions()}">$0.00</td>
+								<td style="font-weight: 700; color: #1b7a46;" th:text="'$' + ${pt.getNetSalary()}">$0.00</td>
+								<td th:text="${pt.bankAccount} ?: '—'">Bank Account</td>
+								<td th:text="${T(java.time.Month).of(pt.paymentMonth).name()} + ' ' + ${pt.paymentYear}">Period</td>
+								<td>
+									<div style="display: inline-flex; gap: 8px;">
+										<button class="btn-sm" style="background:none; border:none; color:#17455e; cursor:pointer; padding: 4px;" th:onclick="'openEditModal(' + ${pt.id} + ')'" title="Edit">
+											<i data-lucide="edit-3" style="width:16px; height:16px;"></i>
+										</button>
+										<form th:action="@{/hr/payroll/delete/{id}(id=${pt.id})}" method="post" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this payroll template?');">
+											<button type="submit" style="background:none; border:none; color:#d11a2a; cursor:pointer; padding: 4px;" title="Delete">
+												<i data-lucide="trash-2" style="width:16px; height:16px;"></i>
+											</button>
+										</form>
+									</div>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- ── Create Modal ── -->
+	<div class="modal-overlay" id="createModal">
+		<div class="modal">
+			<h3>Create Salary Template</h3>
+			<form th:action="@{/hr/payroll/create}" method="post">
+				<div class="form-grid">
+					<div class="form-group full-width">
+						<label>Employee *</label>
+						<select name="employeeId" required>
+							<option value="">Select Employee...</option>
+							<option th:each="emp : ${unassignedEmployees}" th:value="${emp.id}" th:text="${emp.username} + ' (' + ${emp.email} + ')'"></option>
+						</select>
+					</div>
+					<div class="form-group">
+						<label>Designation</label>
+						<input type="text" name="designation" placeholder="e.g. Software Engineer">
+					</div>
+					<div class="form-group">
+						<label>Department</label>
+						<input type="text" name="department" placeholder="e.g. Engineering">
+					</div>
+					<div class="form-group">
+						<label>Basic Monthly Salary ($)</label>
+						<input type="number" name="basicSalary" value="0" min="0" step="0.01">
+					</div>
+					<div class="form-group">
+						<label>HRA ($)</label>
+						<input type="number" name="hra" value="0" min="0" step="0.01">
+					</div>
+					<div class="form-group">
+						<label>Transport Allowance ($)</label>
+						<input type="number" name="transportAllowance" value="0" min="0" step="0.01">
+					</div>
+					<div class="form-group">
+						<label>Other Allowance ($)</label>
+						<input type="number" name="otherAllowance" value="0" min="0" step="0.01">
+					</div>
+					<div class="form-group">
+						<label>Tax Deduction ($)</label>
+						<input type="number" name="taxDeduction" value="0" min="0" step="0.01">
+					</div>
+					<div class="form-group">
+						<label>PF Deduction ($)</label>
+						<input type="number" name="pfDeduction" value="0" min="0" step="0.01">
+					</div>
+					<div class="form-group">
+						<label>Other Deduction ($)</label>
+						<input type="number" name="otherDeduction" value="0" min="0" step="0.01">
+					</div>
+					<div class="form-group">
+						<label>Bank Account Number</label>
+						<input type="text" name="bankAccount" placeholder="e.g. 1234567890">
+					</div>
+					<div class="form-group">
+						<label>Payment Month</label>
+						<select name="paymentMonth">
+							<option th:each="m : ${#numbers.sequence(1,12)}" th:value="${m}" th:text="${T(java.time.Month).of(m).name()}" th:selected="${m == T(java.time.LocalDate).now().getMonthValue()}"></option>
+						</select>
+					</div>
+					<div class="form-group">
+						<label>Payment Year</label>
+						<input type="number" name="paymentYear" th:value="${T(java.time.LocalDate).now().getYear()}">
+					</div>
+				</div>
+				<div class="modal-actions">
+					<button type="button" class="btn-cancel" onclick="closeCreateModal()">Cancel</button>
+					<button type="submit" class="btn-submit">Submit</button>
+				</div>
+			</form>
+		</div>
+	</div>
+
+	<!-- ── Edit Modal ── -->
+	<div class="modal-overlay" id="editModal">
+		<div class="modal">
+			<h3>Edit Salary Template</h3>
+			<form id="editForm" method="post">
+				<div class="form-grid">
+					<div class="form-group full-width">
+						<label>Employee</label>
+						<input type="text" id="editEmployeeName" readonly style="background:#e9ecef; cursor:not-allowed;">
+					</div>
+					<div class="form-group">
+						<label>Designation</label>
+						<input type="text" id="editDesignation" name="designation">
+					</div>
+					<div class="form-group">
+						<label>Department</label>
+						<input type="text" id="editDepartment" name="department">
+					</div>
+					<div class="form-group">
+						<label>Basic Monthly Salary ($)</label>
+						<input type="number" id="editBasicSalary" name="basicSalary" min="0" step="0.01">
+					</div>
+					<div class="form-group">
+						<label>HRA ($)</label>
+						<input type="number" id="editHra" name="hra" min="0" step="0.01">
+					</div>
+					<div class="form-group">
+						<label>Transport Allowance ($)</label>
+						<input type="number" id="editTransportAllowance" name="transportAllowance" min="0" step="0.01">
+					</div>
+					<div class="form-group">
+						<label>Other Allowance ($)</label>
+						<input type="number" id="editOtherAllowance" name="otherAllowance" min="0" step="0.01">
+					</div>
+					<div class="form-group">
+						<label>Tax Deduction ($)</label>
+						<input type="number" id="editTaxDeduction" name="taxDeduction" min="0" step="0.01">
+					</div>
+					<div class="form-group">
+						<label>PF Deduction ($)</label>
+						<input type="number" id="editPfDeduction" name="pfDeduction" min="0" step="0.01">
+					</div>
+					<div class="form-group">
+						<label>Other Deduction ($)</label>
+						<input type="number" id="editOtherDeduction" name="otherDeduction" min="0" step="0.01">
+					</div>
+					<div class="form-group">
+						<label>Bank Account Number</label>
+						<input type="text" id="editBankAccount" name="bankAccount">
+					</div>
+					<div class="form-group">
+						<label>Payment Month</label>
+						<select id="editPaymentMonth" name="paymentMonth">
+							<option th:each="m : ${#numbers.sequence(1,12)}" th:value="${m}" th:text="${T(java.time.Month).of(m).name()}"></option>
+						</select>
+					</div>
+					<div class="form-group">
+						<label>Payment Year</label>
+						<input type="number" id="editPaymentYear" name="paymentYear">
+					</div>
+				</div>
+				<div class="modal-actions">
+					<button type="button" class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+					<button type="submit" class="btn-submit">Save Changes</button>
+				</div>
+			</form>
+		</div>
+	</div>
+
+	<script>
+		var hamburger = document.getElementById('hamburgerBtn'), sidebar = document.getElementById('sidebar'), overlay = document.getElementById('sidebarOverlay');
+		function openSidebar() {sidebar.classList.add('open'); overlay.classList.add('active'); document.body.style.overflow = 'hidden';}
+		function closeSidebar() {sidebar.classList.remove('open'); overlay.classList.remove('active'); document.body.style.overflow = '';}
+		if (hamburger) hamburger.addEventListener('click', openSidebar);
+		if (overlay) overlay.addEventListener('click', closeSidebar);
+		lucide.createIcons();
+
+		// Modal helpers
+		function openCreateModal() { document.getElementById('createModal').classList.add('open'); }
+		function closeCreateModal() { document.getElementById('createModal').classList.remove('open'); }
+		
+		function openEditModal(id) {
+			if (typeof crmFetch !== 'function') return;
+			crmFetch('/hr/payroll/data/' + id)
+				.then(function(res) { return res.json(); })
+				.then(function(data) {
+					if (data.error) {
+						alert('Error loading payroll template data.');
+						return;
+					}
+					document.getElementById('editForm').action = '/hr/payroll/edit/' + id;
+					document.getElementById('editEmployeeName').value = data.employeeName;
+					document.getElementById('editDesignation').value = data.designation || '';
+					document.getElementById('editDepartment').value = data.department || '';
+					document.getElementById('editBasicSalary').value = data.basicSalary || 0;
+					document.getElementById('editHra').value = data.hra || 0;
+					document.getElementById('editTransportAllowance').value = data.transportAllowance || 0;
+					document.getElementById('editOtherAllowance').value = data.otherAllowance || 0;
+					document.getElementById('editTaxDeduction').value = data.taxDeduction || 0;
+					document.getElementById('editPfDeduction').value = data.pfDeduction || 0;
+					document.getElementById('editOtherDeduction').value = data.otherDeduction || 0;
+					document.getElementById('editBankAccount').value = data.bankAccount || '';
+					document.getElementById('editPaymentMonth').value = data.paymentMonth;
+					document.getElementById('editPaymentYear').value = data.paymentYear;
+					
+					document.getElementById('editModal').classList.add('open');
+				})
+				.catch(function(err) {
+					alert('Connection error loading payroll template data.');
+				});
+		}
+		function closeEditModal() { document.getElementById('editModal').classList.remove('open'); }
+
+		// Close modal on click overlay target
+		document.querySelectorAll('.modal-overlay').forEach(function (el) {
+			el.addEventListener('click', function (e) { if (e.target === el) el.classList.remove('open'); });
+		});
+	</script>
+	<script th:src="@{/auth.js}"></script>
+	<script th:src="@{/notifications.js}"></script>
+</body>
+</html>

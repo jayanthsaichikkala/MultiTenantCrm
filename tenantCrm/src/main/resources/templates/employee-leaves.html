@@ -411,7 +411,7 @@
 					</div>
 
 					<!-- Server-rendered existing requests -->
-					<div id="lfHistory" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+					<div id="lfHistory" style="padding:16px;display:flex;flex-direction:column;gap:12px;max-height:480px;overflow-y:auto;">
 						<div th:each="req : ${leaveRequests}" class="leave-item" style="display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:10px;background:#f9fafb;border:1px solid #e5e7eb;">
 							<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
 								<div>

@@ -532,7 +532,7 @@
 							<p>Recent submissions</p>
 						</div>
 					</div>
-					<div id="lfHistory">
+					<div id="lfHistory" style="max-height:480px;overflow-y:auto;padding-right:4px;">
 						<!-- Server-rendered existing requests -->
 						<div th:each="req : ${leaveRequests}" class="lh-item">
 							<div>

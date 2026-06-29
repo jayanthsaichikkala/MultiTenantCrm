@@ -113,6 +113,7 @@
 <div class="mobile-topbar">
     <button class="hamburger" id="hamburgerBtn"><span></span><span></span><span></span></button>
     <span class="mobile-title">SuperAdmin</span>
+    <div class="mobile-topbar-right" id="mobileTopbarRight"></div>
 </div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
@@ -341,12 +342,7 @@
             </div>
 
             <div style="display:flex;flex-direction:column;gap:18px;">
-                <div class="card">
-                    <div class="card-header"><div><h2>Notifications</h2><p>Recent updates for you</p></div></div>
-                    <div id="dashboardNotifFeed" style="padding:4px 0 12px 16px;">
-                        <div class="notif-feed-empty"><i data-lucide="bell-off"></i><p>Loading notifications…</p></div>
-                    </div>
-                </div>
+
                 <div class="card">
                     <div class="card-header"><div><h2>Quick Actions</h2><p>Common tasks at a glance</p></div></div>
                     <div class="card-body" style="padding:6px 0 4px;">

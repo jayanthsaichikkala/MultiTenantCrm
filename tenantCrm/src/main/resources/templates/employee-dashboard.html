@@ -128,7 +128,7 @@
     </style>
 </head>
 <body>
-<div class="mobile-topbar"><button class="hamburger" id="hamburgerBtn"><span></span><span></span><span></span></button><span class="mobile-title">Employee</span></div>
+<div class="mobile-topbar"><button class="hamburger" id="hamburgerBtn"><span></span><span></span><span></span></button><span class="mobile-title">Employee</span><div class="mobile-topbar-right" id="mobileTopbarRight"></div></div>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <div class="sidebar" id="sidebar">
     <a th:href="@{/employee/dashboard}" style="text-decoration: none; color: inherit; display: block;">
@@ -269,24 +269,21 @@
                             <div style="font-size:11px;color:#9ab3bd;font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">Teammates</div>
                             <div th:if="${myTeamMembers == null or #lists.isEmpty(myTeamMembers)}"
                                  style="font-size:13px;color:#9ab3bd;text-align:center;padding:8px 0;">No teammates yet.</div>
-                            <div th:each="member : ${myTeamMembers}"
-                                 style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f3f7fa;">
-                                <div style="width:30px;height:30px;border-radius:50%;background:#e9e2ff;color:#5b21b6;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;"
-                                     th:text="${#strings.substring(member.username ?: 'E', 0, 1).toUpperCase()}">E</div>
-                                <div style="flex:1;min-width:0;">
-                                    <div style="font-size:13px;font-weight:600;color:#163647;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" th:text="${member.username}">Name</div>
-                                    <div style="font-size:11px;color:#9ab3bd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" th:text="${member.email}">email</div>
+                            <div th:unless="${myTeamMembers == null or #lists.isEmpty(myTeamMembers)}" style="max-height:180px;overflow-y:auto;padding-right:4px;">
+                                <div th:each="member : ${myTeamMembers}"
+                                     style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f3f7fa;">
+                                    <div style="width:30px;height:30px;border-radius:50%;background:#e9e2ff;color:#5b21b6;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;"
+                                         th:text="${#strings.substring(member.username ?: 'E', 0, 1).toUpperCase()}">E</div>
+                                    <div style="flex:1;min-width:0;">
+                                        <div style="font-size:13px;font-weight:600;color:#163647;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" th:text="${member.username}">Name</div>
+                                        <div style="font-size:11px;color:#9ab3bd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" th:text="${member.email}">email</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="card">
-                    <div class="card-header"><div><h2>Notifications</h2><p>Recent updates for you</p></div></div>
-                    <div id="dashboardNotifFeed" style="padding:4px 0;">
-                        <div class="notif-feed-empty"><i data-lucide="bell-off"></i><p>Loading notifications…</p></div>
-                    </div>
-                </div>
+
                 <div class="card">
                     <div class="card-header"><div><h2>Quick Actions</h2></div></div>
                     <div class="quick-actions">

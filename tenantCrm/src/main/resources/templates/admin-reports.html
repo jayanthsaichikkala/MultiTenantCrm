@@ -470,74 +470,7 @@
 			</div>
 			<!-- ── End Manager Reports ──────────────────────── -->
 
-			<div class="dashboard-grid">
-				<div class="card">
-					<div class="card-header">
-						<div>
-							<h2>User Report</h2>
-							<p>All registered users by role</p>
-						</div>
-					</div>
-					<div class="table-wrap">
-						<table>
-							<thead>
-								<tr>
-									<th>#</th>
-									<th>Username</th>
-									<th>Email</th>
-									<th>Role</th>
-									<th>Status</th>
-								</tr>
-							</thead>
-							<tbody>
-								<tr th:each="u, stat : ${reportUsers}">
-									<td th:text="${stat.count}">1</td>
-									<td>
-										<div class="member-cell">
-											<div class="member-avatar"
-												th:text="${#strings.substring(u.username,0,1).toUpperCase()}">U</div>
-											<span style="font-weight:600;" th:text="${u.username}">User</span>
-										</div>
-									</td>
-									<td style="color:#6b7280;font-size:13px;" th:text="${u.email}">email</td>
-									<td><span class="role-badge" th:text="${u.role} ?: '—'">Role</span></td>
-									<td><span class="status-badge active"
-											th:if="${u.status == 'active' or u.status == null}">Active</span><span
-											class="status-badge inactive"
-											th:unless="${u.status == 'active' or u.status == null}">Inactive</span></td>
-								</tr>
-								<tr th:if="${reportUsers == null or #lists.isEmpty(reportUsers)}">
-									<td colspan="5">
-										<div class="empty-state"><i data-lucide="file-bar-chart"
-												style="width:40px;height:40px;opacity:.3;"></i>
-											<h3>No data</h3>
-										</div>
-									</td>
-								</tr>
-							</tbody>
-						</table>
-					</div>
-				</div>
-				<div class="right-col">
-					<div class="card">
-						<div class="card-header">
-							<div>
-								<h2>Role Breakdown</h2>
-							</div>
-						</div>
-						<div class="summary-list">
-							<div class="summary-row"><span class="summary-label">Admins</span><span
-									class="summary-value" th:text="${roleAdmin} ?: '0'">0</span></div>
-							<div class="summary-row"><span class="summary-label">Employees</span><span
-									class="summary-value" th:text="${roleEmployee} ?: '0'">0</span></div>
-							<div class="summary-row"><span class="summary-label">Managers</span><span
-									class="summary-value" th:text="${roleManager} ?: '0'">0</span></div>
-							<div class="summary-row"><span class="summary-label">HR</span><span class="summary-value"
-									th:text="${roleHr} ?: '0'">0</span></div>
-						</div>
-					</div>
-				</div>
-			</div>
+
 		</div>
 	</div>
 	<script>

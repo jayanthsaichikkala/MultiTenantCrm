@@ -4,7 +4,8 @@
    ORIGINAL FUNCTIONALITY INTACT
 ============================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+* { font-family: 'Poppins', sans-serif !important; }
 
 /* ---------- CSS VARIABLES (VARIANT COLOR SCHEME) ---------- */
 :root {

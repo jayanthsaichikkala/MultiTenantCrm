@@ -71,8 +71,27 @@
 
 	function replaceDataset(chart, labels, values) {
 		if (!chart) return;
-		chart.data.labels = labels;
-		chart.data.datasets[0].data = values;
+		
+		if (!chart.$originalColors && chart.data.datasets && chart.data.datasets[0]) {
+			chart.$originalColors = chart.data.datasets[0].backgroundColor;
+		}
+		
+		var sum = values.reduce(function (sum, val) {
+			return sum + getNumber(val);
+		}, 0);
+		
+		if (sum === 0 && (chart.config.type === 'doughnut' || chart.config.type === 'pie')) {
+			chart.data.labels = ['No Data'];
+			chart.data.datasets[0].data = [1];
+			chart.data.datasets[0].backgroundColor = ['#edf3f6'];
+		} else {
+			chart.data.labels = labels;
+			chart.data.datasets[0].data = values;
+			if (chart.$originalColors && chart.data.datasets && chart.data.datasets[0]) {
+				chart.data.datasets[0].backgroundColor = chart.$originalColors;
+			}
+		}
+		
 		chart.update('none');
 	}
 
@@ -126,6 +145,7 @@
 			responsive: true,
 			maintainAspectRatio: false,
 			cutout: '60%',
+			layout: { padding: { top: 20, bottom: 10, left: 10, right: 10 } },
 			plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: pctLabel } } }
 		}
 	});
@@ -145,6 +165,7 @@
 		options: {
 			responsive: true,
 			maintainAspectRatio: false,
+			layout: { padding: { top: 20, bottom: 10, left: 10, right: 10 } },
 			plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: pctLabel } } }
 		}
 	});
@@ -189,6 +210,7 @@
 		options: {
 			responsive: true,
 			maintainAspectRatio: false,
+			layout: { padding: { top: 20, bottom: 10, left: 10, right: 10 } },
 			plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: pctLabel } } }
 		}
 	});
@@ -209,6 +231,7 @@
 			responsive: true,
 			maintainAspectRatio: false,
 			cutout: '60%',
+			layout: { padding: { top: 20, bottom: 10, left: 10, right: 10 } },
 			plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: pctLabel } } }
 		}
 	});

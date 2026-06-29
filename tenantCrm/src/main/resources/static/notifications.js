@@ -769,6 +769,9 @@
                     if (window.lucide) {
                         lucide.createIcons();
                     }
+                    if (typeof initPaginators === 'function') {
+                        initPaginators();
+                    }
 
                     if (path.indexOf('/leaves') !== -1) {
                         if (typeof updateStats === 'function') updateStats();
@@ -908,6 +911,286 @@
         }, 3000);
     }
 
+    function setupResponsiveHeader() {
+        var mobileTopbar = document.querySelector('.mobile-topbar');
+        if (!mobileTopbar) return;
+
+        var mobileRight = document.getElementById('mobileTopbarRight');
+        if (!mobileRight) {
+            mobileRight = document.createElement('div');
+            mobileRight.id = 'mobileTopbarRight';
+            mobileRight.className = 'mobile-topbar-right';
+            mobileTopbar.appendChild(mobileRight);
+        }
+
+        var topbarRight = document.querySelector('.topbar-right');
+        if (!topbarRight) return;
+
+        // Create or find a wrapper for actions in desktop topbar-right to keep things neat
+        var desktopActions = document.getElementById('desktopTopbarActions');
+        if (!desktopActions) {
+            desktopActions = document.createElement('div');
+            desktopActions.id = 'desktopTopbarActions';
+            desktopActions.style.display = 'flex';
+            desktopActions.style.alignItems = 'center';
+            desktopActions.style.gap = '14px';
+            
+            // Find user badge and notification wrap to move into desktopActions
+            var badge = topbarRight.querySelector('.user-badge');
+            var notif = document.getElementById('crmNotifWrap');
+            
+            if (badge) desktopActions.appendChild(badge);
+            topbarRight.appendChild(desktopActions);
+            if (notif) desktopActions.insertBefore(notif, badge);
+        }
+
+        function relocate() {
+            var isMobile = window.innerWidth <= 768;
+            var badge = document.querySelector('.user-badge');
+            var notif = document.getElementById('crmNotifWrap');
+            
+            if (isMobile) {
+                if (notif && notif.parentNode !== mobileRight) {
+                    mobileRight.appendChild(notif);
+                }
+                if (badge && badge.parentNode !== mobileRight) {
+                    mobileRight.appendChild(badge);
+                }
+            } else {
+                if (notif && notif.parentNode !== desktopActions) {
+                    if (badge) {
+                        desktopActions.insertBefore(notif, badge);
+                    } else {
+                        desktopActions.appendChild(notif);
+                    }
+                }
+                if (badge && badge.parentNode !== desktopActions) {
+                    desktopActions.appendChild(badge);
+                }
+            }
+        }
+
+        relocate();
+        window.addEventListener('resize', relocate);
+    }
+
+    function setupClientPagination(container, itemSelector, pageSize) {
+        if (!container) return;
+        
+        var items = Array.prototype.slice.call(container.querySelectorAll(itemSelector));
+        // Filter out empty states or tables with only one cell of "no records"
+        items = items.filter(function(item) {
+            return !item.classList.contains('empty-state') && 
+                   !item.querySelector('td[colspan]') &&
+                   item.textContent.trim().toLowerCase().indexOf('no pending') === -1 &&
+                   item.textContent.trim().toLowerCase().indexOf('no meetings') === -1 &&
+                   item.textContent.trim().toLowerCase().indexOf('no records') === -1 &&
+                   item.textContent.trim().toLowerCase().indexOf('no attendance') === -1;
+        });
+
+        if (items.length <= pageSize) return; // No pagination needed
+
+        // Clean up old pagination bar of the parent
+        var targetParent = container;
+        if (container.tagName.toUpperCase() === 'TBODY') {
+            var table = container.parentNode;
+            if (table && table.tagName.toUpperCase() === 'TABLE') {
+                var tableWrap = table.parentNode;
+                if (tableWrap && tableWrap.classList.contains('table-wrap')) {
+                    targetParent = tableWrap;
+                } else {
+                    targetParent = table;
+                }
+            }
+        }
+        var next = targetParent.nextSibling;
+        while (next) {
+            var curr = next;
+            next = next.nextSibling;
+            if (curr.nodeType === 1 && curr.classList.contains('pagination-bar')) {
+                curr.remove();
+            }
+        }
+
+        var currentPage = 1;
+
+        // Create pagination bar
+        var pagBar = document.createElement('div');
+        pagBar.className = 'pagination-bar';
+        pagBar.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-top: 1px solid #edf3f6; font-size: 13px; color: #6b7280; margin-top: 15px; flex-wrap: wrap; gap: 10px;';
+
+        var info = document.createElement('div');
+        info.className = 'pagination-info';
+        info.style.fontWeight = '500';
+        pagBar.appendChild(info);
+
+        var buttons = document.createElement('div');
+        buttons.className = 'pagination-buttons';
+        buttons.style.cssText = 'display: flex; gap: 6px; align-items: center; margin-left: auto;';
+
+        var prevBtn = document.createElement('button');
+        prevBtn.type = 'button';
+        prevBtn.className = 'btn-pagination-nav';
+        prevBtn.innerHTML = '❮';
+        prevBtn.style.cssText = 'width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid rgba(23,69,94,0.15); background: white; color: #17455e; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.2s;';
+        prevBtn.addEventListener('click', function() {
+            if (currentPage > 1) {
+                currentPage--;
+                update();
+            }
+        });
+        buttons.appendChild(prevBtn);
+
+        var pageNumbers = document.createElement('div');
+        pageNumbers.style.cssText = 'display:flex;gap:4px;';
+        buttons.appendChild(pageNumbers);
+
+        var nextBtn = document.createElement('button');
+        nextBtn.type = 'button';
+        nextBtn.className = 'btn-pagination-nav';
+        nextBtn.innerHTML = '❯';
+        nextBtn.style.cssText = 'width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid rgba(23,69,94,0.15); background: white; color: #17455e; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.2s;';
+        nextBtn.addEventListener('click', function() {
+            var activeItems = getActiveItems();
+            var totalPages = Math.ceil(activeItems.length / pageSize) || 1;
+            if (currentPage < totalPages) {
+                currentPage++;
+                update();
+            }
+        });
+        buttons.appendChild(nextBtn);
+
+        pagBar.appendChild(buttons);
+
+        // Insert pagBar after container (or if it is table, after its wrapper)
+        if (targetParent && targetParent.parentNode) {
+            if (targetParent.nextSibling) {
+                targetParent.parentNode.insertBefore(pagBar, targetParent.nextSibling);
+            } else {
+                targetParent.parentNode.appendChild(pagBar);
+            }
+        }
+
+        function getActiveItems() {
+            return items.filter(function(item) {
+                var isFilterHidden = (item.style.display === 'none' && !item.classList.contains('pag-hidden'));
+                return !isFilterHidden;
+            });
+        }
+
+        function update() {
+            var activeItems = getActiveItems();
+            var totalItems = activeItems.length;
+            var totalPages = Math.ceil(totalItems / pageSize) || 1;
+
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+
+            var startIndex = (currentPage - 1) * pageSize;
+            var endIndex = Math.min(startIndex + pageSize, totalItems);
+
+            items.forEach(function(item) {
+                item.style.display = 'none';
+                item.classList.add('pag-hidden');
+            });
+
+            activeItems.forEach(function(item, idx) {
+                if (idx >= startIndex && idx < endIndex) {
+                    item.style.display = '';
+                    item.classList.remove('pag-hidden');
+                }
+            });
+
+            info.textContent = 'Showing ' + (totalItems > 0 ? (startIndex + 1) : 0) + ' to ' + endIndex + ' of ' + totalItems + ' entries';
+
+            prevBtn.disabled = (currentPage === 1);
+            prevBtn.style.opacity = (currentPage === 1) ? '0.5' : '1';
+            prevBtn.style.cursor = (currentPage === 1) ? 'not-allowed' : 'pointer';
+
+            nextBtn.disabled = (currentPage === totalPages);
+            nextBtn.style.opacity = (currentPage === totalPages) ? '0.5' : '1';
+            nextBtn.style.cursor = (currentPage === totalPages) ? 'not-allowed' : 'pointer';
+
+            pageNumbers.innerHTML = '';
+            var maxPageButtons = 5;
+            var startPage = Math.max(1, currentPage - Math.floor(maxPageButtons / 2));
+            var endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
+            if (endPage - startPage + 1 < maxPageButtons) {
+                startPage = Math.max(1, endPage - maxPageButtons + 1);
+            }
+
+            for (var i = startPage; i <= endPage; i++) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = i;
+                btn.style.cssText = 'width: 32px; height: 32px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; font-size: 13px;';
+                if (i === currentPage) {
+                    btn.style.background = '#17455e';
+                    btn.style.color = 'white';
+                    btn.style.cursor = 'default';
+                } else {
+                    btn.style.background = '#f3f7fa';
+                    btn.style.color = '#163647';
+                    btn.addEventListener('click', (function(p) {
+                        return function() {
+                            currentPage = p;
+                            update();
+                        };
+                    })(i));
+                }
+                pageNumbers.appendChild(btn);
+            }
+
+            pagBar.style.display = totalItems > 0 ? 'flex' : 'none';
+        }
+
+        update();
+
+        var observer = new MutationObserver(function(mutations) {
+            observer.disconnect();
+            update();
+            observe();
+        });
+
+        function observe() {
+            items.forEach(function(item) {
+                observer.observe(item, { attributes: true, attributeFilter: ['style'] });
+            });
+        }
+
+        observe();
+    }
+
+    function initPaginators() {
+        var targets = [
+            { container: '#attTable tbody', item: 'tr', size: 5 },
+            { container: '#meetingsTable tbody', item: 'tr', size: 5 },
+            { container: '#historyTable tbody', item: 'tr', size: 3 },
+            { container: '#pastMeetingsTable tbody', item: 'tr', size: 3 },
+            { container: '#perfTable tbody', item: 'tr', size: 5 },
+            { container: '.table-wrap table tbody', item: 'tr', size: 5 },
+            { container: '.teamTable tbody', item: 'tr', size: 5 },
+            { container: '.team-grid', item: '.team-card', size: 5 },
+            { container: '#reportsTable tbody', item: 'tr', size: 5 },
+            { container: '.reports-grid', item: '.report-card', size: 5 },
+            { container: '#lhList', item: '.leave-item', size: 5 },
+            { container: '#lhList', item: '.lh-item', size: 5 },
+            { container: '#taskTable tbody', item: 'tr', size: 5 },
+            { container: '#usersTable tbody', item: 'tr', size: 5 },
+            { container: '#adminsTable tbody', item: 'tr', size: 5 }
+        ];
+
+        targets.forEach(function(t) {
+            var containers = document.querySelectorAll(t.container);
+            containers.forEach(function(container) {
+                if (container && !container.dataset.paginated) {
+                    container.dataset.paginated = 'true';
+                    setupClientPagination(container, t.item, t.size);
+                }
+            });
+        });
+    }
+
     function init(attempt) {
         if (!isAppPage()) return;
 
@@ -919,6 +1202,8 @@
         }
 
         ensureUi();
+        setupResponsiveHeader();
+        initPaginators();
 
         // Fetch initial list of notifications
         fetchNotifications(function () {

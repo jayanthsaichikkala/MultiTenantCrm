@@ -1,3 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+* { font-family: 'Poppins', sans-serif !important; }
+
 /* Shared notification bell styles for all dashboards */
 .notif-wrap { position: relative; flex-shrink: 0; }
 .notif-btn {
@@ -477,3 +480,116 @@
 .crm-confirm-ok:active {
     transform: scale(0.97);
 }
+
+/* Custom styles for mobile topbar integration */
+.mobile-topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.mobile-topbar-right .user-badge {
+    background: white !important;
+    color: #17455e !important;
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 13px !important;
+    box-shadow: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 50% !important;
+}
+.mobile-topbar-right .notif-btn {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border: none !important;
+    color: white !important;
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer;
+    position: relative;
+    box-shadow: none !important;
+}
+.mobile-topbar-right .notif-btn i[data-lucide] {
+    width: 18px !important;
+    height: 18px !important;
+    color: white !important;
+    stroke: white !important;
+}
+.mobile-topbar-right .notif-badge {
+    position: absolute !important;
+    top: -2px !important;
+    right: -2px !important;
+    min-width: 14px !important;
+    height: 14px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    background: #e11d48 !important;
+    color: white !important;
+    font-size: 8px !important;
+    font-weight: 700 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 1.5px solid #17455e !important;
+}
+
+/* Custom responsive grid layout for attendance filter forms on mobile */
+@media (max-width: 768px) {
+    .card-header form.att-filter-form {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 12px !important;
+        width: 100% !important;
+        flex-direction: row !important;
+        align-items: stretch !important;
+    }
+    
+    .card-header form.att-filter-form > div {
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 4px !important;
+    }
+    
+    .card-header form.att-filter-form > div label {
+        flex-shrink: 0 !important;
+        min-width: 0 !important;
+        font-size: 11px !important;
+        color: #9ab3bd !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.04em !important;
+        margin-bottom: 2px !important;
+    }
+    
+    .card-header form.att-filter-form > div input[type="date"] {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        height: 36px !important;
+    }
+
+    .card-header form.att-filter-form select {
+        grid-column: span 2 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .card-header form.att-filter-form button {
+        grid-column: span 1 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .card-header form.att-filter-form a {
+        grid-column: span 1 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        justify-content: center !important;
+    }
+}
+
