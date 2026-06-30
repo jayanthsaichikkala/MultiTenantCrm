@@ -50,4 +50,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
 	@Query("SELECT u FROM User u WHERE u.email LIKE %:tenantSegment% AND UPPER(u.role) = 'EMPLOYEE' ORDER BY u.id DESC")
 	List<User> findEmployeesByTenant(@Param("tenantSegment") String tenantSegment);
+
+	// ===================================
+	// EMPLOYEES & MANAGERS BY TENANT
+	// ===================================
+
+	@Query("SELECT u FROM User u WHERE u.email LIKE %:tenantSegment% AND (UPPER(u.role) = 'EMPLOYEE' OR UPPER(u.role) = 'MANAGER') ORDER BY u.id DESC")
+	List<User> findEmployeesAndManagersByTenant(@Param("tenantSegment") String tenantSegment);
 }

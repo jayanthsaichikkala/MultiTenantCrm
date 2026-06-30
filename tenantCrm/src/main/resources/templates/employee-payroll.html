@@ -40,6 +40,10 @@
         </div>
     </div>
     <div class="page-content">
+        <!-- Flash messages -->
+        <div class="toast success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="toast error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
         <!-- If no payroll is assigned -->
         <div th:if="${payroll == null}" class="card" style="text-align: center; padding: 60px 20px;">
             <div style="background: #f1f5f9; width: 64px; height: 64px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px; color: #64748b;">
@@ -86,47 +90,83 @@
                             <span style="color: #64748b;">Other Allowance</span>
                             <span style="font-weight: 600; color: #0f172a;" th:text="'$' + ${payroll.otherAllowance}">$0.00</span>
                         </div>
-                        <div style="display: flex; justify-content: space-between; font-size: 14px; border-top: 1px dashed #cbd5e1; padding-top: 10px; margin-top: 4px; font-weight: 700;">
+                        <div style="display: flex; justify-content: space-between; font-size: 14px; border-top: 1px dashed #cbd5e1; padding-top: 10px; margin-top: 10px; font-weight: 700;">
                             <span style="color: #0f172a;">Gross Salary</span>
                             <span style="color: #0f172a;" th:text="'$' + ${payroll.getGrossSalary()}">$0.00</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Deductions -->
-                <div style="background: #fff8f8; border-radius: 16px; padding: 20px; border: 1px solid #fee2e2;">
-                    <h3 style="font-size: 16px; font-weight: 700; color: #991b1b; border-bottom: 1px solid #fee2e2; padding-bottom: 10px; margin-bottom: 14px;">Deductions</h3>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <div style="display: flex; justify-content: space-between; font-size: 14px;">
-                            <span style="color: #991b1b; opacity: 0.8;">Tax Deduction</span>
-                            <span style="font-weight: 600; color: #991b1b;" th:text="'$' + ${payroll.taxDeduction}">$0.00</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; font-size: 14px;">
-                            <span style="color: #991b1b; opacity: 0.8;">PF Contribution</span>
-                            <span style="font-weight: 600; color: #991b1b;" th:text="'$' + ${payroll.pfDeduction}">$0.00</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; font-size: 14px;">
-                            <span style="color: #991b1b; opacity: 0.8;">Other Deduction</span>
-                            <span style="font-weight: 600; color: #991b1b;" th:text="'$' + ${payroll.otherDeduction}">$0.00</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; font-size: 14px; border-top: 1px dashed #fecaca; padding-top: 10px; margin-top: 14px; font-weight: 700;">
-                            <span style="color: #991b1b;">Total Deductions</span>
-                            <span style="color: #991b1b;" th:text="'$' + ${payroll.getTotalDeductions()}">$0.00</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+				<!-- Deductions -->
+				<div style="background: #fff8f8; border-radius: 16px; padding: 20px; border: 1px solid #fee2e2;">
+					<h3 style="font-size: 16px; font-weight: 700; color: #991b1b; border-bottom: 1px solid #fee2e2; padding-bottom: 10px; margin-bottom: 14px;">Deductions</h3>
+					<div style="display: flex; flex-direction: column; gap: 10px;">
+						<div style="display: flex; justify-content: space-between; font-size: 14px;">
+							<span style="color: #991b1b; opacity: 0.8;">Tax Deduction</span>
+							<span style="font-weight: 600; color: #991b1b;" th:text="'$' + ${payroll.taxDeduction}">$0.00</span>
+						</div>
+						<div style="display: flex; justify-content: space-between; font-size: 14px;">
+							<span style="color: #991b1b; opacity: 0.8;">PF Contribution</span>
+							<span style="font-weight: 600; color: #991b1b;" th:text="'$' + ${payroll.pfDeduction}">$0.00</span>
+						</div>
+						<div style="display: flex; justify-content: space-between; font-size: 14px;">
+							<span style="color: #991b1b; opacity: 0.8;">Other Deduction</span>
+							<span style="font-weight: 600; color: #991b1b;" th:text="'$' + ${payroll.otherDeduction}">$0.00</span>
+						</div>
+						<div style="display: flex; justify-content: space-between; font-size: 14px;">
+							<span style="color: #991b1b; opacity: 0.8;">Leave Deduction (Est)</span>
+							<span style="font-weight: 700; color: #991b1b;" th:text="'$' + ${payrollLeaveDeduction}">$0.00</span>
+						</div>
+						<div style="display: flex; justify-content: space-between; font-size: 14px; border-top: 1px dashed #fecaca; padding-top: 10px; margin-top: 10px; font-weight: 700;">
+							<span style="color: #991b1b;">Total Deductions</span>
+							<span style="color: #991b1b;" th:text="'$' + (${payroll.getTotalDeductions().add(payrollLeaveDeduction)})">$0.00</span>
+						</div>
+					</div>
+				</div>
+			</div>
 
-            <!-- Net Salary Summary Banner -->
-            <div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); border-radius: 16px; padding: 24px; color: white; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
-                <div>
-                    <p style="font-size: 13px; opacity: 0.8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Net Take-Home Salary</p>
-                    <h2 style="font-size: 32px; font-weight: 800; margin: 0;" th:text="'$' + ${payroll.getNetSalary()}">$0.00</h2>
-                </div>
-                <div style="text-align: right;">
-                    <p style="font-size: 13px; opacity: 0.8; margin-bottom: 4px;">Bank Account</p>
-                    <p style="font-size: 16px; font-weight: 600; margin: 0;" th:text="${payroll.bankAccount} ?: 'Not Specified'">Account Number</p>
-                </div>
+			<!-- Net Salary Summary Banner -->
+			<div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); border-radius: 16px; padding: 24px; color: white; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+				<div>
+					<p style="font-size: 13px; opacity: 0.8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Est. Take-Home (This Month)</p>
+					<h2 style="font-size: 32px; font-weight: 800; margin: 0;" th:text="'$' + ${payrollEstimatedNet}">$0.00</h2>
+				</div>
+				<div style="text-align: right;">
+					<p style="font-size: 13px; opacity: 0.8; margin-bottom: 4px;">Bank Account</p>
+					<p style="font-size: 16px; font-weight: 600; margin: 0;" th:text="${payroll.bankAccount} ?: 'Not Specified'">Account Number</p>
+				</div>
+			</div>
+		</div>
+
+        <!-- My Payslips History Card -->
+        <div th:if="${!#lists.isEmpty(myPayslips)}" class="card" style="max-width: 800px; margin: 20px auto 0; padding: 24px;">
+            <div style="border-bottom: 2px solid #f1f5f9; padding-bottom: 16px; margin-bottom: 16px;">
+                <h2 style="font-size: 18px; font-weight: 700; color: #1e293b; margin: 0;">My Payslips History</h2>
+                <p style="color: #64748b; font-size: 13px; margin: 4px 0 0;">View your past generated monthly payslips</p>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Period</th>
+                            <th>Gross Salary</th>
+                            <th>Standard Deductions</th>
+                            <th>Leave Deductions</th>
+                            <th>Net Take-Home</th>
+                            <th>Bank Account</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="p : ${myPayslips}">
+                            <td style="font-weight: 600; color: #0f172a;" th:text="${T(java.time.Month).of(p.paymentMonth).name()} + ' ' + ${p.paymentYear}">Period</td>
+                            <td th:text="'$' + ${p.grossSalary}">$0.00</td>
+                            <td style="color: #991b1b;" th:text="'$' + (${p.taxDeduction.add(p.pfDeduction).add(p.otherDeduction)})">$0.00</td>
+                            <td style="color: #991b1b; font-weight: 600;" th:text="'$' + ${p.leaveDeduction}">$0.00</td>
+                            <td style="font-weight: 700; color: #10b981;" th:text="'$' + ${p.netSalary}">$0.00</td>
+                            <td th:text="${p.bankAccount} ?: '—'">—</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -138,6 +178,16 @@
         if (hamburger) hamburger.addEventListener('click', openSidebar);
         if (overlay) overlay.addEventListener('click', closeSidebar);
         lucide.createIcons();
+
+		// Auto-dismiss toasts in a few seconds (3 seconds)
+		document.querySelectorAll('.toast').forEach(function (t) {
+			setTimeout(function () {
+				t.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+				t.style.opacity = '0';
+				t.style.transform = 'translateY(-20px)';
+				setTimeout(function() { t.remove(); }, 500);
+			}, 3000);
+		});
     </script>
 	<script th:src="@{/auth.js}"></script>
 	<script th:src="@{/notifications.js}"></script>

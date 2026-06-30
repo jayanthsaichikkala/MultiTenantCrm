@@ -29,6 +29,11 @@ public class User {
     @Column(name = "employee_limit", nullable = false, columnDefinition = "int default 10")
     private Integer employeeLimit = 10;
 
+    private String domain;
+
+    @Column(name = "joining_date")
+    private java.time.LocalDate joiningDate;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -49,6 +54,12 @@ public class User {
 
     public Integer getEmployeeLimit() { return employeeLimit != null ? employeeLimit : 10; }
     public void setEmployeeLimit(Integer employeeLimit) { this.employeeLimit = employeeLimit; }
+
+    public String getDomain() { return domain; }
+    public void setDomain(String domain) { this.domain = domain; }
+
+    public java.time.LocalDate getJoiningDate() { return joiningDate; }
+    public void setJoiningDate(java.time.LocalDate joiningDate) { this.joiningDate = joiningDate; }
 
     public boolean isActive() { return "active".equalsIgnoreCase(getStatus()); }
 	

@@ -66,6 +66,9 @@ import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
 import com.crm.demo.model.PayrollTemplate;
 import com.crm.demo.repository.PayrollTemplateRepository;
+import com.crm.demo.model.Payslip;
+import com.crm.demo.repository.PayslipRepository;
+import com.crm.demo.service.PayslipService;
 import com.crm.demo.service.NotificationService;
 import com.crm.demo.service.ProfileUpdateService;
 import com.crm.demo.service.AttendanceService;
@@ -130,6 +133,12 @@ public class ManagerController {
 
 	@Autowired
 	private PayrollTemplateRepository payrollTemplateRepository;
+
+	@Autowired
+	private PayslipRepository payslipRepository;
+
+	@Autowired
+	private PayslipService payslipService;
 	// =========================
 	private void injectStats(Model model) {
 
@@ -2075,6 +2084,38 @@ public class ManagerController {
 		List<PayrollTemplate> payrolls = payrollTemplateRepository.findByEmployeesAndTenant(teamMembers, tenant);
 		model.addAttribute("payrolls", payrolls);
 		model.addAttribute("teamMembers", teamMembers);
+
+		java.util.Optional<PayrollTemplate> myPayrollOpt = payrollTemplateRepository.findByEmployeeAndTenantSegment(manager, tenant);
+		if (myPayrollOpt.isPresent()) {
+			PayrollTemplate myPayroll = myPayrollOpt.get();
+			model.addAttribute("myPayroll", myPayroll);
+			
+			// Calculate real-time estimated leave deductions for the current month
+			int currentMonth = java.time.LocalDate.now().getMonthValue();
+			int currentYear = java.time.LocalDate.now().getYear();
+			java.math.BigDecimal leaveDeduction = payslipService.calculateLeaveDeduction(manager, myPayroll.getBasicSalary(), currentMonth, currentYear);
+			java.math.BigDecimal estimatedNet = myPayroll.getNetSalary().subtract(leaveDeduction);
+			if (estimatedNet.compareTo(java.math.BigDecimal.ZERO) < 0) {
+				estimatedNet = java.math.BigDecimal.ZERO;
+			}
+			model.addAttribute("myPayrollLeaveDeduction", leaveDeduction);
+			model.addAttribute("myPayrollEstimatedNet", estimatedNet);
+		} else {
+			model.addAttribute("myPayroll", null);
+		}
+
+		// Personal Generated Payslips
+		List<Payslip> myPayslips = payslipRepository.findByEmployeeOrderByIdDesc(manager);
+		model.addAttribute("myPayslips", myPayslips);
+
+		// Team Generated Payslips
+		List<Payslip> teamPayslips = new java.util.ArrayList<>();
+		for (User member : teamMembers) {
+			teamPayslips.addAll(payslipRepository.findByEmployeeOrderByIdDesc(member));
+		}
+		teamPayslips.sort((p1, p2) -> p2.getId().compareTo(p1.getId()));
+		model.addAttribute("teamPayslips", teamPayslips);
+
 		model.addAttribute("activePage", "payroll");
 		return "manager-payroll";
 	}

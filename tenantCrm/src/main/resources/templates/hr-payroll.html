@@ -129,6 +129,7 @@
 			<li><a th:href="@{/hr/reports}"><i data-lucide="file-bar-chart"></i> Reports</a></li>
 			<li class="active"><a th:href="@{/hr/payroll}"><i data-lucide="banknote"></i> Payroll</a></li>
 			<li><a th:href="@{/hr/profile}"><i data-lucide="user"></i> Profile</a></li>
+			<li><a th:href="@{/hr/settings}"><i data-lucide="settings"></i> Settings</a></li>
 		</ul>
 		<a href="#" data-logout style="text-decoration:none;"><button class="logout-btn"><i data-lucide="log-out"></i> Logout</button></a>
 	</div>
@@ -140,8 +141,12 @@
 			</div>
 		</div>
 		<div class="page-content">
+			<!-- Flash messages -->
+			<div class="toast success" th:if="${successMessage}" th:text="${successMessage}"></div>
+			<div class="toast error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
 			<!-- Status Row -->
-			<div class="stats-row" style="grid-template-columns: repeat(2, 1fr);">
+			<div class="stats-row" style="grid-template-columns: repeat(3, 1fr); gap: 16px;">
 				<div class="stat-card">
 					<div class="stat-icon purple"><i data-lucide="banknote"></i></div>
 					<div class="stat-info">
@@ -155,6 +160,22 @@
 						<h3 th:text="'$' + ${totalNetSalary} ?: '$0.00'">$0.00</h3>
 						<p>Monthly Net Salary Spend</p>
 					</div>
+				</div>
+				<div class="stat-card" style="display: flex; flex-direction: column; gap: 8px; justify-content: center; height: 100%;">
+					<div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #163647; font-size: 14px;">
+						<i data-lucide="file-text" style="color: #17455e; width: 18px; height: 18px;"></i> Generate Payslips
+					</div>
+					<form th:action="@{/hr/payroll/generate-payslips}" method="post" style="display: flex; gap: 8px; align-items: center; width: 100%;">
+						<select name="month" required style="flex: 1.2; height: 36px; border: 1.5px solid #e5edf2; border-radius: 8px; padding: 0 8px; font-size: 13px; outline: none; background: #f3f8fb; color: #163647; font-family: inherit;">
+							<option value="">Month</option>
+							<option th:each="m : ${#numbers.sequence(1, 12)}" th:value="${m}" th:text="${T(java.time.Month).of(m).name()}"></option>
+						</select>
+						<select name="year" required style="flex: 1; height: 36px; border: 1.5px solid #e5edf2; border-radius: 8px; padding: 0 8px; font-size: 13px; outline: none; background: #f3f8fb; color: #163647; font-family: inherit;">
+							<option value="">Year</option>
+							<option th:each="y : ${#numbers.sequence(2025, 2030)}" th:value="${y}" th:text="${y}"></option>
+						</select>
+						<button type="submit" style="background: #17455e; color: white; border: none; height: 36px; padding: 0 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px; font-family: inherit;">Generate</button>
+					</form>
 				</div>
 			</div>
 
@@ -218,6 +239,76 @@
 											</button>
 										</form>
 									</div>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<!-- Payslips history card -->
+			<div class="card" style="margin-top: 22px;">
+				<div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+					<div>
+						<h2>Generated Payslips History</h2>
+						<p>View all automatically and manually generated payslips for employees and managers</p>
+					</div>
+					<!-- Search and Filter Controls -->
+					<div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+						<div style="position: relative; width: 220px;">
+							<i data-lucide="search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: #94a3b8;"></i>
+							<input type="text" id="payslipSearchInput" placeholder="Search employee..." style="width: 100%; height: 36px; padding: 0 12px 0 32px; border: 1.5px solid #e5edf2; border-radius: 8px; font-size: 13px; outline: none; font-family: inherit; color: #163647;">
+						</div>
+						<div style="width: 130px;">
+							<select id="payslipMonthFilter" style="width: 100%; height: 36px; border: 1.5px solid #e5edf2; border-radius: 8px; padding: 0 8px; font-size: 13px; outline: none; font-family: inherit; color: #163647; background: white;">
+								<option value="">All Months</option>
+								<option th:each="m : ${#numbers.sequence(1, 12)}" th:value="${m}" th:text="${T(java.time.Month).of(m).name()}"></option>
+							</select>
+						</div>
+					</div>
+				</div>
+				
+				<!-- Empty state -->
+				<div th:if="${#lists.isEmpty(payslips)}" class="empty-state" style="padding: 40px; text-align: center;">
+					<i data-lucide="file-text" style="width: 48px; height: 48px; opacity: .3; margin-bottom: 16px;"></i>
+					<h3>No Payslips Found</h3>
+					<p>Generate payslips using the form above to view them here.</p>
+				</div>
+
+				<!-- Payslips Table -->
+				<div th:if="${!#lists.isEmpty(payslips)}" class="table-wrap">
+					<table>
+						<thead>
+							<tr>
+								<th>Employee/Manager</th>
+								<th>Designation & Dept</th>
+								<th>Period</th>
+								<th>Gross Salary</th>
+								<th>Standard Deductions</th>
+								<th>Leave Deductions</th>
+								<th>Net Salary</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr th:each="p : ${payslips}" class="payslip-row" th:data-month="${p.paymentMonth}">
+								<td>
+									<div style="font-weight: 600; color: #163647;" th:text="${p.employee.username}">Name</div>
+									<div style="font-size: 12px; color: #6b7280;" th:text="${p.employee.email}">Email</div>
+								</td>
+								<td>
+									<div th:text="${p.designation} ?: '—'">Designation</div>
+									<div style="font-size: 12px; color: #6b7280;" th:text="${p.department} ?: '—'">Department</div>
+								</td>
+								<td th:text="${T(java.time.Month).of(p.paymentMonth).name()} + ' ' + ${p.paymentYear}">Period</td>
+								<td style="font-weight: 600; color: #163647;" th:text="'$' + ${p.grossSalary}">$0.00</td>
+								<td style="font-weight: 600; color: #d11a2a;" th:text="'$' + (${p.taxDeduction.add(p.pfDeduction).add(p.otherDeduction)})">$0.00</td>
+								<td style="font-weight: 600; color: #d11a2a;" th:text="'$' + ${p.leaveDeduction}">$0.00</td>
+								<td style="font-weight: 700; color: #1b7a46;" th:text="'$' + ${p.netSalary}">$0.00</td>
+								<td>
+									<button class="btn-sm primary" th:onclick="'openPayslipModal(' + ${p.id} + ')'" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; color: white; background: #17455e; font-size: 12px;">
+										<i data-lucide="eye" style="width: 14px; height: 14px;"></i> View
+									</button>
 								</td>
 							</tr>
 						</tbody>
@@ -368,6 +459,54 @@
 		</div>
 	</div>
 
+	<!-- ── Payslip View Modal ── -->
+	<div class="modal-overlay" id="payslipModal">
+		<div class="modal" style="width: 600px; max-width: 90vw;">
+			<h3 style="font-size: 18px; font-weight: 700; color: #163647; margin-bottom: 18px;">Monthly Payslip Details</h3>
+			<div style="border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 16px;">
+				<h4 id="psEmployeeName" style="margin: 0; font-size: 16px; color: #163647;">Employee Name</h4>
+				<p id="psEmployeeEmail" style="margin: 2px 0 0; font-size: 12px; color: #6b7280;">Email</p>
+				<p style="margin: 4px 0 0; font-size: 13px; color: #4b6a7a;"><span id="psDesignation">Designation</span> &bull; <span id="psDepartment">Department</span></p>
+			</div>
+			
+			<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+				<!-- Earnings -->
+				<div style="background: #f8fafc; border-radius: 12px; padding: 12px; border: 1px solid #e2e8f0; font-size: 13px;">
+					<h5 style="margin: 0 0 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; font-weight: 700; color: #163647;">Earnings</h5>
+					<div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="color: #64748b;">Basic:</span><span id="psBasic" style="font-weight: 600; color: #163647;">$0.00</span></div>
+					<div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="color: #64748b;">HRA:</span><span id="psHra" style="font-weight: 600; color: #163647;">$0.00</span></div>
+					<div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="color: #64748b;">Transport:</span><span id="psTransport" style="font-weight: 600; color: #163647;">$0.00</span></div>
+					<div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="color: #64748b;">Other:</span><span id="psOther" style="font-weight: 600; color: #163647;">$0.00</span></div>
+					<div style="display: flex; justify-content: space-between; border-top: 1px dashed #cbd5e1; padding-top: 4px; font-weight: 700; color: #163647;"><span>Gross:</span><span id="psGross">$0.00</span></div>
+				</div>
+				<!-- Deductions -->
+				<div style="background: #fff8f8; border-radius: 12px; padding: 12px; border: 1px solid #fee2e2; font-size: 13px; color: #991b1b;">
+					<h5 style="margin: 0 0 8px; border-bottom: 1px solid #fee2e2; padding-bottom: 4px; font-weight: 700;">Deductions</h5>
+					<div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="color: #c93b3b;">Tax:</span><span id="psTax" style="font-weight: 600;">$0.00</span></div>
+					<div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="color: #c93b3b;">PF:</span><span id="psPf" style="font-weight: 600;">$0.00</span></div>
+					<div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="color: #c93b3b;">Other:</span><span id="psOtherD" style="font-weight: 600;">$0.00</span></div>
+					<div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="color: #991b1b; font-weight: 600;">Leave Ded:</span><span id="psLeaveD" style="font-weight: 700; color: #991b1b;">$0.00</span></div>
+					<div style="display: flex; justify-content: space-between; border-top: 1px dashed #fecaca; padding-top: 4px; font-weight: 700; color: #991b1b;"><span>Total Ded:</span><span id="psTotalD">$0.00</span></div>
+				</div>
+			</div>
+			
+			<div style="background: linear-gradient(135deg, #17455e, #2a617d); border-radius: 12px; padding: 16px; color: white; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 13px;">
+				<div>
+					<p style="margin: 0; opacity: 0.8; font-size: 11px;">Net Take-Home Salary</p>
+					<h4 id="psNet" style="margin: 0; font-size: 20px; font-weight: 800;">$0.00</h4>
+				</div>
+				<div style="text-align: right;">
+					<p style="margin: 0; opacity: 0.8; font-size: 11px;">Account & Period</p>
+					<p id="psBankAndPeriod" style="margin: 0; font-weight: 600;">—</p>
+				</div>
+			</div>
+			
+			<div class="modal-actions" style="margin-top: 12px;">
+				<button type="button" class="btn-cancel" onclick="closePayslipModal()" style="width: 100%; border-radius: 10px; height: 38px; cursor: pointer; font-family: inherit;">Close</button>
+			</div>
+		</div>
+	</div>
+
 	<script>
 		var hamburger = document.getElementById('hamburgerBtn'), sidebar = document.getElementById('sidebar'), overlay = document.getElementById('sidebarOverlay');
 		function openSidebar() {sidebar.classList.add('open'); overlay.classList.add('active'); document.body.style.overflow = 'hidden';}
@@ -412,9 +551,78 @@
 		}
 		function closeEditModal() { document.getElementById('editModal').classList.remove('open'); }
 
+		function openPayslipModal(id) {
+			if (typeof crmFetch !== 'function') return;
+			crmFetch('/hr/payroll/payslip/' + id)
+				.then(function(res) { return res.json(); })
+				.then(function(data) {
+					document.getElementById('psEmployeeName').textContent = data.employeeName;
+					document.getElementById('psEmployeeEmail').textContent = data.employeeEmail;
+					document.getElementById('psDesignation').textContent = data.designation || '—';
+					document.getElementById('psDepartment').textContent = data.department || '—';
+					document.getElementById('psBasic').textContent = '$' + (data.basicSalary || 0);
+					document.getElementById('psHra').textContent = '$' + (data.hra || 0);
+					document.getElementById('psTransport').textContent = '$' + (data.transportAllowance || 0);
+					document.getElementById('psOther').textContent = '$' + (data.otherAllowance || 0);
+					document.getElementById('psTax').textContent = '$' + (data.taxDeduction || 0);
+					document.getElementById('psPf').textContent = '$' + (data.pfDeduction || 0);
+					document.getElementById('psOtherD').textContent = '$' + (data.otherDeduction || 0);
+					document.getElementById('psLeaveD').textContent = '$' + (data.leaveDeduction || 0);
+					
+					var totalD = (data.taxDeduction || 0) + (data.pfDeduction || 0) + (data.otherDeduction || 0) + (data.leaveDeduction || 0);
+					document.getElementById('psGross').textContent = '$' + (data.grossSalary || 0);
+					document.getElementById('psTotalD').textContent = '$' + totalD.toFixed(2);
+					document.getElementById('psNet').textContent = '$' + (data.netSalary || 0);
+					document.getElementById('psBankAndPeriod').textContent = (data.bankAccount || 'Not Specified') + ' (' + data.period + ')';
+					
+					document.getElementById('payslipModal').classList.add('open');
+				})
+				.catch(function(err) {
+					alert('Connection error loading payslip details.');
+				});
+		}
+		function closePayslipModal() { document.getElementById('payslipModal').classList.remove('open'); }
+
 		// Close modal on click overlay target
 		document.querySelectorAll('.modal-overlay').forEach(function (el) {
 			el.addEventListener('click', function (e) { if (e.target === el) el.classList.remove('open'); });
+		});
+
+		// Client-side search and filter for Generated Payslips
+		var searchInput = document.getElementById('payslipSearchInput');
+		var monthFilter = document.getElementById('payslipMonthFilter');
+		function filterPayslips() {
+			var query = searchInput.value.toLowerCase().trim();
+			var selectedMonth = monthFilter.value;
+			var rows = document.querySelectorAll('.payslip-row');
+			rows.forEach(function(row) {
+				var nameAndEmail = row.cells[0] ? row.cells[0].textContent.toLowerCase() : '';
+				var designationAndDept = row.cells[1] ? row.cells[1].textContent.toLowerCase() : '';
+				var month = row.getAttribute('data-month') || '';
+				var matchesSearch = query === '' 
+					|| nameAndEmail.indexOf(query) !== -1 
+					|| designationAndDept.indexOf(query) !== -1;
+				var matchesMonth = selectedMonth === '' || month === selectedMonth;
+				if (matchesSearch && matchesMonth) {
+					row.style.display = '';
+				} else {
+					row.style.display = 'none';
+				}
+			});
+		}
+		if (searchInput && monthFilter) {
+			searchInput.addEventListener('input', filterPayslips);
+			monthFilter.addEventListener('change', filterPayslips);
+		}
+
+		// Auto-dismiss toasts in a few seconds (3 seconds)
+		document.querySelectorAll('.toast').forEach(function (t) {
+			setTimeout(function () {
+				t.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+				t.style.opacity = '0';
+				t.style.transform = 'translateY(-20px)';
+				setTimeout(function() { t.remove(); }, 500);
+			}, 3000);
 		});
 	</script>
 	<script th:src="@{/auth.js}"></script>

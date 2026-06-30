@@ -49,6 +49,9 @@ import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
 import com.crm.demo.model.PayrollTemplate;
 import com.crm.demo.repository.PayrollTemplateRepository;
+import com.crm.demo.model.Payslip;
+import com.crm.demo.repository.PayslipRepository;
+import com.crm.demo.service.PayslipService;
 import com.crm.demo.service.NotificationService;
 import com.crm.demo.service.ProfileUpdateService;
 import com.crm.demo.service.AttendanceService;
@@ -90,6 +93,8 @@ public class EmployeeController {
     @Autowired private NotificationService   notificationService;
     @Autowired private AttendanceService     attendanceService;
     @Autowired private PayrollTemplateRepository payrollTemplateRepository;
+    @Autowired private PayslipRepository payslipRepository;
+    @Autowired private PayslipService payslipService;
 
     // ── helpers ───────────────────────────────────────────────────────────
 
@@ -966,7 +971,28 @@ public class EmployeeController {
         injectStats(model);
         String tenant = getTenantSegment(emp);
         Optional<PayrollTemplate> ptOpt = payrollTemplateRepository.findByEmployeeAndTenantSegment(emp, tenant);
-        model.addAttribute("payroll", ptOpt.orElse(null));
+        if (ptOpt.isPresent()) {
+            PayrollTemplate pt = ptOpt.get();
+            model.addAttribute("payroll", pt);
+            
+            // Calculate real-time estimated leave deductions for the current month
+            int currentMonth = java.time.LocalDate.now().getMonthValue();
+            int currentYear = java.time.LocalDate.now().getYear();
+            java.math.BigDecimal leaveDeduction = payslipService.calculateLeaveDeduction(emp, pt.getBasicSalary(), currentMonth, currentYear);
+            java.math.BigDecimal estimatedNet = pt.getNetSalary().subtract(leaveDeduction);
+            if (estimatedNet.compareTo(java.math.BigDecimal.ZERO) < 0) {
+                estimatedNet = java.math.BigDecimal.ZERO;
+            }
+            model.addAttribute("payrollLeaveDeduction", leaveDeduction);
+            model.addAttribute("payrollEstimatedNet", estimatedNet);
+        } else {
+            model.addAttribute("payroll", null);
+        }
+
+        // Fetch personal generated payslips
+        List<Payslip> myPayslips = payslipRepository.findByEmployeeOrderByIdDesc(emp);
+        model.addAttribute("myPayslips", myPayslips);
+
         model.addAttribute("activePage", "payroll");
         return "employee-payroll";
     }

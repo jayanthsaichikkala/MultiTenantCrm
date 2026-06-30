@@ -62,6 +62,9 @@ import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
 import com.crm.demo.model.PayrollTemplate;
 import com.crm.demo.repository.PayrollTemplateRepository;
+import com.crm.demo.model.Payslip;
+import com.crm.demo.repository.PayslipRepository;
+import com.crm.demo.service.PayslipService;
 import com.crm.demo.service.NotificationService;
 import com.crm.demo.service.ProfileUpdateService;
 import com.crm.demo.service.AttendanceService;
@@ -91,6 +94,9 @@ public class HrController {
     @Autowired private NotificationService   notificationService;
 
     @Autowired private PayrollTemplateRepository payrollTemplateRepository;
+    @Autowired private PayslipRepository payslipRepository;
+    @Autowired private PayslipService payslipService;
+    @Autowired private com.crm.demo.repository.DomainCategoryRepository domainCategoryRepository;
 
     // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -367,6 +373,8 @@ public class HrController {
     @GetMapping("/add-user")
     public String addUserPage(HttpServletRequest request, Model model) {
         injectUser(request, model);
+        String tenant = getTenantSegment(request);
+        model.addAttribute("domainCategories", domainCategoryRepository.findByTenantSegment(tenant));
         return "hr-add-user";
     }
 
@@ -376,6 +384,8 @@ public class HrController {
                           @RequestParam String password,
                           @RequestParam String confirmPassword,
                           @RequestParam String role,
+                          @RequestParam(required = false) String domain,
+                          @RequestParam(required = false) String joiningDate,
                           HttpServletRequest request,
                           RedirectAttributes ra) {
         if (username == null || username.trim().isBlank()) {
@@ -448,6 +458,20 @@ public class HrController {
         user.setPassword(passwordEncoder.encode(password));
         user.setRole(role.toUpperCase());
         user.setStatus("active");
+        
+        if (domain != null && !domain.trim().isEmpty()) {
+            user.setDomain(domain.trim());
+        }
+        if (joiningDate != null && !joiningDate.trim().isEmpty()) {
+            try {
+                user.setJoiningDate(java.time.LocalDate.parse(joiningDate.trim()));
+            } catch (Exception e) {
+                user.setJoiningDate(java.time.LocalDate.now());
+            }
+        } else {
+            user.setJoiningDate(java.time.LocalDate.now());
+        }
+
         userRepository.save(user);
         notificationService.notifyEmployeeManagementChanged(getTenantSegment(request), "added", username.trim());
         ra.addFlashAttribute("successMessage", "User '" + username.trim() + "' added successfully.");
@@ -1609,12 +1633,16 @@ public class HrController {
                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
         model.addAttribute("totalNetSalary", totalNet);
         // For the create/edit modal — list of employees without a template yet
-        List<User> tenantEmployees = userRepository.findEmployeesByTenant(tenant);
+        List<User> tenantEmployees = userRepository.findEmployeesAndManagersByTenant(tenant);
         List<Long> existingIds = payrolls.stream()
                 .map(p -> p.getEmployee().getId()).toList();
         List<User> unassigned = tenantEmployees.stream()
                 .filter(u -> !existingIds.contains(u.getId())).toList();
         model.addAttribute("unassignedEmployees", unassigned);
+
+        List<Payslip> payslips = payslipRepository.findByTenantSegmentOrderByIdDesc(tenant);
+        model.addAttribute("payslips", payslips);
+
         model.addAttribute("activePage", "payroll");
         return "hr-payroll";
     }
@@ -1753,5 +1781,107 @@ public class HrController {
         result.put("paymentMonth", pt.getPaymentMonth());
         result.put("paymentYear", pt.getPaymentYear());
         return result;
+    }
+
+    @PostMapping("/payroll/generate-payslips")
+    public String manualGeneratePayslips(HttpServletRequest request,
+                                         @RequestParam Integer month,
+                                         @RequestParam Integer year,
+                                         RedirectAttributes ra) {
+        String tenant = getTenantSegment(request);
+        if (month == null || month < 1 || month > 12 || year == null) {
+            ra.addFlashAttribute("errorMessage", "Invalid month or year.");
+            return "redirect:/hr/payroll";
+        }
+
+        // Payslips can only be generated on or after the 2nd day of the next month
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate earliestAllowedDate = java.time.LocalDate.of(year, month, 1).plusMonths(1).withDayOfMonth(2);
+        if (today.isBefore(earliestAllowedDate)) {
+            ra.addFlashAttribute("errorMessage", "Payslips for " + java.time.Month.of(month).name() + " " + year + 
+                " can only be generated on or after the 2nd day of the next month (" + 
+                earliestAllowedDate.format(java.time.format.DateTimeFormatter.ofPattern("MMMM d, yyyy")) + ").");
+            return "redirect:/hr/payroll";
+        }
+
+        int generated = payslipService.generatePayslipsForTenant(tenant, month, year);
+        if (generated == 0) {
+            ra.addFlashAttribute("errorMessage", "No payslips were generated. They may already exist, or there are no active templates.");
+        } else {
+            ra.addFlashAttribute("successMessage", "Successfully generated " + generated + " payslip(s) for " + java.time.Month.of(month).name() + " " + year + ".");
+        }
+        return "redirect:/hr/payroll";
+    }
+
+    @GetMapping("/payroll/payslip/{id}")
+    @ResponseBody
+    public ResponseEntity<?> getPayslipData(@PathVariable Long id, HttpServletRequest request) {
+        String tenant = getTenantSegment(request);
+        Optional<Payslip> opt = payslipRepository.findById(id);
+        if (opt.isEmpty() || !tenant.equals(opt.get().getTenantSegment())) {
+            return ResponseEntity.notFound().build();
+        }
+        Payslip p = opt.get();
+        java.util.Map<String, Object> data = new java.util.LinkedHashMap<>();
+        data.put("id", p.getId());
+        data.put("employeeName", p.getEmployee().getUsername());
+        data.put("employeeEmail", p.getEmployee().getEmail());
+        data.put("designation", p.getDesignation() != null ? p.getDesignation() : "");
+        data.put("department", p.getDepartment() != null ? p.getDepartment() : "");
+        data.put("basicSalary", p.getBasicSalary());
+        data.put("hra", p.getHra());
+        data.put("transportAllowance", p.getTransportAllowance());
+        data.put("otherAllowance", p.getOtherAllowance());
+        data.put("taxDeduction", p.getTaxDeduction());
+        data.put("pfDeduction", p.getPfDeduction());
+        data.put("otherDeduction", p.getOtherDeduction());
+        data.put("leaveDeduction", p.getLeaveDeduction());
+        data.put("grossSalary", p.getGrossSalary());
+        data.put("netSalary", p.getNetSalary());
+        data.put("bankAccount", p.getBankAccount() != null ? p.getBankAccount() : "");
+        data.put("period", java.time.Month.of(p.getPaymentMonth()).name() + " " + p.getPaymentYear());
+        return ResponseEntity.ok(data);
+    }
+
+    @GetMapping("/settings")
+    public String settingsPage(HttpServletRequest request, Model model) {
+        injectUser(request, model);
+        String tenant = getTenantSegment(request);
+        model.addAttribute("categories", domainCategoryRepository.findByTenantSegment(tenant));
+        model.addAttribute("activePage", "settings");
+        return "hr-settings";
+    }
+
+    @PostMapping("/settings/domain-categories")
+    public String addDomainCategory(@RequestParam String name, HttpServletRequest request, RedirectAttributes ra) {
+        String tenant = getTenantSegment(request);
+        if (name == null || name.trim().isEmpty()) {
+            ra.addFlashAttribute("errorMessage", "Domain category name is required.");
+            return "redirect:/hr/settings";
+        }
+        String cleanName = name.trim();
+        if (domainCategoryRepository.existsByNameAndTenantSegment(cleanName, tenant)) {
+            ra.addFlashAttribute("errorMessage", "Domain category already exists.");
+            return "redirect:/hr/settings";
+        }
+        com.crm.demo.model.DomainCategory cat = new com.crm.demo.model.DomainCategory();
+        cat.setName(cleanName);
+        cat.setTenantSegment(tenant);
+        domainCategoryRepository.save(cat);
+        ra.addFlashAttribute("successMessage", "Domain category '" + cleanName + "' added successfully.");
+        return "redirect:/hr/settings";
+    }
+
+    @PostMapping("/settings/domain-categories/delete/{id}")
+    public String deleteDomainCategory(@PathVariable Long id, HttpServletRequest request, RedirectAttributes ra) {
+        String tenant = getTenantSegment(request);
+        Optional<com.crm.demo.model.DomainCategory> catOpt = domainCategoryRepository.findById(id);
+        if (catOpt.isPresent() && tenant.equals(catOpt.get().getTenantSegment())) {
+            domainCategoryRepository.delete(catOpt.get());
+            ra.addFlashAttribute("successMessage", "Domain category deleted successfully.");
+        } else {
+            ra.addFlashAttribute("errorMessage", "Domain category not found.");
+        }
+        return "redirect:/hr/settings";
     }
 }

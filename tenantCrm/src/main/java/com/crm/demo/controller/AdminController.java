@@ -96,6 +96,9 @@ public class AdminController {
 	@Autowired
 	private TeamRepository teamRepository;
 
+	@Autowired
+	private com.crm.demo.repository.DomainCategoryRepository domainCategoryRepository;
+
 	// =========================================================
 	// COMMON USER DETAILS
 	// =========================================================
@@ -387,6 +390,12 @@ public class AdminController {
 	@GetMapping("/add-employee")
 	public String addEmployeePage(HttpServletRequest request, Model model) {
 		injectUser(request, model);
+		String adminUser = (String) request.getAttribute("loggedInUser");
+		if (adminUser == null) {
+			adminUser = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+		}
+		String tenant = getTenantSegment(adminUser);
+		model.addAttribute("domainCategories", domainCategoryRepository.findByTenantSegment(tenant));
 		return "admin-add-employee";
 	}
 
@@ -405,6 +414,8 @@ public class AdminController {
 	                      @RequestParam String password,
 	                      @RequestParam String confirmPassword,
 	                      @RequestParam String role,
+	                      @RequestParam(required = false) String domain,
+	                      @RequestParam(required = false) String joiningDate,
 	                      HttpServletRequest request,
 	                      RedirectAttributes ra) {
 
@@ -479,6 +490,20 @@ public class AdminController {
 		user.setPassword(passwordEncoder.encode(password));
 		user.setRole(role.toUpperCase());
 		user.setStatus("active");
+
+		if (domain != null && !domain.trim().isEmpty()) {
+			user.setDomain(domain.trim());
+		}
+		if (joiningDate != null && !joiningDate.trim().isEmpty()) {
+			try {
+				user.setJoiningDate(java.time.LocalDate.parse(joiningDate.trim()));
+			} catch (Exception e) {
+				user.setJoiningDate(java.time.LocalDate.now());
+			}
+		} else {
+			user.setJoiningDate(java.time.LocalDate.now());
+		}
+
 		userRepository.save(user);
 
 		notificationService.notifyEmployeeManagementChanged(tenant, "added", username.trim());
@@ -1120,5 +1145,59 @@ public class AdminController {
 			ra.addFlashAttribute("successMessage", "Meeting deleted successfully.");
 		}
 		return "redirect:/admin/schedule-meeting";
+	}
+
+	@GetMapping("/settings")
+	public String settingsPage(HttpServletRequest request, Model model) {
+		injectUser(request, model);
+		String adminUser = (String) request.getAttribute("loggedInUser");
+		if (adminUser == null) {
+			adminUser = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+		}
+		String tenant = getTenantSegment(adminUser);
+		model.addAttribute("categories", domainCategoryRepository.findByTenantSegment(tenant));
+		model.addAttribute("activePage", "settings");
+		return "admin-settings";
+	}
+
+	@PostMapping("/settings/domain-categories")
+	public String addDomainCategory(@RequestParam String name, HttpServletRequest request, RedirectAttributes ra) {
+		String adminUser = (String) request.getAttribute("loggedInUser");
+		if (adminUser == null) {
+			adminUser = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+		}
+		String tenant = getTenantSegment(adminUser);
+		if (name == null || name.trim().isEmpty()) {
+			ra.addFlashAttribute("errorMessage", "Domain category name is required.");
+			return "redirect:/admin/settings";
+		}
+		String cleanName = name.trim();
+		if (domainCategoryRepository.existsByNameAndTenantSegment(cleanName, tenant)) {
+			ra.addFlashAttribute("errorMessage", "Domain category already exists.");
+			return "redirect:/admin/settings";
+		}
+		com.crm.demo.model.DomainCategory cat = new com.crm.demo.model.DomainCategory();
+		cat.setName(cleanName);
+		cat.setTenantSegment(tenant);
+		domainCategoryRepository.save(cat);
+		ra.addFlashAttribute("successMessage", "Domain category '" + cleanName + "' added successfully.");
+		return "redirect:/admin/settings";
+	}
+
+	@PostMapping("/settings/domain-categories/delete/{id}")
+	public String deleteDomainCategory(@PathVariable Long id, HttpServletRequest request, RedirectAttributes ra) {
+		String adminUser = (String) request.getAttribute("loggedInUser");
+		if (adminUser == null) {
+			adminUser = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+		}
+		String tenant = getTenantSegment(adminUser);
+		java.util.Optional<com.crm.demo.model.DomainCategory> catOpt = domainCategoryRepository.findById(id);
+		if (catOpt.isPresent() && tenant.equals(catOpt.get().getTenantSegment())) {
+			domainCategoryRepository.delete(catOpt.get());
+			ra.addFlashAttribute("successMessage", "Domain category deleted successfully.");
+		} else {
+			ra.addFlashAttribute("errorMessage", "Domain category not found.");
+		}
+		return "redirect:/admin/settings";
 	}
 }
