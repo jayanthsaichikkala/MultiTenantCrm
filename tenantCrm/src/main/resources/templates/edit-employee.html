@@ -8,6 +8,25 @@
 	<link rel="stylesheet" th:href="@{/notifications.css}">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <style>
+        .select-wrap {
+            position: relative;
+        }
+        .select-wrap .select-input {
+            appearance: none;
+            -webkit-appearance: none;
+            padding-right: 40px;
+            width: 100%;
+        }
+        .select-wrap .select-arrow {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: #9ca3af;
+            display: flex;
+            align-items: center;
+        }
 @media (max-width: 768px) {
     .topbar { flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 16px; }
     .topbar > div { flex-wrap: wrap; gap: 8px; }
@@ -124,13 +143,42 @@
                         </div>
                         <div class="form-group">
                             <label>Role</label>
-                            <div class="input-wrap">
+                            <div class="input-wrap select-wrap">
                                 <select name="role" class="select-input" required>
                                     <option value="">Select Role</option>
                                     <option value="HR" th:selected="${employee.role == 'HR'}">HR</option>
                                     <option value="MANAGER" th:selected="${employee.role == 'MANAGER'}">Manager</option>
                                     <option value="EMPLOYEE" th:selected="${employee.role == 'EMPLOYEE'}">Employee</option>
                                 </select>
+                                <span class="select-arrow">
+                                    <i data-lucide="chevron-down" style="width:16px;height:16px;"></i>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Domain</label>
+                            <div class="input-wrap select-wrap">
+                                <select name="domain" class="select-input" required>
+                                    <option value="">Select Domain</option>
+                                    <option th:each="cat : ${domainCategories}" th:value="${cat.name}" th:text="${cat.name}" th:selected="${employee.domain == cat.name}"></option>
+                                    <th:block th:if="${#lists.isEmpty(domainCategories)}">
+                                        <option value="Engineering" th:selected="${employee.domain == 'Engineering'}">Engineering</option>
+                                        <option value="Sales" th:selected="${employee.domain == 'Sales'}">Sales</option>
+                                        <option value="Marketing" th:selected="${employee.domain == 'Marketing'}">Marketing</option>
+                                        <option value="HR" th:selected="${employee.domain == 'HR'}">HR</option>
+                                        <option value="Finance" th:selected="${employee.domain == 'Finance'}">Finance</option>
+                                        <option value="Operations" th:selected="${employee.domain == 'Operations'}">Operations</option>
+                                    </th:block>
+                                </select>
+                                <span class="select-arrow">
+                                    <i data-lucide="chevron-down" style="width:16px;height:16px;"></i>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Joining Date</label>
+                            <div class="input-wrap">
+                                <input type="date" name="joiningDate" th:value="${employee.joiningDate}" required>
                             </div>
                         </div>
                         <div class="form-group">

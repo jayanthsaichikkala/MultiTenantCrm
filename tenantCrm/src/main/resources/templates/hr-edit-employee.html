@@ -250,14 +250,38 @@
 									<select name="role" class="select-input" required>
 										<option value="">Select Role</option>
 										<option value="HR" th:selected="${employee.role == 'HR'}">HR</option>
-										<option value="MANAGER" th:selected="${employee.role == 'MANAGER'}">Manager
-										</option>
-										<option value="EMPLOYEE" th:selected="${employee.role == 'EMPLOYEE'}">Employee
-										</option>
+										<option value="MANAGER" th:selected="${employee.role == 'MANAGER'}">Manager</option>
+										<option value="EMPLOYEE" th:selected="${employee.role == 'EMPLOYEE'}">Employee</option>
 									</select>
 									<span class="select-arrow">
 										<i data-lucide="chevron-down" style="width:16px;height:16px;"></i>
 									</span>
+								</div>
+							</div>
+							<div class="form-group">
+								<label>Domain</label>
+								<div class="input-wrap select-wrap">
+									<select name="domain" class="select-input" required>
+										<option value="">Select Domain</option>
+										<option th:each="cat : ${domainCategories}" th:value="${cat.name}" th:text="${cat.name}" th:selected="${employee.domain == cat.name}"></option>
+										<th:block th:if="${#lists.isEmpty(domainCategories)}">
+											<option value="Engineering" th:selected="${employee.domain == 'Engineering'}">Engineering</option>
+											<option value="Sales" th:selected="${employee.domain == 'Sales'}">Sales</option>
+											<option value="Marketing" th:selected="${employee.domain == 'Marketing'}">Marketing</option>
+											<option value="HR" th:selected="${employee.domain == 'HR'}">HR</option>
+											<option value="Finance" th:selected="${employee.domain == 'Finance'}">Finance</option>
+											<option value="Operations" th:selected="${employee.domain == 'Operations'}">Operations</option>
+										</th:block>
+									</select>
+									<span class="select-arrow">
+										<i data-lucide="chevron-down" style="width:16px;height:16px;"></i>
+									</span>
+								</div>
+							</div>
+							<div class="form-group">
+								<label>Joining Date</label>
+								<div class="input-wrap">
+									<input type="date" name="joiningDate" th:value="${employee.joiningDate}" required>
 								</div>
 							</div>
 							<div class="form-group">

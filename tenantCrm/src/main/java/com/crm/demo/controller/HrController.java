@@ -689,6 +689,8 @@ public class HrController {
         if (emp == null || !isNonAdminRole(emp.getRole())) {
             return "redirect:/hr/employees";
         }
+        String tenant = getTenantSegment(request);
+        model.addAttribute("domainCategories", domainCategoryRepository.findByTenantSegment(tenant));
         model.addAttribute("employee", emp);
         return "hr-edit-employee";
     }
@@ -700,6 +702,8 @@ public class HrController {
                                  @RequestParam String role,
                                  @RequestParam(required = false) String password,
                                  @RequestParam(required = false) String confirmPassword,
+                                 @RequestParam(required = false) String domain,
+                                 @RequestParam(required = false) String joiningDate,
                                  HttpServletRequest request,
                                  RedirectAttributes ra) {
         User emp = userRepository.findById(id).orElse(null);
@@ -770,6 +774,16 @@ public class HrController {
         }
 
         emp.setRole(role.toUpperCase());
+        if (domain != null && !domain.trim().isEmpty()) {
+            emp.setDomain(domain.trim());
+        }
+        if (joiningDate != null && !joiningDate.trim().isEmpty()) {
+            try {
+                emp.setJoiningDate(java.time.LocalDate.parse(joiningDate.trim()));
+            } catch (Exception e) {
+                // Keep existing
+            }
+        }
         userRepository.save(emp);
         notificationService.notifyEmployeeManagementChanged(getTenantSegment(request), "updated", emp.getUsername());
         ra.addFlashAttribute("successMessage", "'" + emp.getUsername() + "' updated successfully.");

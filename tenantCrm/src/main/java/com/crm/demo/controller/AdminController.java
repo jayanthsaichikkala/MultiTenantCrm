@@ -715,6 +715,9 @@ public class AdminController {
 			ra.addFlashAttribute("errorMessage", "User not found or cannot be edited.");
 			return "redirect:/admin/employees";
 		}
+		String adminName = SecurityContextHolder.getContext().getAuthentication().getName();
+		String tenant = getTenantSegment(adminName);
+		model.addAttribute("domainCategories", domainCategoryRepository.findByTenantSegment(tenant));
 		model.addAttribute("employee", emp);
 		return "edit-employee";
 	}
@@ -726,6 +729,8 @@ public class AdminController {
 	                             @RequestParam String role,
 	                             @RequestParam(required = false) String password,
 	                             @RequestParam(required = false) String confirmPassword,
+	                             @RequestParam(required = false) String domain,
+	                             @RequestParam(required = false) String joiningDate,
 	                             HttpServletRequest request,
 	                             RedirectAttributes ra) {
 		User emp = userRepository.findById(id).orElse(null);
@@ -795,6 +800,16 @@ public class AdminController {
 			emp.setPassword(passwordEncoder.encode(password));
 		}
 		emp.setRole(role.toUpperCase());
+		if (domain != null && !domain.trim().isEmpty()) {
+			emp.setDomain(domain.trim());
+		}
+		if (joiningDate != null && !joiningDate.trim().isEmpty()) {
+			try {
+				emp.setJoiningDate(java.time.LocalDate.parse(joiningDate.trim()));
+			} catch (Exception e) {
+				// Keep existing
+			}
+		}
 		userRepository.save(emp);
 
 		notificationService.notifyEmployeeManagementChanged(tenant, "updated", emp.getUsername());
