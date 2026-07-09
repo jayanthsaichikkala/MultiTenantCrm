@@ -4,11 +4,16 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.crm.demo.model.User;
 import com.crm.demo.repository.UserRepository;
 
 @Component
 public class UserSeed implements CommandLineRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(UserSeed.class);
 
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
@@ -21,7 +26,7 @@ public class UserSeed implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
 
-        User user = userRepository.findByUsername("superadmin");
+        var user = userRepository.findByUsername("superadmin");
 
         // IF USER NOT EXISTS, create a new one
         if (user == null) {
@@ -30,7 +35,7 @@ public class UserSeed implements CommandLineRunner {
 
         // Only re-hash if the stored password is NOT already a BCrypt hash.
         // This prevents double-hashing on every restart.
-        String rawPassword = "superadmin123";
+        var rawPassword = "superadmin123";
         if (user.getPassword() == null || !user.getPassword().startsWith("$2")) {
             user.setPassword(passwordEncoder.encode(rawPassword));
         }
@@ -41,6 +46,6 @@ public class UserSeed implements CommandLineRunner {
 
         userRepository.save(user);
 
-        System.out.println("Super Admin Created/Updated (password BCrypt-hashed)");
+        log.info("Super Admin Created/Updated (password BCrypt-hashed)");
     }
 }

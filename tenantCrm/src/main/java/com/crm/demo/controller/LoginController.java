@@ -21,7 +21,15 @@ import com.crm.demo.security.SessionManager;
 @Controller
 public class LoginController {
 
-	
+    private static final String ROLE_SUPER_ADMIN = "SUPER_ADMIN";
+    private static final String ROLE_ADMIN = "ADMIN";
+    private static final String ROLE_MANAGER = "MANAGER";
+    private static final String ROLE_EMPLOYEE = "EMPLOYEE";
+    private static final String ROLE_HR = "HR";
+    private static final String ATTR_ERROR = "error";
+    private static final String REDIRECT_PREFIX = "redirect:";
+    private static final String REDIRECT_LOGIN = "redirect:/login";
+
     @Autowired private UserRepository      userRepository;
     @Autowired private BCryptPasswordEncoder passwordEncoder;
     @Autowired private JwtUtil             jwtUtil;
@@ -37,41 +45,31 @@ public class LoginController {
     // Called by the login form via fetch() — returns JSON, no redirect
     @PostMapping("/api/auth/login")
     @ResponseBody
-    public ResponseEntity<?> authenticate(@RequestBody Map<String, String> body) {
+    public ResponseEntity<Map<String, Object>> authenticate(@RequestBody Map<String, String> body) {
 
-        String username = body.get("username");
-        String password = body.get("password");
-        boolean force = Boolean.parseBoolean(body.get("force"));
+        var username = body.get("username");
+        var password = body.get("password");
+        var force = Boolean.parseBoolean(body.get("force"));
 
         if (username == null || username.trim().isEmpty() || password == null || password.isEmpty()) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Username and password are required."));
+                    .body(Map.of(ATTR_ERROR, "Username and password are required."));
         }
 
-        User user = userRepository.findByUsernameOrEmail(username, username).orElse(null);
+        var user = userRepository.findByUsernameOrEmail(username, username).orElse(null);
 
         if (user != null && passwordEncoder.matches(password, user.getPassword())) {
 
             // Block inactive users from logging in
             if (!user.isActive()) {
                 return ResponseEntity.status(403)
-                        .body(Map.of("error", "Your account is inactive. Please contact your administrator."));
+                        .body(Map.of(ATTR_ERROR, "Your account is inactive. Please contact your administrator."));
             }
 
             // Block employees/managers/HR if their tenant's admin is inactive
-            String role = user.getRole();
-            if (role != null && !role.equalsIgnoreCase("SUPER_ADMIN") && !role.equalsIgnoreCase("ADMIN")) {
-                String tenantSegment = extractTenantSegment(user.getEmail());
-                if (tenantSegment != null && !tenantSegment.isBlank()) {
-                    boolean adminInactive = userRepository.findAll().stream()
-                            .filter(u -> "ADMIN".equalsIgnoreCase(u.getRole()))
-                            .filter(u -> tenantSegment.equals(extractTenantSegment(u.getEmail())))
-                            .anyMatch(u -> !u.isActive());
-                    if (adminInactive) {
-                        return ResponseEntity.status(403)
-                                .body(Map.of("error", "Access is currently disabled. Please contact your administrator."));
-                    }
-                }
+            if (isTenantAdminInactive(user)) {
+                return ResponseEntity.status(403)
+                        .body(Map.of(ATTR_ERROR, "Access is currently disabled. Please contact your administrator."));
             }
 
             // Check if user is already logged in
@@ -79,7 +77,7 @@ public class LoginController {
                 return ResponseEntity.status(409)
                         .body(Map.of(
                             "alreadyLoggedIn", true,
-                            "error", "Your account is already active on another device. Do you want to continue and sign out from the previous session?"
+                            ATTR_ERROR, "Your account is already active on another device. Do you want to continue and sign out from the previous session?"
                         ));
             }
 
@@ -87,7 +85,7 @@ public class LoginController {
                 sessionManager.invalidateSession(user.getUsername());
             }
 
-            String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
+            var token = jwtUtil.generateToken(user.getUsername(), user.getRole());
 
             // Register the active session
             sessionManager.registerSession(user.getUsername(), token);
@@ -101,18 +99,18 @@ public class LoginController {
         }
 
         return ResponseEntity.status(401)
-                .body(Map.of("error", "Invalid username or password."));
+                .body(Map.of(ATTR_ERROR, "Invalid username or password."));
     }
 
     // ─── REST Logout: clear server-side session ──────────────────────────────────
     @PostMapping("/api/auth/logout")
     @ResponseBody
-    public ResponseEntity<?> apiLogout(HttpServletRequest request) {
-        String authHeader = request.getHeader("Authorization");
+    public ResponseEntity<Void> apiLogout(HttpServletRequest request) {
+        var authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
+            var token = authHeader.substring(7);
             if (jwtUtil.isValid(token)) {
-                String username = jwtUtil.extractUsername(token);
+                var username = jwtUtil.extractUsername(token);
                 sessionManager.invalidateSession(username);
             }
         }
@@ -122,123 +120,137 @@ public class LoginController {
     // ─── Logout: clear server-side session and cookie ────────────────────────────
     @GetMapping("/logout")
     public String logout(HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response) {
-        org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated()) {
-            String username = auth.getName();
+            var username = auth.getName();
             sessionManager.invalidateSession(username);
         }
         
         // Clear cookie
-        jakarta.servlet.http.Cookie cookie = new jakarta.servlet.http.Cookie("jwt_token", "");
+        var cookie = new jakarta.servlet.http.Cookie("jwt_token", "");
         cookie.setPath("/");
         cookie.setMaxAge(0);
         response.addCookie(cookie);
         
-        return "redirect:/login";
+        return REDIRECT_LOGIN;
     }
 
     @GetMapping({"/dashboard", "/tasks", "/meetings", "/leaves", "/leave", "/teams", "/team", "/performance", "/reports", "/attendance", "/calendar"})
     public String handleLegacyRedirects(HttpServletRequest request) {
-        org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) {
-            return "redirect:/login";
+            return REDIRECT_LOGIN;
         }
-        String username = auth.getName();
-        User user = userRepository.findByUsername(username);
+        var username = auth.getName();
+        var user = userRepository.findByUsername(username);
         if (user == null) {
-            return "redirect:/login";
+            return REDIRECT_LOGIN;
         }
 
-        String role = user.getRole() != null ? user.getRole().toUpperCase() : "";
-        String path = request.getRequestURI().toLowerCase();
+        var role = user.getRole() != null ? user.getRole().toUpperCase() : "";
+        var path = request.getRequestURI().toLowerCase();
 
         if (path.endsWith("/dashboard")) {
-            return "redirect:" + dashboardFor(role);
+            return REDIRECT_PREFIX + dashboardFor(role);
         } else if (path.endsWith("/tasks")) {
             return switch (role) {
-                case "EMPLOYEE" -> "redirect:/employee/tasks";
-                case "MANAGER" -> "redirect:/manager/tasks";
-                case "HR" -> "redirect:/hr/tasks";
-                case "ADMIN" -> "redirect:/admin/tasks";
-                default -> "redirect:" + dashboardFor(role);
+                case ROLE_EMPLOYEE -> "redirect:/employee/tasks";
+                case ROLE_MANAGER -> "redirect:/manager/tasks";
+                case ROLE_HR -> "redirect:/hr/tasks";
+                case ROLE_ADMIN -> "redirect:/admin/tasks";
+                default -> REDIRECT_PREFIX + dashboardFor(role);
             };
         } else if (path.endsWith("/meetings")) {
             return switch (role) {
-                case "EMPLOYEE" -> "redirect:/employee/meetings";
-                case "MANAGER" -> "redirect:/manager/meetings";
-                case "HR" -> "redirect:/hr/meetings";
-                case "ADMIN" -> "redirect:/admin/schedule-meeting";
-                default -> "redirect:" + dashboardFor(role);
+                case ROLE_EMPLOYEE -> "redirect:/employee/meetings";
+                case ROLE_MANAGER -> "redirect:/manager/meetings";
+                case ROLE_HR -> "redirect:/hr/meetings";
+                case ROLE_ADMIN -> "redirect:/admin/schedule-meeting";
+                default -> REDIRECT_PREFIX + dashboardFor(role);
             };
         } else if (path.endsWith("/leaves") || path.endsWith("/leave")) {
             return switch (role) {
-                case "EMPLOYEE" -> "redirect:/employee/leaves";
-                case "MANAGER" -> "redirect:/manager/leaves";
-                case "HR" -> "redirect:/hr/leaves";
-                default -> "redirect:" + dashboardFor(role);
+                case ROLE_EMPLOYEE -> "redirect:/employee/leaves";
+                case ROLE_MANAGER -> "redirect:/manager/leaves";
+                case ROLE_HR -> "redirect:/hr/leaves";
+                default -> REDIRECT_PREFIX + dashboardFor(role);
             };
         } else if (path.endsWith("/teams") || path.endsWith("/team")) {
             return switch (role) {
-                case "MANAGER" -> "redirect:/manager/team";
-                case "HR" -> "redirect:/hr/teams";
-                default -> "redirect:" + dashboardFor(role);
+                case ROLE_MANAGER -> "redirect:/manager/team";
+                case ROLE_HR -> "redirect:/hr/teams";
+                default -> REDIRECT_PREFIX + dashboardFor(role);
             };
         } else if (path.endsWith("/performance")) {
             return switch (role) {
-                case "EMPLOYEE" -> "redirect:/employee/performance";
-                case "MANAGER" -> "redirect:/manager/performance";
-                case "HR" -> "redirect:/hr/performance";
-                default -> "redirect:" + dashboardFor(role);
+                case ROLE_EMPLOYEE -> "redirect:/employee/performance";
+                case ROLE_MANAGER -> "redirect:/manager/performance";
+                case ROLE_HR -> "redirect:/hr/performance";
+                default -> REDIRECT_PREFIX + dashboardFor(role);
             };
         } else if (path.endsWith("/reports")) {
             return switch (role) {
-                case "EMPLOYEE" -> "redirect:/employee/reports";
-                case "MANAGER" -> "redirect:/manager/reports";
-                case "HR" -> "redirect:/hr/reports";
-                case "ADMIN" -> "redirect:/admin/reports";
-                default -> "redirect:" + dashboardFor(role);
+                case ROLE_EMPLOYEE -> "redirect:/employee/reports";
+                case ROLE_MANAGER -> "redirect:/manager/reports";
+                case ROLE_HR -> "redirect:/hr/reports";
+                case ROLE_ADMIN -> "redirect:/admin/reports";
+                default -> REDIRECT_PREFIX + dashboardFor(role);
             };
         } else if (path.endsWith("/attendance")) {
             return switch (role) {
-                case "EMPLOYEE" -> "redirect:/employee/attendance";
-                case "MANAGER" -> "redirect:/manager/attendance";
-                case "HR" -> "redirect:/hr/attendance";
-                default -> "redirect:" + dashboardFor(role);
+                case ROLE_EMPLOYEE -> "redirect:/employee/attendance";
+                case ROLE_MANAGER -> "redirect:/manager/attendance";
+                case ROLE_HR -> "redirect:/hr/attendance";
+                default -> REDIRECT_PREFIX + dashboardFor(role);
             };
         } else if (path.endsWith("/calendar")) {
             return switch (role) {
-                case "EMPLOYEE" -> "redirect:/employee/calendar";
-                case "MANAGER" -> "redirect:/manager/calendar";
-                case "HR" -> "redirect:/hr/calendar";
-                case "ADMIN" -> "redirect:/admin/calendar";
-                default -> "redirect:" + dashboardFor(role);
+                case ROLE_EMPLOYEE -> "redirect:/employee/calendar";
+                case ROLE_MANAGER -> "redirect:/manager/calendar";
+                case ROLE_HR -> "redirect:/hr/calendar";
+                case ROLE_ADMIN -> "redirect:/admin/calendar";
+                default -> REDIRECT_PREFIX + dashboardFor(role);
             };
         }
 
-        return "redirect:/login";
+        return REDIRECT_LOGIN;
     }
 
     // ─── Helper ───────────────────────────────────────────────────────────────────
     private String dashboardFor(String role) {
         if (role == null) return "/login";
         return switch (role.toUpperCase()) {
-            case "SUPER_ADMIN" -> "/superadmin";
-            case "ADMIN"       -> "/admin/dashboard";
-            case "MANAGER"     -> "/manager/dashboard";
-            case "HR"          -> "/hr/dashboard";
-            case "EMPLOYEE"    -> "/employee/dashboard";
+            case ROLE_SUPER_ADMIN -> "/superadmin";
+            case ROLE_ADMIN       -> "/admin/dashboard";
+            case ROLE_MANAGER     -> "/manager/dashboard";
+            case ROLE_HR          -> "/hr/dashboard";
+            case ROLE_EMPLOYEE    -> "/employee/dashboard";
             default            -> "/login";
         };
+    }
+
+    private boolean isTenantAdminInactive(User user) {
+        var role = user.getRole();
+        if (role != null && !role.equalsIgnoreCase(ROLE_SUPER_ADMIN) && !role.equalsIgnoreCase(ROLE_ADMIN)) {
+            var tenantSegment = extractTenantSegment(user.getEmail());
+            if (tenantSegment != null && !tenantSegment.isBlank()) {
+                return userRepository.findAll().stream()
+                        .filter(u -> ROLE_ADMIN.equalsIgnoreCase(u.getRole()))
+                        .filter(u -> tenantSegment.equals(extractTenantSegment(u.getEmail())))
+                        .anyMatch(u -> !u.isActive());
+            }
+        }
+        return false;
     }
 
     /** Extract tenant segment from email: "emp.tcs@crm.com" → "tcs" */
     private String extractTenantSegment(String email) {
         if (email == null || !email.contains("@")) return null;
-        String local = email.substring(0, email.indexOf('@'));
-        int dot = local.lastIndexOf('.');
+        var local = email.substring(0, email.indexOf('@'));
+        var dot = local.lastIndexOf('.');
         return dot >= 0 ? local.substring(dot + 1) : null;
     }
     
- 
+  
     }
 

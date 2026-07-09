@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,18 +25,38 @@ import com.crm.demo.service.NotificationService;
 @RequestMapping("/api/notifications")
 public class NotificationController {
 
+    private static final String KEY_ERROR = "error";
+    private static final String VAL_UNAUTHORIZED = "Unauthorized";
+    private static final String KEY_UNREAD_COUNT = "unreadCount";
+
     @Autowired private NotificationService notificationService;
     @Autowired private UserRepository userRepository;
 
+    public static class UnauthorizedException extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+    }
+
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<Map<String, String>> handleUnauthorized() {
+        return ResponseEntity.status(401).body(Map.of(KEY_ERROR, VAL_UNAUTHORIZED));
+    }
+
     private User getCurrentUser() {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        var username = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByUsername(username);
     }
 
+    private User getCurrentUserOrThrow() {
+        var user = getCurrentUser();
+        if (user == null) {
+            throw new UnauthorizedException();
+        }
+        return user;
+    }
+
     @GetMapping("/me")
-    public ResponseEntity<?> getMe() {
-        User user = getCurrentUser();
-        if (user == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+    public ResponseEntity<Map<String, Object>> getMe() {
+        var user = getCurrentUserOrThrow();
         return ResponseEntity.ok(Map.of(
                 "id", user.getId(),
                 "username", user.getUsername(),
@@ -44,67 +65,61 @@ public class NotificationController {
     }
 
     @GetMapping
-    public ResponseEntity<?> list() {
-        User user = getCurrentUser();
-        if (user == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+    public ResponseEntity<Map<String, Object>> list() {
+        var user = getCurrentUserOrThrow();
 
-        List<Map<String, Object>> items = notificationService.getRecentForUser(user.getId())
+        var items = notificationService.getRecentForUser(user.getId())
                 .stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(Map.of(
                 "notifications", items,
-                "unreadCount", notificationService.getUnreadCount(user.getId())
+                KEY_UNREAD_COUNT, notificationService.getUnreadCount(user.getId())
         ));
     }
 
     @GetMapping("/unread-count")
-    public ResponseEntity<?> unreadCount() {
-        User user = getCurrentUser();
-        if (user == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
-        return ResponseEntity.ok(Map.of("unreadCount", notificationService.getUnreadCount(user.getId())));
+    public ResponseEntity<Map<String, Object>> unreadCount() {
+        var user = getCurrentUserOrThrow();
+        return ResponseEntity.ok(Map.of(KEY_UNREAD_COUNT, notificationService.getUnreadCount(user.getId())));
     }
 
     @PostMapping("/{id}/read")
-    public ResponseEntity<?> markRead(@PathVariable Long id) {
-        User user = getCurrentUser();
-        if (user == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
-        boolean ok = notificationService.markAsRead(id, user.getId());
+    public ResponseEntity<Map<String, Object>> markRead(@PathVariable Long id) {
+        var user = getCurrentUserOrThrow();
+        var ok = notificationService.markAsRead(id, user.getId());
         if (!ok) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(Map.of("unreadCount", notificationService.getUnreadCount(user.getId())));
+        return ResponseEntity.ok(Map.of(KEY_UNREAD_COUNT, notificationService.getUnreadCount(user.getId())));
     }
 
     @PostMapping("/read-all")
-    public ResponseEntity<?> markAllRead() {
-        User user = getCurrentUser();
-        if (user == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+    public ResponseEntity<Map<String, Object>> markAllRead() {
+        var user = getCurrentUserOrThrow();
         notificationService.markAllAsRead(user.getId());
-        return ResponseEntity.ok(Map.of("unreadCount", 0));
+        return ResponseEntity.ok(Map.of(KEY_UNREAD_COUNT, 0L));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteOne(@PathVariable Long id) {
-        User user = getCurrentUser();
-        if (user == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
-        boolean ok = notificationService.deleteNotification(id, user.getId());
+    public ResponseEntity<Map<String, Object>> deleteOne(@PathVariable Long id) {
+        var user = getCurrentUserOrThrow();
+        var ok = notificationService.deleteNotification(id, user.getId());
         if (!ok) return ResponseEntity.notFound().build();
         return ResponseEntity.ok(Map.of(
-                "unreadCount", notificationService.getUnreadCount(user.getId()),
+                KEY_UNREAD_COUNT, notificationService.getUnreadCount(user.getId()),
                 "deleted", true
         ));
     }
 
     @DeleteMapping("/clear-all")
-    public ResponseEntity<?> deleteAll() {
-        User user = getCurrentUser();
-        if (user == null) return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+    public ResponseEntity<Map<String, Object>> deleteAll() {
+        var user = getCurrentUserOrThrow();
         notificationService.deleteAllForUser(user.getId());
-        return ResponseEntity.ok(Map.of("unreadCount", 0, "deleted", true));
+        return ResponseEntity.ok(Map.of(KEY_UNREAD_COUNT, 0L, "deleted", true));
     }
 
     private Map<String, Object> toDto(Notification n) {
-        Map<String, Object> m = new HashMap<>();
+        var m = new HashMap<String, Object>();
         m.put("id", n.getId());
         m.put("title", n.getTitle());
         m.put("message", n.getMessage());

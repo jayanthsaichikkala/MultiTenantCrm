@@ -26,22 +26,55 @@ import jakarta.servlet.http.HttpServletResponse;
 @RequestMapping("/superadmin")
 public class SuperAdminController {
 
+    private static final String ROLE_ADMIN = "ADMIN";
+    private static final String ATTR_SUPER_ADMIN_USER = "superAdminUser";
+    private static final String ATTR_ERROR_MESSAGE = "errorMessage";
+    private static final String ATTR_SUCCESS_MESSAGE = "successMessage";
+    private static final String REDIRECT_SUPERADMIN_ADD_ADMIN = "redirect:/superadmin/add-admin";
+    private static final String REDIRECT_SUPERADMIN_ADMINS = "redirect:/superadmin/admins";
+    private static final String REDIRECT_SUPERADMIN_EDIT_ADMIN_PREFIX = "redirect:/superadmin/edit-admin/";
+    private static final String MSG_ADMIN_PREFIX = "Admin '";
+
     @Autowired private UserRepository        userRepository;
     @Autowired private BCryptPasswordEncoder passwordEncoder;
     @Autowired private ProfileUpdateService  profileUpdateService;
 
     // ── helper: load admins and stats into model ─────────────────────────────
     private List<User> loadAdmins(Model model) {
-        List<User> admins = userRepository.findAll().stream()
-                .filter(u -> "ADMIN".equalsIgnoreCase(u.getRole()))
+        var admins = userRepository.findAll().stream()
+                .filter(u -> ROLE_ADMIN.equalsIgnoreCase(u.getRole()))
                 .sorted(java.util.Comparator.comparing(User::getId).reversed())
-                .toList();
-        long activeCount = admins.stream().filter(User::isActive).count();
+                .collect(Collectors.toList());
+        var activeCount = admins.stream().filter(User::isActive).count();
         model.addAttribute("admins",       admins);
         model.addAttribute("totalAdmins",  admins.size());
         model.addAttribute("activeAdmins", activeCount);
         model.addAttribute("todayAdmins",  0);
         return admins;
+    }
+
+    private String validateAdminParams(String username, String email, Integer employeeLimit) {
+        if (username == null || username.trim().isBlank()) {
+            return "Username is required.";
+        }
+        if (!username.trim().matches("^[A-Za-z0-9._-]{3,50}$")) {
+            return "Username must be 3-50 characters and contain only letters, numbers, dots, hyphens, or underscores.";
+        }
+        if (email == null || email.trim().isBlank()) {
+            return "Email is required.";
+        }
+        if (!email.trim().matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
+            return "Please provide a valid email address.";
+        }
+        // Admin email must contain a dot in local part to establish a tenant segment
+        var local = email.trim().substring(0, email.trim().indexOf('@'));
+        if (local.lastIndexOf('.') < 0) {
+            return "Admin email must follow the pattern name.tenant@domain.com (e.g. admin.wipro@crm.com) to establish a tenant segment.";
+        }
+        if (employeeLimit == null || employeeLimit < 1) {
+            return "Employee limit must be a positive integer.";
+        }
+        return null;
     }
 
     // ── Dashboard (default page) ──────────────────────────────────────────────
@@ -55,55 +88,48 @@ public class SuperAdminController {
         loadAdmins(model);
 
         // ── Analytics data ────────────────────────────────────────────────────
-        List<User> allUsers = userRepository.findAll();
-        List<User> admins   = allUsers.stream()
-                .filter(u -> "ADMIN".equalsIgnoreCase(u.getRole()))
+        var allUsers = userRepository.findAll();
+        var admins   = allUsers.stream()
+                .filter(u -> ROLE_ADMIN.equalsIgnoreCase(u.getRole()))
                 .collect(Collectors.toList());
 
-        long activeAdmins   = admins.stream().filter(User::isActive).count();
-        long inactiveAdmins = admins.size() - activeAdmins;
+        var activeAdmins   = admins.stream().filter(User::isActive).count();
+        var inactiveAdmins = admins.size() - activeAdmins;
 
         // Role distribution across ALL users
-        Map<String, Long> roleDistribution = allUsers.stream()
+        var roleDistribution = allUsers.stream()
                 .collect(Collectors.groupingBy(
                         u -> u.getRole() == null ? "UNKNOWN" : u.getRole().toUpperCase(),
                         Collectors.counting()));
 
-        // Admin growth simulation: bucket admins into 6 groups by ID range
-        // (approximates "added over time" without a createdAt column)
-        int total = admins.size();
-        int[] growthData = new int[6];
+        // Growth & Active/Inactive breakdown per bucket (simulated months)
+        var total = admins.size();
+        var growthData = new int[6];
+        var activePerMonth   = new int[6];
+        var inactivePerMonth = new int[6];
+
         if (total > 0) {
-            long minId = admins.stream().mapToLong(User::getId).min().orElse(1);
-            long maxId = admins.stream().mapToLong(User::getId).max().orElse(1);
-            long range = Math.max(maxId - minId, 1);
-            for (User a : admins) {
-                int bucket = (int) Math.min(5, (a.getId() - minId) * 6 / range);
+            var minId = admins.stream().mapToLong(User::getId).min().orElse(1);
+            var maxId = admins.stream().mapToLong(User::getId).max().orElse(1);
+            var range = Math.max(maxId - minId, 1);
+            for (var a : admins) {
+                var bucket = (int) Math.min(5, (a.getId() - minId) * 6 / range);
                 growthData[bucket]++;
+                if (a.isActive()) {
+                    activePerMonth[bucket]++;
+                } else {
+                    inactivePerMonth[bucket]++;
+                }
             }
         }
 
         // Status breakdown per "simulated month" (last 6 months labels)
-        java.time.LocalDate now = java.time.LocalDate.now();
-        String[] monthLabels = new String[6];
-        for (int i = 5; i >= 0; i--) {
+        var now = java.time.LocalDate.now();
+        var monthLabels = new String[6];
+        for (var i = 5; i >= 0; i--) {
             monthLabels[5 - i] = now.minusMonths(i)
                     .getMonth().getDisplayName(java.time.format.TextStyle.SHORT,
                             java.util.Locale.ENGLISH);
-        }
-
-        // Active vs Inactive per bucket (for stacked bar)
-        int[] activePerMonth   = new int[6];
-        int[] inactivePerMonth = new int[6];
-        if (total > 0) {
-            long minId = admins.stream().mapToLong(User::getId).min().orElse(1);
-            long maxId = admins.stream().mapToLong(User::getId).max().orElse(1);
-            long range = Math.max(maxId - minId, 1);
-            for (User a : admins) {
-                int bucket = (int) Math.min(5, (a.getId() - minId) * 6 / range);
-                if (a.isActive()) activePerMonth[bucket]++;
-                else              inactivePerMonth[bucket]++;
-            }
         }
 
         model.addAttribute("activeAdminsCount",   activeAdmins);
@@ -115,8 +141,8 @@ public class SuperAdminController {
         model.addAttribute("inactivePerMonth",     inactivePerMonth);
         model.addAttribute("totalUsers",           allUsers.size());
 
-        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-        model.addAttribute("superAdminUser", userRepository.findByUsername(currentUsername));
+        var currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        model.addAttribute(ATTR_SUPER_ADMIN_USER, userRepository.findByUsername(currentUsername));
 
         return "superadmin-dashboard";
     }
@@ -125,16 +151,16 @@ public class SuperAdminController {
     @GetMapping("/admins")
     public String adminsPage(Model model) {
         loadAdmins(model);
-        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-        model.addAttribute("superAdminUser", userRepository.findByUsername(currentUsername));
+        var currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        model.addAttribute(ATTR_SUPER_ADMIN_USER, userRepository.findByUsername(currentUsername));
         return "superadmin-admins";
     }
 
     // ── Add Admin page (GET) ──────────────────────────────────────────────────
     @GetMapping("/add-admin")
     public String addAdminPage(Model model) {
-        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-        model.addAttribute("superAdminUser", userRepository.findByUsername(currentUsername));
+        var currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        model.addAttribute(ATTR_SUPER_ADMIN_USER, userRepository.findByUsername(currentUsername));
         return "superadmin-add-admin";
     }
 
@@ -148,68 +174,48 @@ public class SuperAdminController {
                            @RequestParam(defaultValue = "10") Integer employeeLimit,
                            RedirectAttributes ra) {
 
-        if (username == null || username.trim().isBlank()) {
-            ra.addFlashAttribute("errorMessage", "Username is required.");
-            return "redirect:/superadmin/add-admin";
+        var validationError = validateAdminParams(username, email, employeeLimit);
+        if (validationError != null) {
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, validationError);
+            return REDIRECT_SUPERADMIN_ADD_ADMIN;
         }
-        if (!username.trim().matches("^[A-Za-z0-9._-]{3,50}$")) {
-            ra.addFlashAttribute("errorMessage", "Username must be 3-50 characters and contain only letters, numbers, dots, hyphens, or underscores.");
-            return "redirect:/superadmin/add-admin";
-        }
-        if (email == null || email.trim().isBlank()) {
-            ra.addFlashAttribute("errorMessage", "Email is required.");
-            return "redirect:/superadmin/add-admin";
-        }
-        if (!email.trim().matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
-            ra.addFlashAttribute("errorMessage", "Please provide a valid email address.");
-            return "redirect:/superadmin/add-admin";
-        }
-        // Admin email must contain a dot in local part to establish a tenant segment
-        String local = email.trim().substring(0, email.trim().indexOf('@'));
-        if (local.lastIndexOf('.') < 0) {
-            ra.addFlashAttribute("errorMessage", "Admin email must follow the pattern name.tenant@domain.com (e.g. admin.wipro@crm.com) to establish a tenant segment.");
-            return "redirect:/superadmin/add-admin";
-        }
+
         if (password == null || password.length() < 4) {
-            ra.addFlashAttribute("errorMessage", "Password must be at least 4 characters long.");
-            return "redirect:/superadmin/add-admin";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Password must be at least 4 characters long.");
+            return REDIRECT_SUPERADMIN_ADD_ADMIN;
         }
         if (!password.matches("^[A-Za-z0-9]+$")) {
-            ra.addFlashAttribute("errorMessage", "Password must contain only letters and numbers (no special characters).");
-            return "redirect:/superadmin/add-admin";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Password must contain only letters and numbers (no special characters).");
+            return REDIRECT_SUPERADMIN_ADD_ADMIN;
         }
         if (!password.equals(confirmPassword)) {
-            ra.addFlashAttribute("errorMessage", "Passwords do not match.");
-            return "redirect:/superadmin/add-admin";
-        }
-        if (employeeLimit == null || employeeLimit < 1) {
-            ra.addFlashAttribute("errorMessage", "Employee limit must be a positive integer.");
-            return "redirect:/superadmin/add-admin";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Passwords do not match.");
+            return REDIRECT_SUPERADMIN_ADD_ADMIN;
         }
 
         if (userRepository.existsByUsernameOrEmail(username.trim(), email.trim())) {
-            ra.addFlashAttribute("errorMessage", "Username or email already exists.");
-            return "redirect:/superadmin/add-admin";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Username or email already exists.");
+            return REDIRECT_SUPERADMIN_ADD_ADMIN;
         }
 
-        User newAdmin = new User();
+        var newAdmin = new User();
         newAdmin.setUsername(username.trim());
         newAdmin.setEmail(email.trim());
         newAdmin.setPassword(passwordEncoder.encode(password));
-        newAdmin.setRole("ADMIN");
+        newAdmin.setRole(ROLE_ADMIN);
         newAdmin.setStatus(status);
         newAdmin.setEmployeeLimit(employeeLimit);
         userRepository.save(newAdmin);
 
-        ra.addFlashAttribute("successMessage", "Admin '" + username.trim() + "' added successfully.");
-        return "redirect:/superadmin/admins";
+        ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, MSG_ADMIN_PREFIX + username.trim() + "' added successfully.");
+        return REDIRECT_SUPERADMIN_ADMINS;
     }
 
     private String getTenantSegment(String email) {
         if (email == null) return "";
         try {
-            String local = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
-            int dot = local.lastIndexOf('.');
+            var local = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
+            var dot = local.lastIndexOf('.');
             return dot >= 0 ? local.substring(dot + 1) : local;
         } catch (Exception e) {
             return "";
@@ -219,18 +225,18 @@ public class SuperAdminController {
     // ── Edit Admin (GET) ──────────────────────────────────────────────────────
     @GetMapping("/edit-admin/{id}")
     public String editAdminPage(@PathVariable Long id, Model model) {
-        User admin = userRepository.findById(id).orElse(null);
-        if (admin == null || !"ADMIN".equalsIgnoreCase(admin.getRole())) {
-            return "redirect:/superadmin/admins";
+        var admin = userRepository.findById(id).orElse(null);
+        if (admin == null || !ROLE_ADMIN.equalsIgnoreCase(admin.getRole())) {
+            return REDIRECT_SUPERADMIN_ADMINS;
         }
-        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-        model.addAttribute("superAdminUser", userRepository.findByUsername(currentUsername));
+        var currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        model.addAttribute(ATTR_SUPER_ADMIN_USER, userRepository.findByUsername(currentUsername));
         model.addAttribute("editAdmin", admin);
 
         // Fetch employees under this admin's tenant segment
-        String tenant = getTenantSegment(admin.getEmail());
-        List<User> employees = userRepository.findByTenantSegment(tenant).stream()
-                .filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole()) && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
+        var tenant = getTenantSegment(admin.getEmail());
+        var employees = userRepository.findByTenantSegment(tenant).stream()
+                .filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole()) && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
                 .collect(Collectors.toList());
         model.addAttribute("employees", employees);
 
@@ -246,48 +252,27 @@ public class SuperAdminController {
                             @RequestParam(defaultValue = "10") Integer employeeLimit,
                             RedirectAttributes ra) {
 
-        User admin = userRepository.findById(id).orElse(null);
-        if (admin == null || !"ADMIN".equalsIgnoreCase(admin.getRole())) {
-            return "redirect:/superadmin/admins";
+        var admin = userRepository.findById(id).orElse(null);
+        if (admin == null || !ROLE_ADMIN.equalsIgnoreCase(admin.getRole())) {
+            return REDIRECT_SUPERADMIN_ADMINS;
         }
 
-        if (username == null || username.trim().isBlank()) {
-            ra.addFlashAttribute("errorMessage", "Username is required.");
-            return "redirect:/superadmin/edit-admin/" + id;
-        }
-        if (!username.trim().matches("^[A-Za-z0-9._-]{3,50}$")) {
-            ra.addFlashAttribute("errorMessage", "Username must be 3-50 characters and contain only letters, numbers, dots, hyphens, or underscores.");
-            return "redirect:/superadmin/edit-admin/" + id;
-        }
-        if (email == null || email.trim().isBlank()) {
-            ra.addFlashAttribute("errorMessage", "Email is required.");
-            return "redirect:/superadmin/edit-admin/" + id;
-        }
-        if (!email.trim().matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
-            ra.addFlashAttribute("errorMessage", "Please provide a valid email address.");
-            return "redirect:/superadmin/edit-admin/" + id;
-        }
-        // Admin email must contain a dot in local part to establish a tenant segment
-        String local = email.trim().substring(0, email.trim().indexOf('@'));
-        if (local.lastIndexOf('.') < 0) {
-            ra.addFlashAttribute("errorMessage", "Admin email must follow the pattern name.tenant@domain.com (e.g. admin.wipro@crm.com) to establish a tenant segment.");
-            return "redirect:/superadmin/edit-admin/" + id;
-        }
-        if (employeeLimit == null || employeeLimit < 1) {
-            ra.addFlashAttribute("errorMessage", "Employee limit must be a positive integer.");
-            return "redirect:/superadmin/edit-admin/" + id;
+        var validationError = validateAdminParams(username, email, employeeLimit);
+        if (validationError != null) {
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, validationError);
+            return REDIRECT_SUPERADMIN_EDIT_ADMIN_PREFIX + id;
         }
 
         // Check uniqueness
-        User existingUserByUname = userRepository.findByUsername(username.trim());
+        var existingUserByUname = userRepository.findByUsername(username.trim());
         if (existingUserByUname != null && !existingUserByUname.getId().equals(admin.getId())) {
-            ra.addFlashAttribute("errorMessage", "Username is already taken.");
-            return "redirect:/superadmin/edit-admin/" + id;
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Username is already taken.");
+            return REDIRECT_SUPERADMIN_EDIT_ADMIN_PREFIX + id;
         }
-        User existingUserByEmail = userRepository.findByEmail(email.trim());
+        var existingUserByEmail = userRepository.findByEmail(email.trim());
         if (existingUserByEmail != null && !existingUserByEmail.getId().equals(admin.getId())) {
-            ra.addFlashAttribute("errorMessage", "Email is already taken.");
-            return "redirect:/superadmin/edit-admin/" + id;
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Email is already taken.");
+            return REDIRECT_SUPERADMIN_EDIT_ADMIN_PREFIX + id;
         }
 
         admin.setUsername(username.trim());
@@ -296,34 +281,34 @@ public class SuperAdminController {
         admin.setEmployeeLimit(employeeLimit);
         userRepository.save(admin);
 
-        ra.addFlashAttribute("successMessage", "Admin '" + admin.getUsername() + "' updated successfully.");
-        return "redirect:/superadmin/admins";
+        ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, MSG_ADMIN_PREFIX + admin.getUsername() + "' updated successfully.");
+        return REDIRECT_SUPERADMIN_ADMINS;
     }
 
     // ── Toggle Admin Status ───────────────────────────────────────────────────
     @PostMapping("/toggle-status/{id}")
     public String toggleStatus(@PathVariable Long id, RedirectAttributes ra) {
-        User admin = userRepository.findById(id).orElse(null);
-        if (admin != null && "ADMIN".equalsIgnoreCase(admin.getRole())) {
-            String newStatus = "active".equalsIgnoreCase(admin.getStatus()) ? "inactive" : "active";
+        var admin = userRepository.findById(id).orElse(null);
+        if (admin != null && ROLE_ADMIN.equalsIgnoreCase(admin.getRole())) {
+            var newStatus = "active".equalsIgnoreCase(admin.getStatus()) ? "inactive" : "active";
             admin.setStatus(newStatus);
             userRepository.save(admin);
-            ra.addFlashAttribute("successMessage",
-                "Admin '" + admin.getUsername() + "' is now " + newStatus + ".");
+            ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
+                MSG_ADMIN_PREFIX + admin.getUsername() + "' is now " + newStatus + ".");
         }
-        return "redirect:/superadmin/admins";
+        return REDIRECT_SUPERADMIN_ADMINS;
     }
 
     // ── Delete Admin ──────────────────────────────────────────────────────────
     @PostMapping("/delete-admin/{id}")
     public String deleteAdmin(@PathVariable Long id, RedirectAttributes ra) {
-        User admin = userRepository.findById(id).orElse(null);
-        if (admin != null && "ADMIN".equalsIgnoreCase(admin.getRole())) {
-            String name = admin.getUsername();
+        var admin = userRepository.findById(id).orElse(null);
+        if (admin != null && ROLE_ADMIN.equalsIgnoreCase(admin.getRole())) {
+            var name = admin.getUsername();
             userRepository.delete(admin);
-            ra.addFlashAttribute("successMessage", "Admin '" + name + "' deleted successfully.");
+            ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, MSG_ADMIN_PREFIX + name + "' deleted successfully.");
         }
-        return "redirect:/superadmin/admins";
+        return REDIRECT_SUPERADMIN_ADMINS;
     }
 
     // ── Views page — removed, redirect to dashboard ──────────────────────────
@@ -336,10 +321,10 @@ public class SuperAdminController {
     @GetMapping("/profile")
     public String profilePage(Model model) {
         loadAdmins(model);
-        String currentUsername = SecurityContextHolder.getContext()
+        var currentUsername = SecurityContextHolder.getContext()
                 .getAuthentication().getName();
-        User superAdmin = userRepository.findByUsername(currentUsername);
-        model.addAttribute("superAdminUser", superAdmin);
+        var superAdmin = userRepository.findByUsername(currentUsername);
+        model.addAttribute(ATTR_SUPER_ADMIN_USER, superAdmin);
         return "superadmin-profile";
     }
 
@@ -352,9 +337,9 @@ public class SuperAdminController {
                                 HttpServletResponse response,
                                 RedirectAttributes ra) {
 
-        String currentUsername = SecurityContextHolder.getContext()
+        var currentUsername = SecurityContextHolder.getContext()
                 .getAuthentication().getName();
-        User superAdmin = userRepository.findByUsername(currentUsername);
+        var superAdmin = userRepository.findByUsername(currentUsername);
         if (superAdmin == null) {
             return "redirect:/superadmin/profile";
         }

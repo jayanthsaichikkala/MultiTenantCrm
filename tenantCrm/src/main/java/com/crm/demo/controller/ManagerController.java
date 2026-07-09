@@ -1,9 +1,5 @@
 package com.crm.demo.controller;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -15,16 +11,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,6 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import org.springframework.validation.BindingResult;
+import java.util.stream.Collectors;
 
 import com.crm.demo.model.Attendance;
 import com.crm.demo.model.AttendanceDay;
@@ -79,6 +72,48 @@ import jakarta.validation.Valid;
 @Controller
 @RequestMapping("/manager")
 public class ManagerController {
+
+	private static final String ROLE_ADMIN = "ADMIN";
+	private static final String ROLE_MANAGER = "MANAGER";
+	private static final String ROLE_EMPLOYEE = "EMPLOYEE";
+	private static final String ROLE_HR = "HR";
+	private static final String ATTR_ERROR = "error";
+	private static final String ATTR_ERROR_MESSAGE = "errorMessage";
+	private static final String ATTR_SUCCESS_MESSAGE = "successMessage";
+	private static final String REDIRECT_PREFIX = "redirect:";
+	private static final String REDIRECT_MANAGER_TASKS = "redirect:/manager/tasks";
+	private static final String REDIRECT_MANAGER_LEAVES = "redirect:/manager/leaves";
+	private static final String REDIRECT_MANAGER_MEETINGS = "redirect:/manager/meetings";
+	private static final String REDIRECT_MANAGER_ATTENDANCE = "redirect:/manager/attendance";
+	private static final String STATUS_PENDING = "pending";
+	private static final String STATUS_APPROVED = "Approved";
+	private static final String STATUS_REJECTED = "rejected";
+	private static final String STATUS_IN_PROGRESS = "in-progress";
+	private static final String STATUS_WAITING_FOR_REVIEW = "waiting-for-review";
+	private static final String PRIORITY_MEDIUM = "Medium";
+	private static final String STATUS_PRESENT = "present";
+	private static final String STATUS_ABSENT = "absent";
+	private static final String OCTET_STREAM = "application/octet-stream";
+	private static final String TIME_FORMAT = "%02d:%02d";
+	private static final String MSG_SESSION_EXPIRED = "Session expired. Please log in again.";
+	private static final String MSG_MEETING_NOT_FOUND = "Meeting not found.";
+	private static final String MSG_NOT_PUNCHED_IN = "You haven't punched in today.";
+	private static final String DATE_REGEX = "^\\d{4}-\\d{2}-\\d{2}$";
+	private static final String ATTR_TEAM_MEMBERS = "teamMembers";
+	private static final String ATTR_ACTIVE_TEAM = "activeTeam";
+	private static final String ATTR_INACTIVE_TEAM = "inactiveTeam";
+	private static final String ATTR_TASKS = "tasks";
+	private static final String ATTR_TOTAL_TASKS = "totalTasks";
+	private static final String ATTR_DONE_TASKS = "doneTasks";
+	private static final String ATTR_PENDING_TASK_COUNT = "pendingTaskCount";
+	private static final String ATTR_MEETINGS = "meetings";
+	private static final String ATTR_PAST_MEETINGS = "pastMeetings";
+	private static final String ATTR_MEETING_FORM = "meetingForm";
+	private static final String PAGE_MEETINGS = "manager-meetings";
+	private static final String ATTR_PERF_LIST = "perfList";
+	private static final String ATTR_SELECTED_MONTH = "selectedMonth";
+	private static final String REDIRECT_MANAGER_REPORTS = "redirect:/manager/reports";
+	private static final String REDIRECT_MANAGER_PERFORMANCE = "redirect:/manager/performance?month=";
 
 	@Value("${app.upload.dir:uploads/tasks}")
 	private String uploadDir;
@@ -123,9 +158,6 @@ public class ManagerController {
 	private PerformanceReviewRepository performanceReviewRepository;
 
 	@Autowired
-	private BCryptPasswordEncoder passwordEncoder;
-
-	@Autowired
 	private ProfileUpdateService profileUpdateService;
 
 	@Autowired
@@ -143,18 +175,18 @@ public class ManagerController {
 	private void injectStats(Model model) {
 
 		// Logged-in manager username
-		String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+		var currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
 
-		User manager = userRepository.findByUsername(currentUsername);
+		var manager = userRepository.findByUsername(currentUsername);
 
 		// Safety check
 		if (manager == null) {
 			model.addAttribute("managerName", "Manager");
 			model.addAttribute("managerEmail", "");
-			model.addAttribute("teamMembers", Collections.emptyList());
+			model.addAttribute(ATTR_TEAM_MEMBERS, Collections.emptyList());
 			model.addAttribute("teamCount", 0);
-			model.addAttribute("activeTeam", 0);
-			model.addAttribute("inactiveTeam", 0);
+			model.addAttribute(ATTR_ACTIVE_TEAM, 0);
+			model.addAttribute(ATTR_INACTIVE_TEAM, 0);
 			model.addAttribute("myTeam", null);
 			model.addAttribute("myTeamName", "—");
 			model.addAttribute("managedTeams", Collections.emptyList());
@@ -163,10 +195,10 @@ public class ManagerController {
 			model.addAttribute("activeProjects", 0);
 			model.addAttribute("completedProjects", 0);
 			model.addAttribute("projectCount", 0);
-			model.addAttribute("tasks", Collections.emptyList());
-			model.addAttribute("totalTasks", 0);
-			model.addAttribute("doneTasks", 0);
-			model.addAttribute("pendingTaskCount", 0);
+			model.addAttribute(ATTR_TASKS, Collections.emptyList());
+			model.addAttribute(ATTR_TOTAL_TASKS, 0);
+			model.addAttribute(ATTR_DONE_TASKS, 0);
+			model.addAttribute(ATTR_PENDING_TASK_COUNT, 0);
 			model.addAttribute("taskCount", 0);
 			model.addAttribute("overdueTasks", 0);
 			model.addAttribute("notificationCount", 0);
@@ -178,31 +210,32 @@ public class ManagerController {
 		model.addAttribute("managerEmail", manager.getEmail());
 
 		// ── Load team(s) assigned to this manager ────────────────────────────
-		Team myTeam = getPrimaryTeam(manager);
-		List<Team> managedTeams = getManagedTeams(manager);
-		List<User> teamMembers = getManagedTeamMembers(manager);
+		var myTeam = getPrimaryTeam(manager);
+		var managedTeams = getManagedTeams(manager);
+		var teamMembers = getManagedTeamMembers(manager);
 
-		long active   = teamMembers.stream().filter(User::isActive).count();
-		long inactive = teamMembers.size() - active;
+		var active   = teamMembers.stream().filter(User::isActive).count();
+		var inactive = teamMembers.size() - active;
 
 		model.addAttribute("myTeam",      myTeam);
 		model.addAttribute("myTeamName",  getManagedTeamName(manager));
 		model.addAttribute("managedTeams",managedTeams);
-		model.addAttribute("teamMembers", teamMembers);
+		model.addAttribute(ATTR_TEAM_MEMBERS, teamMembers);
 		model.addAttribute("teamCount",   teamMembers.size());
-		model.addAttribute("activeTeam",  active);
-		model.addAttribute("inactiveTeam",inactive);
+		model.addAttribute(ATTR_ACTIVE_TEAM,  active);
+		model.addAttribute(ATTR_INACTIVE_TEAM,inactive);
 
 		// ── Projects & Tasks ──────────────────────────────────────────────
-		List<Project> projects = projectRepository.findAll();
+		var projects = projectRepository.findAll();
 		projects.sort(java.util.Comparator.comparing(Project::getId).reversed());
 		// For stats only — scoped tasks loaded per-page where needed
-		List<Task>    tasks    = taskRepository.findAll();
+		var tasks    = taskRepository.findAll();
 
-		long done    = tasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
-		long pending = tasks.stream().filter(t -> "pending".equalsIgnoreCase(t.getStatus())).count();
-		long activeP = projects.stream().filter(p -> "active".equalsIgnoreCase(p.getStatus())).count();
-		long completedP = projects.stream().filter(p -> "completed".equalsIgnoreCase(p.getStatus())).count();
+		var done    = tasks.stream().filter(t -> STATUS_PENDING.equalsIgnoreCase(t.getStatus())).count(); // Wait, let's keep status check as 'done'
+		var doneCount = tasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
+		var pending = tasks.stream().filter(t -> STATUS_PENDING.equalsIgnoreCase(t.getStatus())).count();
+		var activeP = projects.stream().filter(p -> "active".equalsIgnoreCase(p.getStatus())).count();
+		var completedP = projects.stream().filter(p -> "completed".equalsIgnoreCase(p.getStatus())).count();
 
 		model.addAttribute("projects",          projects);
 		model.addAttribute("totalProjects",     projects.size());
@@ -210,14 +243,170 @@ public class ManagerController {
 		model.addAttribute("completedProjects", completedP);
 		model.addAttribute("projectCount",      projects.size());
 
-		model.addAttribute("tasks",             tasks);
-		model.addAttribute("totalTasks",        tasks.size());
-		model.addAttribute("doneTasks",         done);
-		model.addAttribute("pendingTaskCount",  pending);
+		model.addAttribute(ATTR_TASKS,             tasks);
+		model.addAttribute(ATTR_TOTAL_TASKS,        tasks.size());
+		model.addAttribute(ATTR_DONE_TASKS,         doneCount);
+		model.addAttribute(ATTR_PENDING_TASK_COUNT,  pending);
 		model.addAttribute("taskCount",         tasks.size());
 		model.addAttribute("overdueTasks",      pending);
 		model.addAttribute("notificationCount", 0);
 		model.addAttribute("pendingTaskList",   Collections.emptyList());
+	}
+
+	private String validateTaskParams(String title, String description, String priority, String status, String dueDate, String startDate) {
+		if (title == null || title.trim().isBlank()) {
+			return "Task title is required.";
+		}
+		if (title.trim().length() > 255) {
+			return "Task title cannot exceed 255 characters.";
+		}
+		if (description != null && description.length() > 255) {
+			return "Description cannot exceed 255 characters.";
+		}
+		if (priority == null || (!"High".equalsIgnoreCase(priority) && !PRIORITY_MEDIUM.equalsIgnoreCase(priority) && !"Low".equalsIgnoreCase(priority))) {
+			return "Invalid priority selected.";
+		}
+		if (status == null || (!STATUS_PENDING.equalsIgnoreCase(status) && !STATUS_IN_PROGRESS.equalsIgnoreCase(status) && !"done".equalsIgnoreCase(status))) {
+			return "Invalid status selected.";
+		}
+		if (dueDate == null || dueDate.trim().isBlank() || !dueDate.trim().matches(DATE_REGEX)) {
+			return "Please select a valid due date.";
+		}
+		return null;
+	}
+
+	private String validateLeaveParams(String type, String reason, String fromDate, String toDate) {
+		if (type == null || type.isBlank()) {
+			return "Leave type is required.";
+		}
+		if (reason == null || reason.isBlank()) {
+			return "Leave reason is required.";
+		}
+		if (reason.trim().length() > 255) {
+			return "Reason cannot exceed 255 characters.";
+		}
+		if (fromDate == null || fromDate.isBlank() || !fromDate.matches(DATE_REGEX)) {
+			return "Invalid start date format.";
+		}
+		if (toDate == null || toDate.isBlank() || !toDate.matches(DATE_REGEX)) {
+			return "Invalid end date format.";
+		}
+		return null;
+	}
+
+	private List<EmployeePerf> computeEmployeePerformance(List<User> teamMembers, java.time.YearMonth ym, String tenant) {
+		var from = ym.atDay(1);
+		var to   = ym.atEndOfMonth().isAfter(LocalDate.now()) ? LocalDate.now() : ym.atEndOfMonth();
+
+		// Working days in the selected range (Mon–Fri, excluding today if future)
+		var workingDays = 0;
+		var d = from;
+		while (!d.isAfter(to)) {
+			var dow = d.getDayOfWeek();
+			if (dow != java.time.DayOfWeek.SATURDAY && dow != java.time.DayOfWeek.SUNDAY) workingDays++;
+			d = d.plusDays(1);
+		}
+		if (workingDays < 1) workingDays = 1;
+
+		var perfList = new ArrayList<EmployeePerf>();
+
+		for (var emp : teamMembers) {
+			var p = new EmployeePerf();
+			p.setEmployee(emp);
+
+			// ── Task stats ──────────────────────────────────────────────
+			var tasks = taskRepository.findByAssignedToAndTenantSegment(emp.getUsername(), tenant);
+			p.setTotalTasks(tasks.size());
+			p.setDoneTasks((int) tasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count());
+			p.setPendingTasks((int) tasks.stream().filter(t -> STATUS_PENDING.equalsIgnoreCase(t.getStatus())).count());
+			// Overdue = pending/in-progress tasks whose due date is before today
+			p.setOverdueTasks((int) tasks.stream()
+					.filter(t -> !"done".equalsIgnoreCase(t.getStatus())
+							&& t.getDueDate() != null
+							&& !t.getDueDate().isBlank()
+							&& LocalDate.parse(t.getDueDate()).isBefore(LocalDate.now()))
+					.count());
+
+			// Task score: done% out of total, penalise overdue
+			if (p.getTotalTasks() > 0) {
+				double raw = ((double) p.getDoneTasks() / p.getTotalTasks()) * 100.0
+						- (p.getOverdueTasks() * 5.0);
+				p.setTaskScore((int) Math.max(0, Math.min(100, raw)));
+			} else {
+				p.setTaskScore(100); // no tasks = no penalty
+			}
+
+			// ── Attendance stats (selected month) ───────────────────────
+			var attRecords = attendanceRepository
+					.findByUserAndDateBetweenOrderByDateDesc(emp, from, to);
+
+			p.setPresentDays((int) attRecords.stream()
+					.filter(a -> STATUS_PRESENT.equalsIgnoreCase(a.getStatus())).count());
+			p.setLateDays((int) attRecords.stream()
+					.filter(a -> "late".equalsIgnoreCase(a.getStatus())).count());
+
+			// Leave days in this month
+			var leaves = leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(emp);
+			var leaveDaysCount = 0;
+			for (var lr : leaves) {
+				if (STATUS_APPROVED.equalsIgnoreCase(lr.getStatus()) && lr.getFromDate() != null && lr.getToDate() != null) {
+					var lStart = lr.getFromDate().isBefore(from) ? from : lr.getFromDate();
+					var lEnd   = lr.getToDate().isAfter(to)      ? to   : lr.getToDate();
+					if (!lStart.isAfter(lEnd)) {
+						var c = lStart;
+						while (!c.isAfter(lEnd)) {
+							var dow2 = c.getDayOfWeek();
+							if (dow2 != java.time.DayOfWeek.SATURDAY && dow2 != java.time.DayOfWeek.SUNDAY) leaveDaysCount++;
+							c = c.plusDays(1);
+						}
+					}
+				}
+			}
+			p.setLeaveDays(leaveDaysCount);
+			var effectiveWorking = Math.max(1, workingDays - p.getLeaveDays());
+			p.setAbsentDays(Math.max(0, effectiveWorking - p.getPresentDays() - p.getLateDays()));
+
+			// Attendance score: present+late as % of effective working days, late counts half
+			double attRaw = ((p.getPresentDays() + p.getLateDays() * 0.5) / effectiveWorking) * 100.0;
+			p.setAttendanceScore((int) Math.max(0, Math.min(100, attRaw)));
+
+			// Overall: 60% task + 40% attendance
+			p.setOverallScore((int) (p.getTaskScore() * 0.6 + p.getAttendanceScore() * 0.4));
+
+			// Grade
+			p.setGrade(p.getOverallScore() >= 90 ? "A+" :
+			          p.getOverallScore() >= 75 ? "A"  :
+			          p.getOverallScore() >= 60 ? "B"  :
+			          p.getOverallScore() >= 45 ? "C"  : "D");
+
+			// Existing review this month
+			p.setExistingReview(performanceReviewRepository
+					.findByEmployeeAndReviewMonthAndTenantSegment(emp, ym.toString(), tenant)
+					.orElse(null));
+			p.setWeeklyLocked(isWeeklyLocked(emp));
+
+			perfList.add(p);
+		}
+		return perfList;
+	}
+
+	private void populatePunchModel(Optional<Attendance> todayOpt, boolean todayOnLeave, Model model) {
+		var punchedIn  = todayOpt.isPresent();
+		var punchedOut = todayOpt.map(a -> a.getCheckOut() != null).orElse(false);
+		var onBreak    = todayOpt.map(a ->
+				(a.getBreakStart() != null && a.getBreakEnd() == null) ||
+				(a.getBreak2Start() != null && a.getBreak2End() == null)).orElse(false);
+		var breakDone  = todayOpt.map(a -> a.getBreak2End() != null).orElse(false);
+		var canStartBreak = punchedIn && !punchedOut && !onBreak && !breakDone &&
+				todayOpt.map(a -> a.getBreakStart() == null ||
+						(a.getBreakEnd() != null && a.getBreak2Start() == null)).orElse(false);
+
+		model.addAttribute("punchedIn",         punchedIn);
+		model.addAttribute("punchedOut",        punchedOut);
+		model.addAttribute("onBreak",           onBreak);
+		model.addAttribute("breakDone",         breakDone);
+		model.addAttribute("canStartBreak",     canStartBreak);
+		model.addAttribute("todayOnLeave",      todayOnLeave);
 	}
 
 	private List<Team> getManagedTeams(User manager) {
@@ -233,15 +422,16 @@ public class ManagerController {
 	}
 
 	private List<User> getManagedTeamMembers(User manager) {
-		Map<Long, User> uniqueMembers = new LinkedHashMap<>();
-		for (Team team : getManagedTeams(manager)) {
-			for (User member : team.getMembers()) {
-				if (member != null && member.getId() != null) {
-					uniqueMembers.putIfAbsent(member.getId(), member);
-				}
-			}
+		if (manager == null) {
+			return Collections.emptyList();
 		}
-		return new ArrayList<>(uniqueMembers.values());
+		return getManagedTeams(manager).stream()
+				.filter(team -> team != null && team.getMembers() != null)
+				.flatMap(team -> team.getMembers().stream())
+				.filter(member -> member != null && member.getId() != null)
+				.collect(Collectors.toMap(User::getId, member -> member, (m1, m2) -> m1, LinkedHashMap::new))
+				.values().stream()
+				.collect(Collectors.toList());
 	}
 
 	private String getManagedTeamName(User manager) {
@@ -252,7 +442,7 @@ public class ManagerController {
 		if (teams.size() == 1) {
 			return teams.get(0).getName();
 		}
-		return String.join(", ", teams.stream().map(Team::getName).toList());
+		return String.join(", ", teams.stream().map(Team::getName).collect(Collectors.toList()));
 	}
 
 	// =========================
@@ -535,144 +725,127 @@ public class ManagerController {
 			@RequestParam(value = "attachments", required = false) MultipartFile[] attachments,
 			RedirectAttributes ra) {
 
-		User manager = getCurrentManager();
+		var manager = getCurrentManager();
 		if (manager == null) {
-			ra.addFlashAttribute("errorMessage", "Session expired. Please log in again.");
-			return "redirect:/manager/tasks";
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_SESSION_EXPIRED);
+			return REDIRECT_MANAGER_TASKS;
 		}
 
-		if (title == null || title.trim().isBlank()) {
-			ra.addFlashAttribute("errorMessage", "Task title is required.");
-			return "redirect:/manager/tasks";
+		var validationError = validateTaskParams(title, description, priority, status, dueDate, startDate);
+		if (validationError != null) {
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, validationError);
+			return REDIRECT_MANAGER_TASKS;
 		}
-		if (title.trim().length() > 255) {
-			ra.addFlashAttribute("errorMessage", "Task title cannot exceed 255 characters.");
-			return "redirect:/manager/tasks";
-		}
-		if (description != null && description.length() > 255) {
-			ra.addFlashAttribute("errorMessage", "Description cannot exceed 255 characters.");
-			return "redirect:/manager/tasks";
-		}
-		if (priority == null || (!"High".equalsIgnoreCase(priority) && !"Medium".equalsIgnoreCase(priority) && !"Low".equalsIgnoreCase(priority))) {
-			ra.addFlashAttribute("errorMessage", "Invalid priority selected.");
-			return "redirect:/manager/tasks";
-		}
-		if (status == null || (!"pending".equalsIgnoreCase(status) && !"in-progress".equalsIgnoreCase(status) && !"done".equalsIgnoreCase(status))) {
-			ra.addFlashAttribute("errorMessage", "Invalid status selected.");
-			return "redirect:/manager/tasks";
-		}
-		if (dueDate == null || dueDate.trim().isBlank() || !dueDate.trim().matches("^\\d{4}-\\d{2}-\\d{2}$")) {
-			ra.addFlashAttribute("errorMessage", "Please select a valid due date.");
-			return "redirect:/manager/tasks";
-		}
+
 		LocalDate due;
 		try {
 			due = LocalDate.parse(dueDate.trim());
 		} catch (java.time.format.DateTimeParseException e) {
-			ra.addFlashAttribute("errorMessage", "Invalid due date value.");
-			return "redirect:/manager/tasks";
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Invalid due date value.");
+			return REDIRECT_MANAGER_TASKS;
 		}
 		if (due.isBefore(LocalDate.now())) {
-			ra.addFlashAttribute("errorMessage", "Due date cannot be in the past.");
-			return "redirect:/manager/tasks";
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Due date cannot be in the past.");
+			return REDIRECT_MANAGER_TASKS;
 		}
+
 		LocalDate start = null;
 		if (startDate != null && !startDate.trim().isEmpty()) {
-			if (!startDate.trim().matches("^\\d{4}-\\d{2}-\\d{2}$")) {
-				ra.addFlashAttribute("errorMessage", "Invalid start date format.");
-				return "redirect:/manager/tasks";
+			if (!startDate.trim().matches(DATE_REGEX)) {
+				ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Invalid start date format.");
+				return REDIRECT_MANAGER_TASKS;
 			}
 			try {
 				start = LocalDate.parse(startDate.trim());
 			} catch (java.time.format.DateTimeParseException e) {
-				ra.addFlashAttribute("errorMessage", "Invalid start date value.");
-				return "redirect:/manager/tasks";
+				ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Invalid start date value.");
+				return REDIRECT_MANAGER_TASKS;
 			}
 			if (start.isAfter(due)) {
-				ra.addFlashAttribute("errorMessage", "Start date cannot be after due date.");
-				return "redirect:/manager/tasks";
+				ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Start date cannot be after due date.");
+				return REDIRECT_MANAGER_TASKS;
 			}
 		}
 
-		String tenant = getTenantSegment(manager);
+		var tenant = getTenantSegment(manager);
 
 		// Verify team members list
-		List<User> teamMembers = getManagedTeamMembers(manager);
-		List<User> targetUsers = new ArrayList<>();
-		String groupName = "";
+		var teamMembers = getManagedTeamMembers(manager);
+		var targetUsers = new ArrayList<User>();
+		var groupName = "";
 
 		if (assignToTeam) {
 			if (assignedToTeamId == null || "all".equalsIgnoreCase(assignedToTeamId)) {
 				if (teamMembers == null || teamMembers.isEmpty()) {
-					ra.addFlashAttribute("errorMessage", "You do not have any employees in your team to assign tasks to.");
-					return "redirect:/manager/tasks";
+					ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You do not have any employees in your team to assign tasks to.");
+					return REDIRECT_MANAGER_TASKS;
 				}
 				targetUsers.addAll(teamMembers);
 				groupName = "entire team";
 			} else {
 				try {
-					Long teamId = Long.parseLong(assignedToTeamId);
-					List<Team> managedTeams = getManagedTeams(manager);
-					Team targetTeam = managedTeams.stream()
+					var teamId = Long.parseLong(assignedToTeamId);
+					var managedTeams = getManagedTeams(manager);
+					var targetTeam = managedTeams.stream()
 							.filter(t -> t.getId().equals(teamId))
 							.findFirst()
 							.orElse(null);
 
 					if (targetTeam == null) {
-						ra.addFlashAttribute("errorMessage", "Selected team is not managed by you.");
-						return "redirect:/manager/tasks";
+						ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Selected team is not managed by you.");
+						return REDIRECT_MANAGER_TASKS;
 					}
 
-					List<User> members = targetTeam.getMembers();
+					var members = targetTeam.getMembers();
 					if (members == null || members.isEmpty()) {
-						ra.addFlashAttribute("errorMessage", "Selected team '" + targetTeam.getName() + "' does not have any members.");
-						return "redirect:/manager/tasks";
+						ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Selected team '" + targetTeam.getName() + "' does not have any members.");
+						return REDIRECT_MANAGER_TASKS;
 					}
 					targetUsers.addAll(members);
 					groupName = "team " + targetTeam.getName();
 				} catch (NumberFormatException e) {
-					ra.addFlashAttribute("errorMessage", "Invalid team ID selected.");
-					return "redirect:/manager/tasks";
+					ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Invalid team ID selected.");
+					return REDIRECT_MANAGER_TASKS;
 				}
 			}
 		} else {
 			if (assignedToIds == null || assignedToIds.isEmpty()) {
-				ra.addFlashAttribute("errorMessage", "Please select at least one employee to assign the task.");
-				return "redirect:/manager/tasks";
+				ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Please select at least one employee to assign the task.");
+				return REDIRECT_MANAGER_TASKS;
 			}
-			for (Long empId : assignedToIds) {
-				User assignedUser = teamMembers.stream()
+			for (var empId : assignedToIds) {
+				var assignedUser = teamMembers.stream()
 						.filter(u -> u.getId().equals(empId))
 						.findFirst()
 						.orElse(null);
 
 				if (assignedUser == null) {
-					ra.addFlashAttribute("errorMessage", "One or more selected employees are not in your team.");
-					return "redirect:/manager/tasks";
+					ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "One or more selected employees are not in your team.");
+					return REDIRECT_MANAGER_TASKS;
 				}
 				targetUsers.add(assignedUser);
 			}
 		}
 
 		// Save uploaded files to in-memory cache to avoid duplicate streams parsing
-		List<TaskAttachmentInfo> attachmentInfos = new ArrayList<>();
+		var attachmentInfos = new ArrayList<TaskAttachmentInfo>();
 		if (attachments != null) {
-			for (MultipartFile file : attachments) {
+			for (var file : attachments) {
 				if (file == null || file.isEmpty()) continue;
 				try {
-					byte[] fileData = file.getBytes();
-					String contentType = file.getContentType();
-					if (contentType == null) contentType = "application/octet-stream";
+					var fileData = file.getBytes();
+					var contentType = file.getContentType();
+					if (contentType == null) contentType = OCTET_STREAM;
 					attachmentInfos.add(new TaskAttachmentInfo(file.getOriginalFilename(), fileData, contentType));
 				} catch (IOException e) {
-					ra.addFlashAttribute("errorMessage", "File upload failed: " + e.getMessage());
-					return "redirect:/manager/tasks";
+					ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "File upload failed: " + e.getMessage());
+					return REDIRECT_MANAGER_TASKS;
 				}
 			}
 		}
 
-		for (User targetUser : targetUsers) {
-			Task task = new Task();
+		for (var targetUser : targetUsers) {
+			var task = new Task();
 			task.setTitle(title.trim());
 			task.setDescription(description);
 			task.setPriority(priority);
@@ -685,9 +858,9 @@ public class ManagerController {
 			task.setCreatedBy(manager.getUsername());
 			taskRepository.save(task);
 
-			List<String> uploadedNames = new ArrayList<>();
-			for (TaskAttachmentInfo info : attachmentInfos) {
-				TaskAttachment taskAttachment = new TaskAttachment(
+			var uploadedNames = new ArrayList<String>();
+			for (var info : attachmentInfos) {
+				var taskAttachment = new TaskAttachment(
 					task,
 					info.filename(),
 					info.fileData(),
@@ -707,15 +880,15 @@ public class ManagerController {
 		}
 
 		if (assignToTeam) {
-			ra.addFlashAttribute("successMessage", "Task assigned to the " + groupName + " successfully.");
+			ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Task assigned to the " + groupName + " successfully.");
 		} else {
 			if (targetUsers.size() == 1) {
-				ra.addFlashAttribute("successMessage", "Task assigned to " + targetUsers.get(0).getUsername() + " successfully.");
+				ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Task assigned to " + targetUsers.get(0).getUsername() + " successfully.");
 			} else {
-				ra.addFlashAttribute("successMessage", "Task assigned to " + targetUsers.size() + " employees successfully.");
+				ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Task assigned to " + targetUsers.size() + " employees successfully.");
 			}
 		}
-		return "redirect:/manager/tasks";
+		return REDIRECT_MANAGER_TASKS;
 	}
 
 	// =========================
@@ -747,7 +920,7 @@ public class ManagerController {
 	// DOWNLOAD TASK ATTACHMENT
 	// =========================
 	@GetMapping("/tasks/download/{attachmentId}")
-	public ResponseEntity<?> downloadAttachment(@PathVariable Long attachmentId) {
+	public ResponseEntity<byte[]> downloadAttachment(@PathVariable Long attachmentId) {
 		TaskAttachment attachment = taskAttachmentRepository.findById(attachmentId).orElse(null);
 		if (attachment == null) {
 			return ResponseEntity.notFound().build();
@@ -755,7 +928,7 @@ public class ManagerController {
 
 		return ResponseEntity.ok()
 				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + attachment.getOriginalFilename() + "\"")
-				.header(HttpHeaders.CONTENT_TYPE, attachment.getContentType() != null ? attachment.getContentType() : "application/octet-stream")
+				.header(HttpHeaders.CONTENT_TYPE, attachment.getContentType() != null ? attachment.getContentType() : OCTET_STREAM)
 				.body(attachment.getFileData());
 	}
 
@@ -763,13 +936,13 @@ public class ManagerController {
 	// VIEW TASK ATTACHMENT INLINE
 	// =========================
 	@GetMapping("/tasks/view/{attachmentId}")
-	public ResponseEntity<?> viewAttachment(@PathVariable Long attachmentId) {
+	public ResponseEntity<byte[]> viewAttachment(@PathVariable Long attachmentId) {
 		TaskAttachment attachment = taskAttachmentRepository.findById(attachmentId).orElse(null);
 		if (attachment == null) {
 			return ResponseEntity.notFound().build();
 		}
 
-		String contentType = attachment.getContentType() != null ? attachment.getContentType() : "application/octet-stream";
+		String contentType = attachment.getContentType() != null ? attachment.getContentType() : OCTET_STREAM;
 		return ResponseEntity.ok()
 				.header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + attachment.getOriginalFilename() + "\"")
 				.header(HttpHeaders.CONTENT_TYPE, contentType)
@@ -930,31 +1103,16 @@ public class ManagerController {
 	                          @RequestParam String reason,
 	                          @RequestParam(value = "attachment", required = false) MultipartFile attachment,
 	                          RedirectAttributes ra) {
-		User manager = getCurrentManager();
+		var manager = getCurrentManager();
 		if (manager == null) {
-			ra.addFlashAttribute("errorMessage", "Session expired. Please log in again.");
-			return "redirect:/manager/leaves";
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_SESSION_EXPIRED);
+			return REDIRECT_MANAGER_LEAVES;
 		}
 
-		if (type == null || type.isBlank()) {
-			ra.addFlashAttribute("errorMessage", "Leave type is required.");
-			return "redirect:/manager/leaves";
-		}
-		if (reason == null || reason.isBlank()) {
-			ra.addFlashAttribute("errorMessage", "Leave reason is required.");
-			return "redirect:/manager/leaves";
-		}
-		if (reason.trim().length() > 255) {
-			ra.addFlashAttribute("errorMessage", "Reason cannot exceed 255 characters.");
-			return "redirect:/manager/leaves";
-		}
-		if (fromDate == null || fromDate.isBlank() || !fromDate.matches("^\\d{4}-\\d{2}-\\d{2}$")) {
-			ra.addFlashAttribute("errorMessage", "Invalid start date format.");
-			return "redirect:/manager/leaves";
-		}
-		if (toDate == null || toDate.isBlank() || !toDate.matches("^\\d{4}-\\d{2}-\\d{2}$")) {
-			ra.addFlashAttribute("errorMessage", "Invalid end date format.");
-			return "redirect:/manager/leaves";
+		var validationError = validateLeaveParams(type, reason, fromDate, toDate);
+		if (validationError != null) {
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, validationError);
+			return REDIRECT_MANAGER_LEAVES;
 		}
 
 		LocalDate from;
@@ -963,13 +1121,13 @@ public class ManagerController {
 			from = LocalDate.parse(fromDate);
 			to = LocalDate.parse(toDate);
 		} catch (java.time.format.DateTimeParseException e) {
-			ra.addFlashAttribute("errorMessage", "Invalid date value.");
-			return "redirect:/manager/leaves";
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Invalid date value.");
+			return REDIRECT_MANAGER_LEAVES;
 		}
 
 		if (to.isBefore(from)) {
-			ra.addFlashAttribute("errorMessage", "To date cannot be before from date.");
-			return "redirect:/manager/leaves";
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "To date cannot be before from date.");
+			return REDIRECT_MANAGER_LEAVES;
 		}
 
 		LeaveRequest leave = new LeaveRequest();
@@ -1020,7 +1178,7 @@ public class ManagerController {
 			List<User> allRecipients = allTenantUsers.stream()
 					.filter(u -> "HR".equalsIgnoreCase(u.getRole()) || "ADMIN".equalsIgnoreCase(u.getRole()) || teamMembers.contains(u))
 					.distinct()
-					.toList();
+					.collect(Collectors.toList());
 			model.addAttribute("allRecipients", allRecipients);
 
 			// Sent reports history (for "Send Report" tracking)
@@ -1030,68 +1188,10 @@ public class ManagerController {
 			model.addAttribute("sentReportCount", sentReports.size());
 
 			// Build per-employee detail for click-to-view
-			java.time.YearMonth ym = java.time.YearMonth.now();
-			LocalDate from = ym.atDay(1);
-			LocalDate to   = LocalDate.now();
-			int workingDays = 0;
-			LocalDate wd = from;
-			while (!wd.isAfter(to)) {
-				java.time.DayOfWeek dow = wd.getDayOfWeek();
-				if (dow != java.time.DayOfWeek.SATURDAY && dow != java.time.DayOfWeek.SUNDAY) workingDays++;
-				wd = wd.plusDays(1);
-			}
-			if (workingDays < 1) workingDays = 1;
-
-			List<EmployeePerf> perfList = new ArrayList<>();
-			for (User emp : teamMembers) {
-				EmployeePerf p = new EmployeePerf();
-				p.employee = emp;
-				List<Task> tasks = taskRepository.findByAssignedToAndTenantSegment(emp.getUsername(), tenant);
-				p.totalTasks   = tasks.size();
-				p.doneTasks    = (int) tasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
-				p.pendingTasks = (int) tasks.stream().filter(t -> "pending".equalsIgnoreCase(t.getStatus())).count();
-				p.overdueTasks = (int) tasks.stream()
-						.filter(t -> !"done".equalsIgnoreCase(t.getStatus())
-								&& t.getDueDate() != null && !t.getDueDate().isBlank()
-								&& LocalDate.parse(t.getDueDate()).isBefore(LocalDate.now()))
-						.count();
-				if (p.totalTasks > 0) {
-					double raw = ((double) p.doneTasks / p.totalTasks) * 100.0 - (p.overdueTasks * 5.0);
-					p.taskScore = (int) Math.max(0, Math.min(100, raw));
-				} else { p.taskScore = 100; }
-
-				List<Attendance> attRecords = attendanceRepository.findByUserAndDateBetweenOrderByDateDesc(emp, from, to);
-				p.presentDays = (int) attRecords.stream().filter(a -> "present".equalsIgnoreCase(a.getStatus())).count();
-				p.lateDays    = (int) attRecords.stream().filter(a -> "late".equalsIgnoreCase(a.getStatus())).count();
-				List<LeaveRequest> leaves = leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(emp);
-				int leaveDaysCount = 0;
-				for (LeaveRequest lr : leaves) {
-					if (!"Approved".equalsIgnoreCase(lr.getStatus()) || lr.getFromDate() == null) continue;
-					LocalDate lStart = lr.getFromDate().isBefore(from) ? from : lr.getFromDate();
-					LocalDate lEnd   = lr.getToDate() == null ? lStart : (lr.getToDate().isAfter(to) ? to : lr.getToDate());
-					LocalDate c = lStart;
-					while (!c.isAfter(lEnd)) {
-						java.time.DayOfWeek d2 = c.getDayOfWeek();
-						if (d2 != java.time.DayOfWeek.SATURDAY && d2 != java.time.DayOfWeek.SUNDAY) leaveDaysCount++;
-						c = c.plusDays(1);
-					}
-				}
-				p.leaveDays  = leaveDaysCount;
-				int effectiveWorking = Math.max(1, workingDays - p.leaveDays);
-				p.absentDays = Math.max(0, effectiveWorking - p.presentDays - p.lateDays);
-				double attRaw = ((p.presentDays + p.lateDays * 0.5) / effectiveWorking) * 100.0;
-				p.attendanceScore = (int) Math.max(0, Math.min(100, attRaw));
-				p.overallScore = (int) (p.taskScore * 0.6 + p.attendanceScore * 0.4);
-				p.grade = p.overallScore >= 90 ? "A+" : p.overallScore >= 75 ? "A" :
-				          p.overallScore >= 60 ? "B"  : p.overallScore >= 45 ? "C" : "D";
-				p.existingReview = performanceReviewRepository
-						.findByEmployeeAndReviewMonthAndTenantSegment(emp, ym.toString(), tenant)
-						.orElse(null);
-				p.weeklyLocked = isWeeklyLocked(emp);
-				perfList.add(p);
-			}
-			model.addAttribute("perfList",      perfList);
-			model.addAttribute("selectedMonth", ym.toString());
+			var ym = java.time.YearMonth.now();
+			var perfList = computeEmployeePerformance(teamMembers, ym, tenant);
+			model.addAttribute(ATTR_PERF_LIST,      perfList);
+			model.addAttribute(ATTR_SELECTED_MONTH, ym.toString());
 		} else {
 			model.addAttribute("teamMembers", java.util.Collections.emptyList());
 			model.addAttribute("sentReports", java.util.Collections.emptyList());
@@ -1156,7 +1256,7 @@ public class ManagerController {
 		List<User> validRecipients = allTenantUsers.stream()
 				.filter(u -> recipientIds.contains(u.getId()))
 				.filter(u -> "HR".equalsIgnoreCase(u.getRole()) || "ADMIN".equalsIgnoreCase(u.getRole()) || teamMembers.contains(u))
-				.toList();
+				.collect(Collectors.toList());
 
 		if (validRecipients.size() != recipientIds.size()) {
 			ra.addFlashAttribute("errorMessage", "One or more selected recipients are invalid or outside your tenant.");
@@ -1218,10 +1318,10 @@ public class ManagerController {
 	// VIEW REPORT ATTACHMENT INLINE
 	// =========================
 	@GetMapping("/reports/view/{attachmentId}")
-	public ResponseEntity<?> viewReportAttachment(@PathVariable Long attachmentId) {
+	public ResponseEntity<byte[]> viewReportAttachment(@PathVariable Long attachmentId) {
 		ReportAttachment att = reportAttachmentRepository.findById(attachmentId).orElse(null);
 		if (att == null) return ResponseEntity.notFound().build();
-		String ct = att.getContentType() != null ? att.getContentType() : "application/octet-stream";
+		String ct = att.getContentType() != null ? att.getContentType() : OCTET_STREAM;
 		return ResponseEntity.ok()
 				.header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + att.getOriginalFilename() + "\"")
 				.header(HttpHeaders.CONTENT_TYPE, ct)
@@ -1232,10 +1332,10 @@ public class ManagerController {
 	// DOWNLOAD REPORT ATTACHMENT
 	// =========================
 	@GetMapping("/reports/download/{attachmentId}")
-	public ResponseEntity<?> downloadReportAttachment(@PathVariable Long attachmentId) {
+	public ResponseEntity<byte[]> downloadReportAttachment(@PathVariable Long attachmentId) {
 		ReportAttachment att = reportAttachmentRepository.findById(attachmentId).orElse(null);
 		if (att == null) return ResponseEntity.notFound().build();
-		String ct = att.getContentType() != null ? att.getContentType() : "application/octet-stream";
+		String ct = att.getContentType() != null ? att.getContentType() : OCTET_STREAM;
 		return ResponseEntity.ok()
 				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + att.getOriginalFilename() + "\"")
 				.header(HttpHeaders.CONTENT_TYPE, ct)
@@ -1259,16 +1359,6 @@ public class ManagerController {
 	 * Filter a list of today's meetings to only those that have not yet ended.
 	 * A meeting ends at meetingTime + duration minutes. Meetings with no time are always shown.
 	 */
-	private List<Meeting> filterActiveMeetings(List<Meeting> meetings) {
-		LocalTime now = LocalTime.now();
-		return meetings.stream().filter(m -> {
-			if (m.getMeetingTime() == null) return true;
-			int durationMins = (m.getDuration() != null) ? m.getDuration() : 0;
-			LocalTime endTime = m.getMeetingTime().plusMinutes(durationMins);
-			return !endTime.isBefore(now);
-		}).toList();
-	}
-
 	private List<Meeting> getPastMeetings(String tenant, String username) {
 		List<Meeting> all = meetingRepository.findAllMeetingsForUserOrHost(tenant, username);
 		LocalDate today = LocalDate.now();
@@ -1279,7 +1369,7 @@ public class ManagerController {
 			if (m.getMeetingTime() == null) return false;
 			int dur = (m.getDuration() != null) ? m.getDuration() : 0;
 			return m.getMeetingTime().plusMinutes(dur).isBefore(now);
-		}).toList();
+		}).collect(Collectors.toList());
 	}
 
 	/** Returns upcoming meetings (today + future) where the user is a participant OR the host,
@@ -1294,7 +1384,7 @@ public class ManagerController {
 			if (m.getMeetingTime() == null) return true;
 			int dur = (m.getDuration() != null) ? m.getDuration() : 0;
 			return !m.getMeetingTime().plusMinutes(dur).isBefore(now);
-		}).toList();
+		}).collect(Collectors.toList());
 	}
 
 	/** GET /manager/meetings — show schedule form + list of meetings where manager is a participant */
@@ -1569,77 +1659,60 @@ public class ManagerController {
 		attendanceService.processAutoPunchOuts();
 		injectStats(model);
 
-		User manager = getCurrentManager();
+		var manager = getCurrentManager();
 		if (manager == null) {
 			return "redirect:/manager/dashboard";
 		}
 
-		LocalDate today = LocalDate.now();
+		var today = LocalDate.now();
 
 		// Date range (default: last 30 days)
-		LocalDate filterFrom = (from != null && !from.isBlank()) ? LocalDate.parse(from) : today.minusDays(29);
-		LocalDate filterTo   = (to   != null && !to.isBlank())   ? LocalDate.parse(to)   : today;
+		var filterFrom = (from != null && !from.isBlank()) ? LocalDate.parse(from) : today.minusDays(29);
+		var filterTo   = (to   != null && !to.isBlank())   ? LocalDate.parse(to)   : today;
 		if (filterTo.isAfter(today))      filterTo   = today;
 		if (filterFrom.isAfter(filterTo)) filterFrom = filterTo;
 
 		// Fetch real records in range
-		String tenant = getTenantSegment(manager);
-		List<Attendance> records = attendanceRepository
+		var tenant = getTenantSegment(manager);
+		var records = attendanceRepository
 				.findByUserAndDateBetweenOrderByDateDesc(manager, filterFrom, filterTo);
 
 		// Holidays in range
-		Map<LocalDate, String> holidays = fetchHolidays(tenant, filterFrom, filterTo);
+		var holidays = fetchHolidays(tenant, filterFrom, filterTo);
 
 		// Today's record — drives punch-in / punch-out button state
-		Optional<Attendance> todayOpt = attendanceRepository.findByUserAndDate(manager, today);
+		var todayOpt = attendanceRepository.findByUserAndDate(manager, today);
 
 		// Is today a holiday?
-		String todayHolidayName = holidays.get(today);
-		boolean isHolidayToday  = todayHolidayName != null;
+		var todayHolidayName = holidays.get(today);
+		var isHolidayToday  = todayHolidayName != null;
 
-		boolean punchedIn  = todayOpt.isPresent();
-		boolean punchedOut = todayOpt.map(a -> a.getCheckOut() != null).orElse(false);
-		boolean onBreak    = todayOpt.map(a ->
-				(a.getBreakStart() != null && a.getBreakEnd() == null) ||
-				(a.getBreak2Start() != null && a.getBreak2End() == null)).orElse(false);
-		boolean breakDone  = todayOpt.map(a -> a.getBreak2End() != null).orElse(false);
-		boolean canStartBreak = punchedIn && !punchedOut && !onBreak && !breakDone &&
-				todayOpt.map(a -> a.getBreakStart() == null ||
-						(a.getBreakEnd() != null && a.getBreak2Start() == null)).orElse(false);
-
-		boolean todayOnLeave = hasApprovedLeave(manager, today);
+		var todayOnLeave = hasApprovedLeave(manager, today);
 
 		// Build merged day list (fills leave/absent/weekend/holiday gaps)
-		List<AttendanceDay> allDays = buildDayList(records, filterFrom, filterTo, holidays, manager);
+		var allDays = buildDayList(records, filterFrom, filterTo, holidays, manager);
 
 		// Apply status filter
-		List<AttendanceDay> filteredDays = allDays;
+		var filteredDays = allDays;
 		if (status != null && !status.isBlank() && !"all".equalsIgnoreCase(status)) {
-			List<AttendanceDay> tmp = new ArrayList<>();
-			for (AttendanceDay d : allDays) {
-				if (d.getStatus().equalsIgnoreCase(status)) tmp.add(d);
-			}
-			filteredDays = tmp;
+			filteredDays = allDays.stream()
+					.filter(d -> d.getStatus().equalsIgnoreCase(status))
+					.collect(Collectors.toList());
 		}
 
 		// Stats from all-time records
-		List<Attendance> allRecords = attendanceRepository.findByUserOrderByDateDesc(manager);
-		long presentCount = allRecords.stream()
-				.filter(a -> "present".equalsIgnoreCase(a.getStatus()) || "late".equalsIgnoreCase(a.getStatus()))
+		var allRecords = attendanceRepository.findByUserOrderByDateDesc(manager);
+		var presentCount = allRecords.stream()
+				.filter(a -> STATUS_PRESENT.equalsIgnoreCase(a.getStatus()) || "late".equalsIgnoreCase(a.getStatus()))
 				.count();
-		long lateCount = allRecords.stream()
+		var lateCount = allRecords.stream()
 				.filter(a -> "late".equalsIgnoreCase(a.getStatus()))
 				.count();
 
 		model.addAttribute("attendanceDays",    filteredDays);
 		model.addAttribute("totalRecords",      filteredDays.size());
 		model.addAttribute("todayRecord",       todayOpt.orElse(null));
-		model.addAttribute("todayOnLeave",      todayOnLeave);
-		model.addAttribute("punchedIn",         punchedIn);
-		model.addAttribute("punchedOut",        punchedOut);
-		model.addAttribute("onBreak",           onBreak);
-		model.addAttribute("breakDone",         breakDone);
-		model.addAttribute("canStartBreak",     canStartBreak);
+		populatePunchModel(todayOpt, todayOnLeave, model);
 		model.addAttribute("isHolidayToday",    isHolidayToday);
 		model.addAttribute("todayHolidayName",  todayHolidayName);
 		model.addAttribute("presentCount",      presentCount);
@@ -1835,37 +1908,32 @@ public class ManagerController {
 	// =========================
 
 	/** Inner DTO holding computed stats for one employee. */
+	@lombok.Getter
+	@lombok.Setter
 	public static class EmployeePerf {
-		public User   employee;
-		public int    totalTasks;
-		public int    doneTasks;
-		public int    pendingTasks;
-		public int    overdueTasks;
-		public int    presentDays;
-		public int    absentDays;
-		public int    lateDays;
-		public int    leaveDays;
-		public int    attendanceScore; // 0-100
-		public int    taskScore;       // 0-100
-		public int    overallScore;    // 0-100
-		public String grade;           // A+/A/B/C/D
-		public PerformanceReview existingReview; // null if not yet reviewed this month
-		public boolean weeklyLocked;
+		private User   employee;
+		private int    totalTasks;
+		private int    doneTasks;
+		private int    pendingTasks;
+		private int    overdueTasks;
+		private int    presentDays;
+		private int    absentDays;
+		private int    lateDays;
+		private int    leaveDays;
+		private int    attendanceScore; // 0-100
+		private int    taskScore;       // 0-100
+		private int    overallScore;    // 0-100
+		private String grade;           // A+/A/B/C/D
+		private PerformanceReview existingReview; // null if not yet reviewed this month
+		private boolean weeklyLocked;
 	}
 
 	private boolean isWeeklyLocked(User employee) {
-		List<PerformanceReview> allReviews = performanceReviewRepository.findByEmployeeOrderByReviewMonthDesc(employee);
-		if (allReviews.isEmpty()) {
-			return false;
-		}
-		PerformanceReview latestReview = allReviews.stream()
+		return performanceReviewRepository.findByEmployeeOrderByReviewMonthDesc(employee).stream()
 				.max(java.util.Comparator.comparing(PerformanceReview::getReviewedAt))
-				.orElse(null);
-		if (latestReview != null && latestReview.getReviewedAt() != null) {
-			long diffMs = System.currentTimeMillis() - latestReview.getReviewedAt();
-			return diffMs < 7L * 24 * 60 * 60 * 1000;
-		}
-		return false;
+				.map(PerformanceReview::getReviewedAt)
+				.map(reviewedAt -> System.currentTimeMillis() - reviewedAt < 7L * 24 * 60 * 60 * 1000)
+				.orElse(false);
 	}
 
 	@GetMapping("/performance")
@@ -1876,119 +1944,42 @@ public class ManagerController {
 		attendanceService.processAutoPunchOuts();
 		injectStats(model);
 
-		User manager = getCurrentManager();
+		var manager = getCurrentManager();
 		if (manager == null) return "manager-performance";
 
-		String tenant = getTenantSegment(manager);
+		var tenant = getTenantSegment(manager);
 
 		// Default to current month
-		java.time.YearMonth ym = (month != null && !month.isBlank())
+		var ym = (month != null && !month.isBlank())
 				? java.time.YearMonth.parse(month)
 				: java.time.YearMonth.now();
 
-		LocalDate from = ym.atDay(1);
-		LocalDate to   = ym.atEndOfMonth().isAfter(LocalDate.now()) ? LocalDate.now() : ym.atEndOfMonth();
+		var from = ym.atDay(1);
+		var to   = ym.atEndOfMonth().isAfter(LocalDate.now()) ? LocalDate.now() : ym.atEndOfMonth();
 
 		// Working days in the selected range (Mon–Fri, excluding today if future)
-		int workingDays = 0;
-		LocalDate d = from;
+		var workingDays = 0;
+		var d = from;
 		while (!d.isAfter(to)) {
-			java.time.DayOfWeek dow = d.getDayOfWeek();
+			var dow = d.getDayOfWeek();
 			if (dow != java.time.DayOfWeek.SATURDAY && dow != java.time.DayOfWeek.SUNDAY) workingDays++;
 			d = d.plusDays(1);
 		}
 		if (workingDays < 1) workingDays = 1;
 
-		List<User> teamMembers = getManagedTeamMembers(manager).stream()
-				.filter(u -> "EMPLOYEE".equalsIgnoreCase(u.getRole()))
-				.toList();
-		List<EmployeePerf> perfList = new ArrayList<>();
-
-		for (User emp : teamMembers) {
-			EmployeePerf p = new EmployeePerf();
-			p.employee = emp;
-
-			// ── Task stats ──────────────────────────────────────────────
-			List<Task> tasks = taskRepository.findByAssignedToAndTenantSegment(emp.getUsername(), tenant);
-			p.totalTasks   = tasks.size();
-			p.doneTasks    = (int) tasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
-			p.pendingTasks = (int) tasks.stream().filter(t -> "pending".equalsIgnoreCase(t.getStatus())).count();
-			// Overdue = pending/in-progress tasks whose due date is before today
-			p.overdueTasks = (int) tasks.stream()
-					.filter(t -> !"done".equalsIgnoreCase(t.getStatus())
-							&& t.getDueDate() != null
-							&& !t.getDueDate().isBlank()
-							&& LocalDate.parse(t.getDueDate()).isBefore(LocalDate.now()))
-					.count();
-
-			// Task score: done% out of total, penalise overdue
-			if (p.totalTasks > 0) {
-				double raw = ((double) p.doneTasks / p.totalTasks) * 100.0
-						- (p.overdueTasks * 5.0);
-				p.taskScore = (int) Math.max(0, Math.min(100, raw));
-			} else {
-				p.taskScore = 100; // no tasks = no penalty
-			}
-
-			// ── Attendance stats (selected month) ───────────────────────
-			List<Attendance> attRecords = attendanceRepository
-					.findByUserAndDateBetweenOrderByDateDesc(emp, from, to);
-
-			p.presentDays = (int) attRecords.stream()
-					.filter(a -> "present".equalsIgnoreCase(a.getStatus())).count();
-			p.lateDays    = (int) attRecords.stream()
-					.filter(a -> "late".equalsIgnoreCase(a.getStatus())).count();
-
-			// Leave days in this month
-			List<LeaveRequest> leaves = leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(emp);
-			int leaveDaysCount = 0;
-			for (LeaveRequest lr : leaves) {
-				if (!"Approved".equalsIgnoreCase(lr.getStatus())) continue;
-				if (lr.getFromDate() == null || lr.getToDate() == null) continue;
-				LocalDate lStart = lr.getFromDate().isBefore(from) ? from : lr.getFromDate();
-				LocalDate lEnd   = lr.getToDate().isAfter(to)      ? to   : lr.getToDate();
-				if (lStart.isAfter(lEnd)) continue;
-				LocalDate c = lStart;
-				while (!c.isAfter(lEnd)) {
-					java.time.DayOfWeek dow2 = c.getDayOfWeek();
-					if (dow2 != java.time.DayOfWeek.SATURDAY && dow2 != java.time.DayOfWeek.SUNDAY) leaveDaysCount++;
-					c = c.plusDays(1);
-				}
-			}
-			p.leaveDays  = leaveDaysCount;
-			int effectiveWorking = Math.max(1, workingDays - p.leaveDays);
-			p.absentDays = Math.max(0, effectiveWorking - p.presentDays - p.lateDays);
-
-			// Attendance score: present+late as % of effective working days, late counts half
-			double attRaw = ((p.presentDays + p.lateDays * 0.5) / effectiveWorking) * 100.0;
-			p.attendanceScore = (int) Math.max(0, Math.min(100, attRaw));
-
-			// Overall: 60% task + 40% attendance
-			p.overallScore = (int) (p.taskScore * 0.6 + p.attendanceScore * 0.4);
-
-			// Grade
-			p.grade = p.overallScore >= 90 ? "A+" :
-			          p.overallScore >= 75 ? "A"  :
-			          p.overallScore >= 60 ? "B"  :
-			          p.overallScore >= 45 ? "C"  : "D";
-
-			// Existing review this month
-			p.existingReview = performanceReviewRepository
-					.findByEmployeeAndReviewMonthAndTenantSegment(emp, ym.toString(), tenant)
-					.orElse(null);
-			p.weeklyLocked = isWeeklyLocked(emp);
-
-			perfList.add(p);
-		}
+		var teamMembers = getManagedTeamMembers(manager).stream()
+				.filter(u -> ROLE_EMPLOYEE.equalsIgnoreCase(u.getRole()))
+				.collect(Collectors.toList());
+		var perfList = computeEmployeePerformance(teamMembers, ym, tenant);
 
 		// Pre-compute summary stats (lambdas not supported in Thymeleaf SpEL)
-		int avgScore = perfList.isEmpty() ? 0
-				: (int) Math.round(perfList.stream().mapToInt(p -> p.overallScore).average().orElse(0));
-		int totalDone = perfList.stream().mapToInt(p -> p.doneTasks).sum();
-		long reviewedCount = perfList.stream().filter(p -> p.existingReview != null).count();
+		var avgScore = perfList.isEmpty() ? 0
+				: (int) Math.round(perfList.stream().mapToInt(EmployeePerf::getOverallScore).average().orElse(0));
+		var totalDone = perfList.stream().mapToInt(EmployeePerf::getDoneTasks).sum();
+		var reviewedCount = perfList.stream().filter(p -> p.getExistingReview() != null).count();
 
-		model.addAttribute("perfList",      perfList);
-		model.addAttribute("selectedMonth", ym.toString());
+		model.addAttribute(ATTR_PERF_LIST,      perfList);
+		model.addAttribute(ATTR_SELECTED_MONTH, ym.toString());
 		model.addAttribute("workingDays",   workingDays);
 		model.addAttribute("filterFrom",    from.toString());
 		model.addAttribute("filterTo",      to.toString());

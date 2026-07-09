@@ -22,6 +22,11 @@ import com.crm.demo.repository.UserRepository;
 @Controller
 public class PasswordController {
 
+	private static final String PAGE_FORGOT_PASSWORD = "forgot-password";
+	private static final String PAGE_RESET_PASSWORD = "reset-password";
+	private static final String ATTR_ERROR = "error";
+	private static final String ATTR_TOKEN = "token";
+
 	@Autowired
 	private JavaMailSender mailSender;
 
@@ -37,39 +42,39 @@ public class PasswordController {
 	// Forgot Password Page
 	@GetMapping("/forgot-password")
 	public String forgotPasswordPage() {
-		return "forgot-password";
+		return PAGE_FORGOT_PASSWORD;
 	}
 
 	// Process Forgot Password
 	@PostMapping("/forgot-password")
 	public String processForgotPassword(@RequestParam String email, Model model) {
 		if (email == null || email.trim().isBlank()) {
-			model.addAttribute("error", "Email is required");
-			return "forgot-password";
+			model.addAttribute(ATTR_ERROR, "Email is required");
+			return PAGE_FORGOT_PASSWORD;
 		}
 		if (!email.trim().matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
-			model.addAttribute("error", "Please provide a valid email address");
-			return "forgot-password";
+			model.addAttribute(ATTR_ERROR, "Please provide a valid email address");
+			return PAGE_FORGOT_PASSWORD;
 		}
 
-		User user = userRepository.findByEmail(email.trim());
+		var user = userRepository.findByEmail(email.trim());
 
 		// Check if user exists
 		if (user == null) {
-			model.addAttribute("error", "User not found");
-			return "forgot-password";
+			model.addAttribute(ATTR_ERROR, "User not found");
+			return PAGE_FORGOT_PASSWORD;
 		}
 
 		// Generate token
-		String token = UUID.randomUUID().toString();
+		var token = UUID.randomUUID().toString();
 
 		// Delete old token if exists
-		Optional<PasswordResetToken> existingToken = tokenRepository.findByUser(user);
+		var existingToken = tokenRepository.findByUser(user);
 
 		existingToken.ifPresent(tokenRepository::delete);
 
 		// Create new token
-		PasswordResetToken resetToken = new PasswordResetToken();
+		var resetToken = new PasswordResetToken();
 
 		resetToken.setToken(token);
 		resetToken.setUser(user);
@@ -78,10 +83,10 @@ public class PasswordController {
 		tokenRepository.save(resetToken);
 
 		// Reset link
-		String resetLink = "http://localhost:8080/reset-password?token=" + token;
+		var resetLink = "http://localhost:8080/reset-password?token=" + token;
 
 		// Send email
-		SimpleMailMessage message = new SimpleMailMessage();
+		var message = new SimpleMailMessage();
 
 		message.setFrom("CRM ADMIN <vishnumatamala@gmail.com>");
 		message.setTo(user.getEmail());
@@ -94,31 +99,31 @@ public class PasswordController {
 
 		model.addAttribute("message", "Password reset link sent to your email");
 
-		return "forgot-password";
+		return PAGE_FORGOT_PASSWORD;
 	}
 
 	// Reset Password Page
 	@GetMapping("/reset-password")
 	public String resetPasswordPage(@RequestParam String token, Model model) {
 
-		Optional<PasswordResetToken> opt = tokenRepository.findByToken(token);
+		var opt = tokenRepository.findByToken(token);
 		if (opt.isEmpty()) {
-			model.addAttribute("error", "Invalid or expired reset link. Please request a new one.");
-			return "forgot-password";
+			model.addAttribute(ATTR_ERROR, "Invalid or expired reset link. Please request a new one.");
+			return PAGE_FORGOT_PASSWORD;
 		}
 
-		PasswordResetToken resetToken = opt.get();
+		var resetToken = opt.get();
 
 		// Check token expiry
 		if (resetToken.getExpiryTime().isBefore(LocalDateTime.now())) {
 			tokenRepository.delete(resetToken);
-			model.addAttribute("error", "Reset link has expired. Please request a new one.");
-			return "forgot-password";
+			model.addAttribute(ATTR_ERROR, "Reset link has expired. Please request a new one.");
+			return PAGE_FORGOT_PASSWORD;
 		}
 
-		model.addAttribute("token", token);
+		model.addAttribute(ATTR_TOKEN, token);
 
-		return "reset-password";
+		return PAGE_RESET_PASSWORD;
 	}
 
 	// Reset Password Logic
@@ -127,45 +132,45 @@ public class PasswordController {
 			@RequestParam String confirmPassword, Model model) {
 
 		if (password == null || password.length() < 4) {
-			model.addAttribute("error", "Password must be at least 4 characters long.");
-			model.addAttribute("token", token);
-			return "reset-password";
+			model.addAttribute(ATTR_ERROR, "Password must be at least 4 characters long.");
+			model.addAttribute(ATTR_TOKEN, token);
+			return PAGE_RESET_PASSWORD;
 		}
 		if (!password.matches("^[A-Za-z0-9]+$")) {
-			model.addAttribute("error", "Password must contain only letters and numbers (no special characters).");
-			model.addAttribute("token", token);
-			return "reset-password";
+			model.addAttribute(ATTR_ERROR, "Password must contain only letters and numbers (no special characters).");
+			model.addAttribute(ATTR_TOKEN, token);
+			return PAGE_RESET_PASSWORD;
 		}
 
 		// Password match validation
 		if (!password.equals(confirmPassword)) {
 
-			model.addAttribute("error", "Passwords do not match");
+			model.addAttribute(ATTR_ERROR, "Passwords do not match");
 
-			model.addAttribute("token", token);
+			model.addAttribute(ATTR_TOKEN, token);
 
-			return "reset-password";
+			return PAGE_RESET_PASSWORD;
 		}
 
-		Optional<PasswordResetToken> opt = tokenRepository.findByToken(token);
+		var opt = tokenRepository.findByToken(token);
 		if (opt.isEmpty()) {
-			model.addAttribute("error", "Invalid or expired reset link. Please request a new one.");
-			return "forgot-password";
+			model.addAttribute(ATTR_ERROR, "Invalid or expired reset link. Please request a new one.");
+			return PAGE_FORGOT_PASSWORD;
 		}
 
-		PasswordResetToken resetToken = opt.get();
+		var resetToken = opt.get();
 
 		// Check expiry again
 		if (resetToken.getExpiryTime().isBefore(LocalDateTime.now())) {
 			tokenRepository.delete(resetToken);
-			model.addAttribute("error", "Reset link has expired. Please request a new one.");
-			return "forgot-password";
+			model.addAttribute(ATTR_ERROR, "Reset link has expired. Please request a new one.");
+			return PAGE_FORGOT_PASSWORD;
 		}
 
-		User user = resetToken.getUser();
+		var user = resetToken.getUser();
 
 		// Encode password
-		String encodedPassword = passwordEncoder.encode(password);
+		var encodedPassword = passwordEncoder.encode(password);
 
 		user.setPassword(encodedPassword);
 

@@ -1,7 +1,6 @@
                 package com.crm.demo.controller;
 
 import java.io.IOException;
-import java.nio.file.StandardCopyOption;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -13,10 +12,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,14 +27,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.crm.demo.model.Attendance;
 import com.crm.demo.model.AttendanceDay;
-import com.crm.demo.model.Holiday;
 import com.crm.demo.model.LeaveRequest;
 import com.crm.demo.model.Meeting;
-import com.crm.demo.model.Report;
-import com.crm.demo.model.ReportAttachment;
 import com.crm.demo.model.Task;
 import com.crm.demo.model.TaskAttachment;
-import com.crm.demo.model.Team;
 import com.crm.demo.model.User;
 import com.crm.demo.repository.AttendanceRepository;
 import com.crm.demo.repository.HolidayRepository;
@@ -47,33 +42,50 @@ import com.crm.demo.repository.TaskRepository;
 import com.crm.demo.repository.TaskAttachmentRepository;
 import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
-import com.crm.demo.model.PayrollTemplate;
 import com.crm.demo.repository.PayrollTemplateRepository;
-import com.crm.demo.model.Payslip;
 import com.crm.demo.repository.PayslipRepository;
 import com.crm.demo.service.PayslipService;
 import com.crm.demo.service.NotificationService;
 import com.crm.demo.service.ProfileUpdateService;
 import com.crm.demo.service.AttendanceService;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.multipart.MultipartFile;
-import java.util.UUID;
 
 import jakarta.servlet.http.HttpServletResponse;
 
 @Controller
 @RequestMapping("/employee")
 public class EmployeeController {
+
+    private static final String STATUS_APPROVED = "Approved";
+    private static final String STATUS_PENDING_UPPER = "Pending";
+    private static final String STATUS_REJECTED_UPPER = "Rejected";
+    private static final String ATTR_COMPLETED_TASKS = "completedTasks";
+    private static final String ATTR_PENDING_TASKS = "pendingTasks";
+    private static final String ATTR_MY_TEAM_NAME = "myTeamName";
+    private static final String ATTR_MY_TEAM_MANAGER = "myTeamManager";
+    private static final String ATTR_MY_TEAM_MEMBERS = "myTeamMembers";
+    private static final String ATTR_MY_TEAM_SIZE = "myTeamSize";
+    private static final String STATUS_DONE = "done";
+    private static final String STATUS_IN_PROGRESS = "in-progress";
+    private static final String STATUS_PENDING = "pending";
+    private static final String STATUS_WAITING_FOR_REVIEW = "waiting-for-review";
+    private static final String STATUS_REJECTED = "rejected";
+    private static final String ATTR_ERROR_MESSAGE = "errorMessage";
+    private static final String ATTR_SUCCESS_MESSAGE = "successMessage";
+    private static final String REDIRECT_EMPLOYEE_TASKS = "redirect:/employee/tasks";
+    private static final String OCTET_STREAM = "application/octet-stream";
+    private static final String REDIRECT_EMPLOYEE_ATTENDANCE = "redirect:/employee/attendance";
+    private static final String TIME_FORMAT = "%02d:%02d";
+    private static final String MSG_NOT_PUNCHED_IN = "You haven't punched in today.";
+    private static final String REDIRECT_EMPLOYEE_LEAVES = "redirect:/employee/leaves";
+    private static final String STATUS_ACTIVE = "active";
+    private static final String ATTR_ACTIVE_PAGE = "activePage";
+    private static final String PAYROLL = "payroll";
 
     @Value("${app.upload.dir:uploads/tasks}")
     private String uploadDir;
@@ -88,7 +100,6 @@ public class EmployeeController {
     @Autowired private LeaveRequestRepository leaveRequestRepository;
     @Autowired private ReportRepository      reportRepository;
     @Autowired private ReportAttachmentRepository reportAttachmentRepository;
-    @Autowired private BCryptPasswordEncoder passwordEncoder;
     @Autowired private ProfileUpdateService  profileUpdateService;
     @Autowired private NotificationService   notificationService;
     @Autowired private AttendanceService     attendanceService;
@@ -99,22 +110,22 @@ public class EmployeeController {
     // ── helpers ───────────────────────────────────────────────────────────
 
     private void injectUser(Model model) {
-        User emp = getCurrentEmployee();
+        var emp = getCurrentEmployee();
         model.addAttribute("employeeName", emp != null ? emp.getUsername() : "Employee");
         model.addAttribute("employeeRole", "Employee");
     }
 
     private User getCurrentEmployee() {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        var username = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByUsername(username);
     }
 
     private String getTenantSegment(User user) {
         if (user == null || user.getEmail() == null) return "";
         try {
-            String email = user.getEmail();
-            String local = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
-            int dot = local.lastIndexOf('.');
+            var email = user.getEmail();
+            var local = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
+            var dot = local.lastIndexOf('.');
             return dot >= 0 ? local.substring(dot + 1) : local;
         } catch (Exception e) { return ""; }
     }
@@ -122,9 +133,58 @@ public class EmployeeController {
     private boolean hasApprovedLeave(User user, LocalDate date) {
         if (user == null || date == null) return false;
         return leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(user).stream()
-                .anyMatch(leave -> "Approved".equalsIgnoreCase(leave.getStatus())
+                .anyMatch(leave -> STATUS_APPROVED.equalsIgnoreCase(leave.getStatus())
                         && !date.isBefore(leave.getFromDate())
                         && !date.isAfter(leave.getToDate()));
+    }
+
+    /**
+     * Build a merged day list for the given date range.
+     * Priority: holiday > weekend > real record > absent (past weekday with no record).
+     * Result is sorted newest-first.
+     */
+    private Set<LocalDate> populateApprovedLeaveDates(User user, LocalDate from, LocalDate to) {
+        var approvedLeaveDates = new LinkedHashSet<LocalDate>();
+        if (user == null) {
+            return approvedLeaveDates;
+        }
+        for (var leave : leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(user)) {
+            if (!STATUS_APPROVED.equalsIgnoreCase(leave.getStatus()) || leave.getFromDate() == null || leave.getToDate() == null) {
+                continue;
+            }
+            var cursor = leave.getFromDate();
+            while (!cursor.isAfter(leave.getToDate())) {
+                if (!cursor.isBefore(from) && !cursor.isAfter(to)) {
+                    approvedLeaveDates.add(cursor);
+                }
+                cursor = cursor.plusDays(1);
+            }
+        }
+        return approvedLeaveDates;
+    }
+
+    private AttendanceDay determineDayStatus(LocalDate cursor,
+                                             Map<LocalDate, String> holidays,
+                                             Map<LocalDate, Attendance> byDate,
+                                             Set<LocalDate> approvedLeaveDates,
+                                             LocalDate today) {
+        if (holidays.containsKey(cursor)) {
+            return new AttendanceDay(cursor, holidays.get(cursor), true);
+        }
+        var dow = cursor.getDayOfWeek();
+        if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
+            return new AttendanceDay(cursor, "weekend");
+        }
+        if (byDate.containsKey(cursor)) {
+            return new AttendanceDay(byDate.get(cursor));
+        }
+        if (approvedLeaveDates.contains(cursor)) {
+            return new AttendanceDay(cursor, "leave");
+        }
+        if (!cursor.isAfter(today)) {
+            return new AttendanceDay(cursor, "absent");
+        }
+        return null;
     }
 
     /**
@@ -136,42 +196,18 @@ public class EmployeeController {
                                              LocalDate from, LocalDate to,
                                              Map<LocalDate, String> holidays,
                                              User user) {
-        Map<LocalDate, Attendance> byDate = new LinkedHashMap<>();
-        for (Attendance a : records) byDate.put(a.getDate(), a);
+        var byDate = new LinkedHashMap<LocalDate, Attendance>();
+        for (var a : records) byDate.put(a.getDate(), a);
 
-        Set<LocalDate> approvedLeaveDates = new LinkedHashSet<>();
-        if (user != null) {
-            for (LeaveRequest leave : leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(user)) {
-                if (!"Approved".equalsIgnoreCase(leave.getStatus()) || leave.getFromDate() == null || leave.getToDate() == null) {
-                    continue;
-                }
-                LocalDate cursor = leave.getFromDate();
-                while (!cursor.isAfter(leave.getToDate())) {
-                    if (!cursor.isBefore(from) && !cursor.isAfter(to)) {
-                        approvedLeaveDates.add(cursor);
-                    }
-                    cursor = cursor.plusDays(1);
-                }
-            }
-        }
+        var approvedLeaveDates = populateApprovedLeaveDates(user, from, to);
 
-        List<AttendanceDay> days = new ArrayList<>();
-        LocalDate today  = LocalDate.now();
-        LocalDate cursor = to;
+        var days = new ArrayList<AttendanceDay>();
+        var today  = LocalDate.now();
+        var cursor = to;
         while (!cursor.isBefore(from)) {
-            if (holidays.containsKey(cursor)) {
-                days.add(new AttendanceDay(cursor, holidays.get(cursor), true));
-            } else {
-                DayOfWeek dow = cursor.getDayOfWeek();
-                if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
-                    days.add(new AttendanceDay(cursor, "weekend"));
-                } else if (byDate.containsKey(cursor)) {
-                    days.add(new AttendanceDay(byDate.get(cursor)));
-                } else if (approvedLeaveDates.contains(cursor)) {
-                    days.add(new AttendanceDay(cursor, "leave"));
-                } else if (!cursor.isAfter(today)) {
-                    days.add(new AttendanceDay(cursor, "absent"));
-                }
+            var day = determineDayStatus(cursor, holidays, byDate, approvedLeaveDates, today);
+            if (day != null) {
+                days.add(day);
             }
             cursor = cursor.minusDays(1);
         }
@@ -180,22 +216,22 @@ public class EmployeeController {
 
     /** Build holiday map (date → name) for a tenant within a date range. */
     private Map<LocalDate, String> fetchHolidays(String tenant, LocalDate from, LocalDate to) {
-        Map<LocalDate, String> map = new LinkedHashMap<>();
+        var map = new LinkedHashMap<LocalDate, String>();
         if (tenant == null || tenant.isBlank()) return map;
-        List<Holiday> list = holidayRepository.findByTenantAndDateRange(
+        var list = holidayRepository.findByTenantAndDateRange(
                 tenant, from.toString(), to.toString());
-        for (Holiday h : list) map.put(LocalDate.parse(h.getDate()), h.getName());
+        for (var h : list) map.put(LocalDate.parse(h.getDate()), h.getName());
         return map;
     }
 
     private void injectStats(Model model) {
         model.addAttribute("activeProjectsCount", 0);
-        model.addAttribute("completedTasks",       0);
+        model.addAttribute(ATTR_COMPLETED_TASKS,       0);
         model.addAttribute("attendanceRate",      "0%");
-        User emp = getCurrentEmployee();
-        long pendingLeaves = emp != null ? leaveRequestRepository.countByEmployeeAndStatus(emp, "Pending") : 0;
-        long approvedLeaves = emp != null ? leaveRequestRepository.countByEmployeeAndStatus(emp, "Approved") : 0;
-        long rejectedLeaves = emp != null ? leaveRequestRepository.countByEmployeeAndStatus(emp, "Rejected") : 0;
+        var emp = getCurrentEmployee();
+        var pendingLeaves = emp != null ? leaveRequestRepository.countByEmployeeAndStatus(emp, STATUS_PENDING_UPPER) : 0;
+        var approvedLeaves = emp != null ? leaveRequestRepository.countByEmployeeAndStatus(emp, STATUS_APPROVED) : 0;
+        var rejectedLeaves = emp != null ? leaveRequestRepository.countByEmployeeAndStatus(emp, STATUS_REJECTED_UPPER) : 0;
 
         model.addAttribute("pendingLeaves",        pendingLeaves);
         model.addAttribute("approvedLeaves",       approvedLeaves);
@@ -206,55 +242,53 @@ public class EmployeeController {
         model.addAttribute("leaveDays",            0);
         model.addAttribute("attendancePercent",    0);
         model.addAttribute("lastCheckin",         "—");
-        List<Task> pendingTasks = Collections.emptyList();
+        var pendingTasks = Collections.<Task>emptyList();
         if (emp != null) {
-            String tenant = getTenantSegment(emp);
-            List<Task> allTasks = taskRepository.findByAssignedToAndTenantSegment(emp.getUsername(), tenant);
+            var tenant = getTenantSegment(emp);
+            var allTasks = taskRepository.findByAssignedToAndTenantSegment(emp.getUsername(), tenant);
             pendingTasks = allTasks.stream()
-                .filter(t -> !"done".equalsIgnoreCase(t.getStatus()))
+                .filter(t -> !STATUS_DONE.equalsIgnoreCase(t.getStatus()))
                 .sorted(java.util.Comparator.comparing(Task::getId).reversed())
                 .collect(java.util.stream.Collectors.toList());
         }
         model.addAttribute("myProjects",           Collections.emptyList());
-        model.addAttribute("pendingTasks",         pendingTasks);
+        model.addAttribute(ATTR_PENDING_TASKS,         pendingTasks);
         model.addAttribute("leaveRequests",        emp != null ? leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(emp) : Collections.emptyList());
     }
-
-    // ── pages ─────────────────────────────────────────────────────────────
 
     @GetMapping("/dashboard")
     public String dashboard(Model model) {
         injectUser(model);
         injectStats(model);
 
-        User emp = getCurrentEmployee();
+        var emp = getCurrentEmployee();
         if (emp != null) {
             model.addAttribute("employeeStatus", emp.getStatus());
         } else {
-            model.addAttribute("employeeStatus", "active");
+            model.addAttribute("employeeStatus", STATUS_ACTIVE);
         }
 
         // ── Team info ─────────────────────────────────────────────────────
         if (emp != null) {
-            String tenant = getTenantSegment(emp);
-            List<Team> myTeams = teamRepository.findByMemberAndTenant(emp, tenant);
+            var tenant = getTenantSegment(emp);
+            var myTeams = teamRepository.findByMemberAndTenant(emp, tenant);
             if (!myTeams.isEmpty()) {
-                Team team = myTeams.get(0);
-                model.addAttribute("myTeamName",    team.getName());
-                model.addAttribute("myTeamManager", team.getManager() != null ? team.getManager().getUsername() : "—");
-                model.addAttribute("myTeamMembers", team.getMembers());
-                model.addAttribute("myTeamSize",    team.getMembers().size());
+                var team = myTeams.get(0);
+                model.addAttribute(ATTR_MY_TEAM_NAME,    team.getName());
+                model.addAttribute(ATTR_MY_TEAM_MANAGER, team.getManager() != null ? team.getManager().getUsername() : "—");
+                model.addAttribute(ATTR_MY_TEAM_MEMBERS, team.getMembers());
+                model.addAttribute(ATTR_MY_TEAM_SIZE,    team.getMembers().size());
             } else {
-                model.addAttribute("myTeamName",    null);
-                model.addAttribute("myTeamManager", "—");
-                model.addAttribute("myTeamMembers", Collections.emptyList());
-                model.addAttribute("myTeamSize",    0);
+                model.addAttribute(ATTR_MY_TEAM_NAME,    null);
+                model.addAttribute(ATTR_MY_TEAM_MANAGER, "—");
+                model.addAttribute(ATTR_MY_TEAM_MEMBERS, Collections.emptyList());
+                model.addAttribute(ATTR_MY_TEAM_SIZE,    0);
             }
         } else {
-            model.addAttribute("myTeamName",    null);
-            model.addAttribute("myTeamManager", "—");
-            model.addAttribute("myTeamMembers", Collections.emptyList());
-            model.addAttribute("myTeamSize",    0);
+            model.addAttribute(ATTR_MY_TEAM_NAME,    null);
+            model.addAttribute(ATTR_MY_TEAM_MANAGER, "—");
+            model.addAttribute(ATTR_MY_TEAM_MEMBERS, Collections.emptyList());
+            model.addAttribute(ATTR_MY_TEAM_SIZE,    0);
         }
 
         addAnalyticsAttributes(model, dashboardAnalytics());
@@ -264,52 +298,52 @@ public class EmployeeController {
     @GetMapping("/dashboard/analytics")
     @ResponseBody
     public Map<String, Object> dashboardAnalytics() {
-        User emp = getCurrentEmployee();
+        var emp = getCurrentEmployee();
         if (emp == null) {
             return buildDashboardAnalytics(Collections.emptyList(), Collections.emptyList());
         }
 
-        String tenant = getTenantSegment(emp);
-        List<Task> myTasks = taskRepository.findByAssignedToAndTenantSegment(emp.getUsername(), tenant);
-        List<User> teammates = new ArrayList<>();
-        List<Team> myTeams = teamRepository.findByMemberAndTenant(emp, tenant);
+        var tenant = getTenantSegment(emp);
+        var myTasks = taskRepository.findByAssignedToAndTenantSegment(emp.getUsername(), tenant);
+        var teammates = new ArrayList<User>();
+        var myTeams = teamRepository.findByMemberAndTenant(emp, tenant);
         if (!myTeams.isEmpty()) {
-            teammates = myTeams.get(0).getMembers();
+            teammates = new ArrayList<>(myTeams.get(0).getMembers());
         }
 
-        Map<String, Object> data = buildDashboardAnalytics(myTasks, teammates);
-        data.put("completedTasks", data.get("statusDone"));
-        data.put("pendingTaskTotal", (long) myTasks.stream()
-                .filter(t -> !"done".equalsIgnoreCase(t.getStatus()))
+        var data = buildDashboardAnalytics(myTasks, teammates);
+        data.put(ATTR_COMPLETED_TASKS, data.get("statusDone"));
+        data.put("pendingTaskTotal", myTasks.stream()
+                .filter(t -> !STATUS_DONE.equalsIgnoreCase(t.getStatus()))
                 .count());
         return data;
     }
 
     private Map<String, Object> buildDashboardAnalytics(List<Task> tasks, List<User> teammates) {
-        Map<String, Object> data = new LinkedHashMap<>();
-        List<Task> scopedTasks = tasks != null ? tasks : Collections.emptyList();
-        List<User> scopedTeammates = teammates != null ? teammates : Collections.emptyList();
+        var data = new LinkedHashMap<String, Object>();
+        var scopedTasks = tasks != null ? tasks : Collections.<Task>emptyList();
+        var scopedTeammates = teammates != null ? teammates : Collections.<User>emptyList();
 
-        long statusDone = scopedTasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
-        long statusInProgress = scopedTasks.stream().filter(t -> "in-progress".equalsIgnoreCase(t.getStatus())).count();
-        long statusPending = scopedTasks.stream().filter(t -> "pending".equalsIgnoreCase(t.getStatus())).count();
-        long statusReview = scopedTasks.stream().filter(t -> "waiting-for-review".equalsIgnoreCase(t.getStatus())).count();
-        long priorityHigh = scopedTasks.stream().filter(t -> "High".equalsIgnoreCase(t.getPriority())).count();
-        long priorityMedium = scopedTasks.stream().filter(t -> "Medium".equalsIgnoreCase(t.getPriority())).count();
-        long priorityLow = scopedTasks.stream().filter(t -> "Low".equalsIgnoreCase(t.getPriority())).count();
+        var statusDone = scopedTasks.stream().filter(t -> STATUS_DONE.equalsIgnoreCase(t.getStatus())).count();
+        var statusInProgress = scopedTasks.stream().filter(t -> STATUS_IN_PROGRESS.equalsIgnoreCase(t.getStatus())).count();
+        var statusPending = scopedTasks.stream().filter(t -> STATUS_PENDING.equalsIgnoreCase(t.getStatus())).count();
+        var statusReview = scopedTasks.stream().filter(t -> STATUS_WAITING_FOR_REVIEW.equalsIgnoreCase(t.getStatus())).count();
+        var priorityHigh = scopedTasks.stream().filter(t -> "High".equalsIgnoreCase(t.getPriority())).count();
+        var priorityMedium = scopedTasks.stream().filter(t -> "Medium".equalsIgnoreCase(t.getPriority())).count();
+        var priorityLow = scopedTasks.stream().filter(t -> "Low".equalsIgnoreCase(t.getPriority())).count();
 
-        Map<String, Long> creatorCounts = new LinkedHashMap<>();
-        for (Task task : scopedTasks) {
-            String creator = task.getCreatedBy() == null || task.getCreatedBy().isBlank() ? "Unassigned" : task.getCreatedBy();
+        var creatorCounts = new LinkedHashMap<String, Long>();
+        for (var task : scopedTasks) {
+            var creator = task.getCreatedBy() == null || task.getCreatedBy().isBlank() ? "Unassigned" : task.getCreatedBy();
             creatorCounts.put(creator, creatorCounts.getOrDefault(creator, 0L) + 1);
         }
 
-        long activeCount = scopedTeammates.stream().filter(User::isActive).count();
-        long inactiveCount = scopedTeammates.size() - activeCount;
-        long verified = scopedTasks.stream().filter(t -> "approved".equalsIgnoreCase(t.getVerificationStatus())).count();
-        long rejected = scopedTasks.stream().filter(t -> "rejected".equalsIgnoreCase(t.getVerificationStatus())).count();
-        long waiting = scopedTasks.stream().filter(t -> "waiting-for-review".equalsIgnoreCase(t.getVerificationStatus())).count();
-        long unverified = scopedTasks.size() - verified - rejected - waiting;
+        var activeCount = scopedTeammates.stream().filter(User::isActive).count();
+        var inactiveCount = scopedTeammates.size() - activeCount;
+        var verified = scopedTasks.stream().filter(t -> "approved".equalsIgnoreCase(t.getVerificationStatus())).count();
+        var rejected = scopedTasks.stream().filter(t -> STATUS_REJECTED.equalsIgnoreCase(t.getVerificationStatus())).count();
+        var waiting = scopedTasks.stream().filter(t -> STATUS_WAITING_FOR_REVIEW.equalsIgnoreCase(t.getVerificationStatus())).count();
+        var unverified = scopedTasks.size() - verified - rejected - waiting;
 
         data.put("statusDone", statusDone);
         data.put("statusInProgress", statusInProgress);
@@ -347,47 +381,72 @@ public class EmployeeController {
         model.addAttribute("chartWaiting", data.get("waiting"));
         model.addAttribute("chartUnverified", data.get("unverified"));
         model.addAttribute("chartTotalMyTasks", data.get("totalMyTasks"));
-        model.addAttribute("completedTasks", data.get("statusDone"));
+        model.addAttribute(ATTR_COMPLETED_TASKS, data.get("statusDone"));
     }
-
-
 
     @GetMapping("/tasks")
     public String tasksPage(Model model) {
         injectUser(model);
         injectStats(model);
 
-        User emp = getCurrentEmployee();
+        var emp = getCurrentEmployee();
         if (emp != null) {
-            String tenant = getTenantSegment(emp);
-            String username = emp.getUsername();
+            var tenant = getTenantSegment(emp);
+            var username = emp.getUsername();
 
             // Load only tasks assigned to this employee in their tenant
-            List<Task> myTasks = taskRepository.findByAssignedToAndTenantSegment(username, tenant);
+            var myTasks = taskRepository.findByAssignedToAndTenantSegment(username, tenant);
             myTasks.sort(java.util.Comparator.comparing(Task::getId).reversed());
 
-            long completed  = myTasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
-            long inProgress = myTasks.stream().filter(t -> "in-progress".equalsIgnoreCase(t.getStatus())).count();
-            long pending    = myTasks.stream().filter(t -> "pending".equalsIgnoreCase(t.getStatus())).count();
+            var completed  = myTasks.stream().filter(t -> STATUS_DONE.equalsIgnoreCase(t.getStatus())).count();
+            var inProgress = myTasks.stream().filter(t -> STATUS_IN_PROGRESS.equalsIgnoreCase(t.getStatus())).count();
+            var pending    = myTasks.stream().filter(t -> STATUS_PENDING.equalsIgnoreCase(t.getStatus())).count();
 
             model.addAttribute("myTasks",         myTasks);
             model.addAttribute("taskHistory",     myTasks);
             model.addAttribute("taskHistoryCount", myTasks.size());
-            model.addAttribute("completedTasks",  completed);
+            model.addAttribute(ATTR_COMPLETED_TASKS,  completed);
             model.addAttribute("inProgressTasks", inProgress);
-            model.addAttribute("pendingTasks",   pending);
+            model.addAttribute(ATTR_PENDING_TASKS,   pending);
             model.addAttribute("totalTasks",     myTasks.size());
         } else {
             model.addAttribute("myTasks",          java.util.Collections.emptyList());
             model.addAttribute("taskHistory",      java.util.Collections.emptyList());
             model.addAttribute("taskHistoryCount", 0);
-            model.addAttribute("completedTasks",   0);
+            model.addAttribute(ATTR_COMPLETED_TASKS,   0);
             model.addAttribute("inProgressTasks",  0);
-            model.addAttribute("pendingTasks",    0);
+            model.addAttribute(ATTR_PENDING_TASKS,    0);
             model.addAttribute("totalTasks",      0);
         }
 
         return "employee-tasks";
+    }
+
+    private void handleTaskAttachment(MultipartFile attachment, Task task, User emp) throws IOException {
+        if (attachment == null || attachment.isEmpty()) {
+            return;
+        }
+        var fileData = attachment.getBytes();
+        var contentType = attachment.getContentType();
+        if (contentType == null) {
+            contentType = OCTET_STREAM;
+        }
+
+        var taskAttachment = new TaskAttachment(
+            task,
+            attachment.getOriginalFilename(),
+            fileData,
+            contentType,
+            emp.getUsername()
+        );
+        taskAttachmentRepository.save(taskAttachment);
+
+        var existingNames = new ArrayList<String>();
+        if (task.getAttachmentPaths() != null && !task.getAttachmentPaths().isBlank()) {
+            existingNames.addAll(java.util.Arrays.asList(task.getAttachmentPaths().split(",")));
+        }
+        existingNames.add(attachment.getOriginalFilename());
+        task.setAttachmentPaths(String.join(",", existingNames));
     }
 
     @PostMapping("/tasks/update-status/{id}")
@@ -395,76 +454,79 @@ public class EmployeeController {
                                    @RequestParam String status,
                                    @RequestParam(value = "attachment", required = false) MultipartFile attachment,
                                    RedirectAttributes ra) {
-        User emp = getCurrentEmployee();
+        var emp = getCurrentEmployee();
         if (emp == null) {
-            ra.addFlashAttribute("errorMessage", "You need to sign in to update a task status.");
-            return "redirect:/employee/tasks";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You need to sign in to update a task status.");
+            return REDIRECT_EMPLOYEE_TASKS;
         }
 
-        Task task = taskRepository.findById(id).orElse(null);
+        var task = taskRepository.findById(id).orElse(null);
         if (task == null) {
-            ra.addFlashAttribute("errorMessage", "Task not found.");
-            return "redirect:/employee/tasks";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Task not found.");
+            return REDIRECT_EMPLOYEE_TASKS;
         }
 
-        String tenant = getTenantSegment(emp);
+        var tenant = getTenantSegment(emp);
         if (!emp.getUsername().equals(task.getAssignedTo()) || !tenant.equals(task.getTenantSegment())) {
-            ra.addFlashAttribute("errorMessage", "You can only update your own assigned tasks.");
-            return "redirect:/employee/tasks";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You can only update your own assigned tasks.");
+            return REDIRECT_EMPLOYEE_TASKS;
         }
 
         // Handle file attachment if provided (optional now)
         if (attachment != null && !attachment.isEmpty()) {
             try {
-                byte[] fileData = attachment.getBytes();
-                String contentType = attachment.getContentType();
-                if (contentType == null) contentType = "application/octet-stream";
-                
-                // Create and save attachment in database
-                TaskAttachment taskAttachment = new TaskAttachment(
-                    task,
-                    attachment.getOriginalFilename(),
-                    fileData,
-                    contentType,
-                    emp.getUsername()
-                );
-                taskAttachmentRepository.save(taskAttachment);
-
-                List<String> existingNames = new ArrayList<>();
-                if (task.getAttachmentPaths() != null && !task.getAttachmentPaths().isBlank()) {
-                    existingNames.addAll(java.util.Arrays.asList(task.getAttachmentPaths().split(",")));
-                }
-                existingNames.add(attachment.getOriginalFilename());
-                task.setAttachmentPaths(String.join(",", existingNames));
+                handleTaskAttachment(attachment, task, emp);
             } catch (IOException e) {
-                ra.addFlashAttribute("errorMessage", "File upload failed: " + e.getMessage());
-                return "redirect:/employee/tasks";
+                ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "File upload failed: " + e.getMessage());
+                return REDIRECT_EMPLOYEE_TASKS;
             }
         }
 
         // Update task status
-        String normalizedStatus = "done".equalsIgnoreCase(status) ? "done" : 
-                                  "in-progress".equalsIgnoreCase(status) ? "in-progress" : "pending";
+        var normalizedStatus = STATUS_PENDING;
+        if (STATUS_DONE.equalsIgnoreCase(status)) {
+            normalizedStatus = STATUS_DONE;
+        } else if (STATUS_IN_PROGRESS.equalsIgnoreCase(status)) {
+            normalizedStatus = STATUS_IN_PROGRESS;
+        }
         task.setStatus(normalizedStatus);
         
         // If employee marks as done, set verification status to waiting-for-review
-        if ("done".equalsIgnoreCase(normalizedStatus)) {
-            task.setVerificationStatus("waiting-for-review");
+        if (STATUS_DONE.equalsIgnoreCase(normalizedStatus)) {
+            task.setVerificationStatus(STATUS_WAITING_FOR_REVIEW);
         } else {
             // If marking as in-progress or pending, reset verification to pending
-            task.setVerificationStatus("pending");
+            task.setVerificationStatus(STATUS_PENDING);
         }
         
         taskRepository.save(task);
 
         notificationService.notifyTaskStatusUpdated(emp, task, normalizedStatus);
 
-        String message = "Task status updated to " + normalizedStatus + ".";
-        ra.addFlashAttribute("successMessage", message);
-        return "redirect:/employee/tasks";
+        var message = "Task status updated to " + normalizedStatus + ".";
+        ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, message);
+        return REDIRECT_EMPLOYEE_TASKS;
     }
 
     // ── ATTENDANCE ────────────────────────────────────────────────────────
+
+    private void populatePunchModel(Model model, Optional<Attendance> todayOpt) {
+        var punchedIn  = todayOpt.isPresent();
+        var punchedOut = todayOpt.map(a -> a.getCheckOut() != null).orElse(false);
+        var onBreak    = todayOpt.map(a ->
+                (a.getBreakStart() != null && a.getBreakEnd() == null) ||
+                (a.getBreak2Start() != null && a.getBreak2End() == null)).orElse(false);
+        var breakDone  = todayOpt.map(a -> a.getBreak2End() != null).orElse(false);
+        var canStartBreak = punchedIn && !punchedOut && !onBreak && !breakDone &&
+                todayOpt.map(a -> a.getBreakStart() == null ||
+                        (a.getBreakEnd() != null && a.getBreak2Start() == null)).orElse(false);
+
+        model.addAttribute("punchedIn",         punchedIn);
+        model.addAttribute("punchedOut",        punchedOut);
+        model.addAttribute("onBreak",           onBreak);
+        model.addAttribute("breakDone",         breakDone);
+        model.addAttribute("canStartBreak",     canStartBreak);
+    }
 
     @GetMapping("/attendance")
     public String attendancePage(
@@ -478,66 +540,60 @@ public class EmployeeController {
         injectUser(model);
         injectStats(model);
 
-        User emp = getCurrentEmployee();
-        LocalDate today = LocalDate.now();
+        var emp = getCurrentEmployee();
+        var today = LocalDate.now();
 
         // Date range (default: last 30 days)
-        LocalDate filterFrom = (from != null && !from.isBlank()) ? LocalDate.parse(from) : today.minusDays(29);
-        LocalDate filterTo   = (to   != null && !to.isBlank())   ? LocalDate.parse(to)   : today;
-        if (filterTo.isAfter(today))      filterTo   = today;
-        if (filterFrom.isAfter(filterTo)) filterFrom = filterTo;
+        var filterFrom = (from != null && !from.isBlank()) ? LocalDate.parse(from) : today.minusDays(29);
+        var filterTo   = (to   != null && !to.isBlank())   ? LocalDate.parse(to)   : today;
+        if (filterTo.isAfter(today)) {
+            filterTo = today;
+        }
+        if (filterFrom.isAfter(filterTo)) {
+            filterFrom = filterTo;
+        }
 
         // Fetch real records in range
-        String tenant = getTenantSegment(emp);
-        List<Attendance> records = emp != null
+        var tenant = getTenantSegment(emp);
+        var records = emp != null
                 ? attendanceRepository.findByUserAndDateBetweenOrderByDateDesc(emp, filterFrom, filterTo)
-                : Collections.emptyList();
+                : Collections.<Attendance>emptyList();
 
         // Holidays in range
-        Map<LocalDate, String> holidays = fetchHolidays(tenant, filterFrom, filterTo);
+        var holidays = fetchHolidays(tenant, filterFrom, filterTo);
 
         // Today's record — drives button state
-        Optional<Attendance> todayOpt = emp != null
+        var todayOpt = emp != null
                 ? attendanceRepository.findByUserAndDate(emp, today)
-                : Optional.empty();
+                : Optional.<Attendance>empty();
 
         // Is today a holiday?
-        String todayHolidayName = holidays.get(today);
-        boolean isHolidayToday  = todayHolidayName != null;
+        var todayHolidayName = holidays.get(today);
+        var isHolidayToday  = todayHolidayName != null;
 
-        boolean punchedIn  = todayOpt.isPresent();
-        boolean punchedOut = todayOpt.map(a -> a.getCheckOut() != null).orElse(false);
-        boolean onBreak    = todayOpt.map(a ->
-                (a.getBreakStart() != null && a.getBreakEnd() == null) ||
-                (a.getBreak2Start() != null && a.getBreak2End() == null)).orElse(false);
-        boolean breakDone  = todayOpt.map(a -> a.getBreak2End() != null).orElse(false);
-        boolean canStartBreak = punchedIn && !punchedOut && !onBreak && !breakDone &&
-                todayOpt.map(a -> a.getBreakStart() == null ||
-                        (a.getBreakEnd() != null && a.getBreak2Start() == null)).orElse(false);
+        populatePunchModel(model, todayOpt);
 
         // Build merged day list (fills absent/weekend/holiday gaps)
-        boolean todayOnLeave = hasApprovedLeave(emp, today);
+        var todayOnLeave = hasApprovedLeave(emp, today);
 
-        List<AttendanceDay> allDays = buildDayList(records, filterFrom, filterTo, holidays, emp);
+        var allDays = buildDayList(records, filterFrom, filterTo, holidays, emp);
 
         // Apply status filter
-        List<AttendanceDay> filteredDays = allDays;
+        var filteredDays = allDays;
         if (status != null && !status.isBlank() && !"all".equalsIgnoreCase(status)) {
-            List<AttendanceDay> tmp = new ArrayList<>();
-            for (AttendanceDay d : allDays) {
-                if (d.getStatus().equalsIgnoreCase(status)) tmp.add(d);
-            }
-            filteredDays = tmp;
+            filteredDays = allDays.stream()
+                .filter(d -> d.getStatus().equalsIgnoreCase(status))
+                .collect(Collectors.toList());
         }
 
         // Stats from all-time records
-        List<Attendance> allRecords = emp != null
+        var allRecords = emp != null
                 ? attendanceRepository.findByUserOrderByDateDesc(emp)
-                : Collections.emptyList();
-        long presentCount = allRecords.stream()
+                : Collections.<Attendance>emptyList();
+        var presentCount = allRecords.stream()
                 .filter(a -> "present".equalsIgnoreCase(a.getStatus()) || "late".equalsIgnoreCase(a.getStatus()))
                 .count();
-        long lateCount = allRecords.stream()
+        var lateCount = allRecords.stream()
                 .filter(a -> "late".equalsIgnoreCase(a.getStatus()))
                 .count();
 
@@ -545,11 +601,6 @@ public class EmployeeController {
         model.addAttribute("totalRecords",      filteredDays.size());
         model.addAttribute("todayRecord",       todayOpt.orElse(null));
         model.addAttribute("todayOnLeave",      todayOnLeave);
-        model.addAttribute("punchedIn",         punchedIn);
-        model.addAttribute("punchedOut",        punchedOut);
-        model.addAttribute("onBreak",           onBreak);
-        model.addAttribute("breakDone",         breakDone);
-        model.addAttribute("canStartBreak",     canStartBreak);
         model.addAttribute("isHolidayToday",    isHolidayToday);
         model.addAttribute("todayHolidayName",  todayHolidayName);
         model.addAttribute("presentCount",      presentCount);
@@ -563,32 +614,34 @@ public class EmployeeController {
 
     @PostMapping("/attendance/punch-in")
     public String punchIn(RedirectAttributes ra) {
-        User emp = getCurrentEmployee();
-        if (emp == null) return "redirect:/employee/attendance";
+        var emp = getCurrentEmployee();
+        if (emp == null) {
+            return REDIRECT_EMPLOYEE_ATTENDANCE;
+        }
 
-        LocalDate today  = LocalDate.now();
-        String    tenant = getTenantSegment(emp);
+        var today  = LocalDate.now();
+        var tenant = getTenantSegment(emp);
 
         // Block punch-in on holidays
         if (holidayRepository.findByDateAndTenantSegment(today.toString(), tenant).isPresent()) {
-            ra.addFlashAttribute("errorMessage", "Today is a holiday. Punch-in is not allowed.");
-            return "redirect:/employee/attendance";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Today is a holiday. Punch-in is not allowed.");
+            return REDIRECT_EMPLOYEE_ATTENDANCE;
         }
 
         if (hasApprovedLeave(emp, today)) {
-            ra.addFlashAttribute("errorMessage", "You are on approved leave today. Punch-in is not allowed.");
-            return "redirect:/employee/attendance";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You are on approved leave today. Punch-in is not allowed.");
+            return REDIRECT_EMPLOYEE_ATTENDANCE;
         }
 
         if (attendanceRepository.findByUserAndDate(emp, today).isPresent()) {
-            ra.addFlashAttribute("errorMessage", "You have already punched in today.");
-            return "redirect:/employee/attendance";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You have already punched in today.");
+            return REDIRECT_EMPLOYEE_ATTENDANCE;
         }
 
-        LocalTime now   = LocalTime.now();
-        String   status = now.isAfter(LocalTime.of(9, 30)) ? "late" : "present";
+        var now   = LocalTime.now();
+        var status = now.isAfter(LocalTime.of(9, 30)) ? "late" : "present";
 
-        Attendance att = new Attendance();
+        var att = new Attendance();
         att.setUser(emp);
         att.setDate(today);
         att.setCheckIn(now);
@@ -597,39 +650,41 @@ public class EmployeeController {
         attendanceRepository.save(att);
         notificationService.notifyAttendanceUpdated(emp, "punch-in");
 
-        ra.addFlashAttribute("successMessage",
-                "Punched in at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
-        return "redirect:/employee/attendance";
+        ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
+                "Punched in at " + String.format(TIME_FORMAT, now.getHour(), now.getMinute()) + ".");
+        return REDIRECT_EMPLOYEE_ATTENDANCE;
     }
 
     @PostMapping("/attendance/punch-out")
     public String punchOut(RedirectAttributes ra) {
-        User emp = getCurrentEmployee();
-        if (emp == null) return "redirect:/employee/attendance";
-
-        LocalDate today = LocalDate.now();
-        if (hasApprovedLeave(emp, today)) {
-            ra.addFlashAttribute("errorMessage", "You are on approved leave today. Punch-out is not allowed.");
-            return "redirect:/employee/attendance";
+        var emp = getCurrentEmployee();
+        if (emp == null) {
+            return REDIRECT_EMPLOYEE_ATTENDANCE;
         }
 
-        Optional<Attendance> opt = attendanceRepository.findByUserAndDate(emp, today);
+        var today = LocalDate.now();
+        if (hasApprovedLeave(emp, today)) {
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You are on approved leave today. Punch-out is not allowed.");
+            return REDIRECT_EMPLOYEE_ATTENDANCE;
+        }
+
+        var opt = attendanceRepository.findByUserAndDate(emp, today);
 
         if (opt.isEmpty()) {
-            ra.addFlashAttribute("errorMessage", "You haven't punched in today.");
-            return "redirect:/employee/attendance";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_NOT_PUNCHED_IN);
+            return REDIRECT_EMPLOYEE_ATTENDANCE;
         }
-        Attendance att = opt.get();
+        var att = opt.get();
         if (att.getCheckOut() != null) {
-            ra.addFlashAttribute("errorMessage", "You have already punched out today.");
-            return "redirect:/employee/attendance";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You have already punched out today.");
+            return REDIRECT_EMPLOYEE_ATTENDANCE;
         }
 
-        LocalTime now = LocalTime.now();
+        var now = LocalTime.now();
         att.setCheckOut(now);
         
         // Recalculate status based on worked hours:
-        long mins = att.getWorkedMinutes();
+        var mins = att.getWorkedMinutes();
         if (mins >= 0 && mins < 240) {
             att.setStatus("absent");
         } else if (mins >= 240 && mins < 360) {
@@ -639,44 +694,46 @@ public class EmployeeController {
         attendanceRepository.save(att);
         notificationService.notifyAttendanceUpdated(emp, "punch-out");
 
-        ra.addFlashAttribute("successMessage",
-                "Punched out at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
-        return "redirect:/employee/attendance";
+        ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
+                "Punched out at " + String.format(TIME_FORMAT, now.getHour(), now.getMinute()) + ".");
+        return REDIRECT_EMPLOYEE_ATTENDANCE;
     }
 
     @PostMapping("/attendance/break-start")
     public String breakStart(RedirectAttributes ra) {
-        User emp = getCurrentEmployee();
-        if (emp == null) return "redirect:/employee/attendance";
-
-        LocalDate today = LocalDate.now();
-        if (hasApprovedLeave(emp, today)) {
-            ra.addFlashAttribute("errorMessage", "You are on approved leave today. Break actions are not allowed.");
-            return "redirect:/employee/attendance";
+        var emp = getCurrentEmployee();
+        if (emp == null) {
+            return REDIRECT_EMPLOYEE_ATTENDANCE;
         }
 
-        Optional<Attendance> opt = attendanceRepository.findByUserAndDate(emp, today);
+        var today = LocalDate.now();
+        if (hasApprovedLeave(emp, today)) {
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You are on approved leave today. Break actions are not allowed.");
+            return REDIRECT_EMPLOYEE_ATTENDANCE;
+        }
+
+        var opt = attendanceRepository.findByUserAndDate(emp, today);
 
         if (opt.isEmpty()) {
-            ra.addFlashAttribute("errorMessage", "You haven't punched in today.");
-            return "redirect:/employee/attendance";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_NOT_PUNCHED_IN);
+            return REDIRECT_EMPLOYEE_ATTENDANCE;
         }
-        Attendance att = opt.get();
+        var att = opt.get();
         if (att.getCheckOut() != null) {
-            ra.addFlashAttribute("errorMessage", "You have already punched out.");
-            return "redirect:/employee/attendance";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You have already punched out.");
+            return REDIRECT_EMPLOYEE_ATTENDANCE;
         }
 
-        LocalTime now = LocalTime.now();
+        var now = LocalTime.now();
 
         // Use break 1 slot if not yet started
         if (att.getBreakStart() == null) {
             att.setBreakStart(now);
             attendanceRepository.save(att);
             notificationService.notifyAttendanceUpdated(emp, "break-1-start");
-            ra.addFlashAttribute("successMessage",
-                    "Break 1 started at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
-            return "redirect:/employee/attendance";
+            ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
+                    "Break 1 started at " + String.format(TIME_FORMAT, now.getHour(), now.getMinute()) + ".");
+            return REDIRECT_EMPLOYEE_ATTENDANCE;
         }
 
         // Use break 2 slot if break 1 is done and break 2 not yet started
@@ -684,44 +741,46 @@ public class EmployeeController {
             att.setBreak2Start(now);
             attendanceRepository.save(att);
             notificationService.notifyAttendanceUpdated(emp, "break-2-start");
-            ra.addFlashAttribute("successMessage",
-                    "Break 2 started at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
-            return "redirect:/employee/attendance";
+            ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
+                    "Break 2 started at " + String.format(TIME_FORMAT, now.getHour(), now.getMinute()) + ".");
+            return REDIRECT_EMPLOYEE_ATTENDANCE;
         }
 
-        ra.addFlashAttribute("errorMessage", "No more breaks available today.");
-        return "redirect:/employee/attendance";
+        ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "No more breaks available today.");
+        return REDIRECT_EMPLOYEE_ATTENDANCE;
     }
 
     @PostMapping("/attendance/break-end")
     public String breakEnd(RedirectAttributes ra) {
-        User emp = getCurrentEmployee();
-        if (emp == null) return "redirect:/employee/attendance";
-
-        LocalDate today = LocalDate.now();
-        if (hasApprovedLeave(emp, today)) {
-            ra.addFlashAttribute("errorMessage", "You are on approved leave today. Break actions are not allowed.");
-            return "redirect:/employee/attendance";
+        var emp = getCurrentEmployee();
+        if (emp == null) {
+            return REDIRECT_EMPLOYEE_ATTENDANCE;
         }
 
-        Optional<Attendance> opt = attendanceRepository.findByUserAndDate(emp, today);
+        var today = LocalDate.now();
+        if (hasApprovedLeave(emp, today)) {
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You are on approved leave today. Break actions are not allowed.");
+            return REDIRECT_EMPLOYEE_ATTENDANCE;
+        }
+
+        var opt = attendanceRepository.findByUserAndDate(emp, today);
 
         if (opt.isEmpty()) {
-            ra.addFlashAttribute("errorMessage", "You haven't punched in today.");
-            return "redirect:/employee/attendance";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_NOT_PUNCHED_IN);
+            return REDIRECT_EMPLOYEE_ATTENDANCE;
         }
-        Attendance att = opt.get();
+        var att = opt.get();
 
-        LocalTime now = LocalTime.now();
+        var now = LocalTime.now();
 
         // End break 2 if it's active
         if (att.getBreak2Start() != null && att.getBreak2End() == null) {
             att.setBreak2End(now);
             attendanceRepository.save(att);
             notificationService.notifyAttendanceUpdated(emp, "break-2-end");
-            ra.addFlashAttribute("successMessage",
-                    "Break 2 ended at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
-            return "redirect:/employee/attendance";
+            ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
+                    "Break 2 ended at " + String.format(TIME_FORMAT, now.getHour(), now.getMinute()) + ".");
+            return REDIRECT_EMPLOYEE_ATTENDANCE;
         }
 
         // End break 1 if it's active
@@ -729,13 +788,13 @@ public class EmployeeController {
             att.setBreakEnd(now);
             attendanceRepository.save(att);
             notificationService.notifyAttendanceUpdated(emp, "break-1-end");
-            ra.addFlashAttribute("successMessage",
-                    "Break 1 ended at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
-            return "redirect:/employee/attendance";
+            ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
+                    "Break 1 ended at " + String.format(TIME_FORMAT, now.getHour(), now.getMinute()) + ".");
+            return REDIRECT_EMPLOYEE_ATTENDANCE;
         }
 
-        ra.addFlashAttribute("errorMessage", "No active break to end.");
-        return "redirect:/employee/attendance";
+        ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "No active break to end.");
+        return REDIRECT_EMPLOYEE_ATTENDANCE;
     }
 
     // ── other pages ───────────────────────────────────────────────────────
@@ -747,36 +806,44 @@ public class EmployeeController {
         return "employee-calendar";
     }
 
+    private List<Meeting> filterActiveMeetings(List<Meeting> all, LocalDate today, LocalTime now) {
+        return all.stream().filter(m -> {
+            if (m.getMeetingDate().isBefore(today)) return false;
+            if (m.getMeetingDate().isAfter(today)) return true;
+            if (m.getMeetingTime() == null) return true;
+            int dur = (m.getDuration() != null) ? m.getDuration() : 0;
+            return !m.getMeetingTime().plusMinutes(dur).isBefore(now);
+        }).collect(Collectors.toList());
+    }
+
+    private List<Meeting> filterPastMeetings(List<Meeting> all, LocalDate today, LocalTime now) {
+        return all.stream().filter(m -> {
+            if (m.getMeetingDate().isBefore(today)) return true;
+            if (!m.getMeetingDate().equals(today)) return false;
+            if (m.getMeetingTime() == null) return false;
+            int dur = (m.getDuration() != null) ? m.getDuration() : 0;
+            return m.getMeetingTime().plusMinutes(dur).isBefore(now);
+        }).collect(Collectors.toList());
+    }
+
     @GetMapping("/meetings")
     public String meetingsPage(Model model) {
         injectUser(model);
         injectStats(model);
-        User emp = getCurrentEmployee();
+        var emp = getCurrentEmployee();
         if (emp != null) {
-            String tenant   = getTenantSegment(emp);
-            String username = emp.getUsername();
-            List<Meeting> all = meetingRepository.findAllMeetingsForUserOrHost(tenant, username);
-            LocalDate today = LocalDate.now();
-            LocalTime now   = LocalTime.now();
-            List<Meeting> active = all.stream().filter(m -> {
-                if (m.getMeetingDate().isBefore(today)) return false;
-                if (m.getMeetingDate().isAfter(today)) return true;
-                if (m.getMeetingTime() == null) return true;
-                int dur = (m.getDuration() != null) ? m.getDuration() : 0;
-                return !m.getMeetingTime().plusMinutes(dur).isBefore(now);
-            }).toList();
-            List<Meeting> past = all.stream().filter(m -> {
-                if (m.getMeetingDate().isBefore(today)) return true;
-                if (!m.getMeetingDate().equals(today)) return false;
-                if (m.getMeetingTime() == null) return false;
-                int dur = (m.getDuration() != null) ? m.getDuration() : 0;
-                return m.getMeetingTime().plusMinutes(dur).isBefore(now);
-            }).toList();
+            var tenant   = getTenantSegment(emp);
+            var username = emp.getUsername();
+            var all = meetingRepository.findAllMeetingsForUserOrHost(tenant, username);
+            var today = LocalDate.now();
+            var now   = LocalTime.now();
+            var active = filterActiveMeetings(all, today, now);
+            var past = filterPastMeetings(all, today, now);
             model.addAttribute("meetings", active);
             model.addAttribute("pastMeetings", past);
         } else {
-            model.addAttribute("meetings", Collections.emptyList());
-            model.addAttribute("pastMeetings", Collections.emptyList());
+            model.addAttribute("meetings", Collections.<Meeting>emptyList());
+            model.addAttribute("pastMeetings", Collections.<Meeting>emptyList());
         }
         return "employee-meetings";
     }
@@ -788,6 +855,25 @@ public class EmployeeController {
         return "employee-leaves";
     }
 
+    private String validateLeaveRequest(String type, String fromDate, String toDate, String reason) {
+        if (type == null || type.isBlank()) {
+            return "Leave type is required.";
+        }
+        if (reason == null || reason.isBlank()) {
+            return "Leave reason is required.";
+        }
+        if (reason.trim().length() > 255) {
+            return "Reason cannot exceed 255 characters.";
+        }
+        if (fromDate == null || fromDate.isBlank() || !fromDate.matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+            return "Invalid start date format.";
+        }
+        if (toDate == null || toDate.isBlank() || !toDate.matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+            return "Invalid end date format.";
+        }
+        return null;
+    }
+
     @PostMapping("/leaves")
     public String submitLeave(@RequestParam String type,
                               @RequestParam String fromDate,
@@ -795,31 +881,16 @@ public class EmployeeController {
                               @RequestParam String reason,
                               @RequestParam(value = "attachment", required = false) MultipartFile attachment,
                               RedirectAttributes ra) {
-        User emp = getCurrentEmployee();
+        var emp = getCurrentEmployee();
         if (emp == null) {
-            ra.addFlashAttribute("errorMessage", "Session expired. Please log in again.");
-            return "redirect:/employee/leaves";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Session expired. Please log in again.");
+            return REDIRECT_EMPLOYEE_LEAVES;
         }
 
-        if (type == null || type.isBlank()) {
-            ra.addFlashAttribute("errorMessage", "Leave type is required.");
-            return "redirect:/employee/leaves";
-        }
-        if (reason == null || reason.isBlank()) {
-            ra.addFlashAttribute("errorMessage", "Leave reason is required.");
-            return "redirect:/employee/leaves";
-        }
-        if (reason.trim().length() > 255) {
-            ra.addFlashAttribute("errorMessage", "Reason cannot exceed 255 characters.");
-            return "redirect:/employee/leaves";
-        }
-        if (fromDate == null || fromDate.isBlank() || !fromDate.matches("^\\d{4}-\\d{2}-\\d{2}$")) {
-            ra.addFlashAttribute("errorMessage", "Invalid start date format.");
-            return "redirect:/employee/leaves";
-        }
-        if (toDate == null || toDate.isBlank() || !toDate.matches("^\\d{4}-\\d{2}-\\d{2}$")) {
-            ra.addFlashAttribute("errorMessage", "Invalid end date format.");
-            return "redirect:/employee/leaves";
+        var validationError = validateLeaveRequest(type, fromDate, toDate, reason);
+        if (validationError != null) {
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, validationError);
+            return REDIRECT_EMPLOYEE_LEAVES;
         }
 
         LocalDate from;
@@ -828,16 +899,16 @@ public class EmployeeController {
             from = LocalDate.parse(fromDate);
             to = LocalDate.parse(toDate);
         } catch (java.time.format.DateTimeParseException e) {
-            ra.addFlashAttribute("errorMessage", "Invalid date value.");
-            return "redirect:/employee/leaves";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Invalid date value.");
+            return REDIRECT_EMPLOYEE_LEAVES;
         }
 
         if (to.isBefore(from)) {
-            ra.addFlashAttribute("errorMessage", "To date cannot be before from date.");
-            return "redirect:/employee/leaves";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "To date cannot be before from date.");
+            return REDIRECT_EMPLOYEE_LEAVES;
         }
 
-        LeaveRequest leave = new LeaveRequest();
+        var leave = new LeaveRequest();
         leave.setEmployee(emp);
         leave.setEmployeeName(emp.getUsername());
         leave.setTenantSegment(getTenantSegment(emp));
@@ -845,23 +916,23 @@ public class EmployeeController {
         leave.setFromDate(from);
         leave.setToDate(to);
         leave.setReason(reason.trim());
-        leave.setStatus("Pending");
+        leave.setStatus(STATUS_PENDING_UPPER);
 
         if (attachment != null && !attachment.isEmpty()) {
             try {
                 leave.setAttachmentName(attachment.getOriginalFilename());
-                leave.setAttachmentContentType(attachment.getContentType() != null ? attachment.getContentType() : "application/octet-stream");
+                leave.setAttachmentContentType(attachment.getContentType() != null ? attachment.getContentType() : OCTET_STREAM);
                 leave.setAttachmentData(attachment.getBytes());
             } catch (IOException e) {
-                ra.addFlashAttribute("errorMessage", "Attachment upload failed: " + e.getMessage());
-                return "redirect:/employee/leaves";
+                ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Attachment upload failed: " + e.getMessage());
+                return REDIRECT_EMPLOYEE_LEAVES;
             }
         }
 
         leaveRequestRepository.save(leave);
         notificationService.notifyLeaveSubmitted(leave);
-        ra.addFlashAttribute("successMessage", "Leave request submitted to HR.");
-        return "redirect:/employee/leaves";
+        ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Leave request submitted to HR.");
+        return REDIRECT_EMPLOYEE_LEAVES;
     }
 
     // ── REPORTS ───────────────────────────────────────────────────────────
@@ -871,10 +942,10 @@ public class EmployeeController {
         injectUser(model);
         injectStats(model);
 
-        User emp = getCurrentEmployee();
+        var emp = getCurrentEmployee();
         if (emp != null) {
-            String tenant = getTenantSegment(emp);
-            List<Report> myReports = reportRepository.findByRecipientId(
+            var tenant = getTenantSegment(emp);
+            var myReports = reportRepository.findByRecipientId(
                     String.valueOf(emp.getId()), tenant);
             model.addAttribute("myReports", myReports);
             model.addAttribute("reportCount", myReports.size());
@@ -887,10 +958,12 @@ public class EmployeeController {
     }
 
     @GetMapping("/reports/view/{attachmentId}")
-    public ResponseEntity<?> viewReportAttachment(@PathVariable Long attachmentId) {
-        ReportAttachment att = reportAttachmentRepository.findById(attachmentId).orElse(null);
-        if (att == null) return ResponseEntity.notFound().build();
-        String ct = att.getContentType() != null ? att.getContentType() : "application/octet-stream";
+    public ResponseEntity<byte[]> viewReportAttachment(@PathVariable Long attachmentId) {
+        var att = reportAttachmentRepository.findById(attachmentId).orElse(null);
+        if (att == null) {
+            return ResponseEntity.notFound().build();
+        }
+        var ct = att.getContentType() != null ? att.getContentType() : OCTET_STREAM;
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + att.getOriginalFilename() + "\"")
                 .header(HttpHeaders.CONTENT_TYPE, ct)
@@ -898,10 +971,12 @@ public class EmployeeController {
     }
 
     @GetMapping("/reports/download/{attachmentId}")
-    public ResponseEntity<?> downloadReportAttachment(@PathVariable Long attachmentId) {
-        ReportAttachment att = reportAttachmentRepository.findById(attachmentId).orElse(null);
-        if (att == null) return ResponseEntity.notFound().build();
-        String ct = att.getContentType() != null ? att.getContentType() : "application/octet-stream";
+    public ResponseEntity<byte[]> downloadReportAttachment(@PathVariable Long attachmentId) {
+        var att = reportAttachmentRepository.findById(attachmentId).orElse(null);
+        if (att == null) {
+            return ResponseEntity.notFound().build();
+        }
+        var ct = att.getContentType() != null ? att.getContentType() : OCTET_STREAM;
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + att.getOriginalFilename() + "\"")
                 .header(HttpHeaders.CONTENT_TYPE, ct)
@@ -912,7 +987,7 @@ public class EmployeeController {
     public String profilePage(Model model) {
         injectUser(model);
         injectStats(model);
-        User emp = getCurrentEmployee();
+        var emp = getCurrentEmployee();
         model.addAttribute("employeeEmail", emp != null ? emp.getEmail() : "");
         return "employee-profile";
     }
@@ -924,8 +999,10 @@ public class EmployeeController {
                                 @RequestParam(required = false) String confirmPassword,
                                 HttpServletResponse response,
                                 RedirectAttributes ra) {
-        User emp = getCurrentEmployee();
-        if (emp == null) return "redirect:/employee/profile";
+        var emp = getCurrentEmployee();
+        if (emp == null) {
+            return "redirect:/employee/profile";
+        }
 
         profileUpdateService.updateProfile(emp, username, email, password, confirmPassword, ra, response);
         return "redirect:/employee/profile";
@@ -933,27 +1010,28 @@ public class EmployeeController {
 
     // ── DOWNLOAD TASK ATTACHMENT ──────────────────────────────────────────
     @GetMapping("/tasks/download/{attachmentId}")
-    public ResponseEntity<?> downloadAttachment(@PathVariable Long attachmentId) {
-        TaskAttachment attachment = taskAttachmentRepository.findById(attachmentId).orElse(null);
+    public ResponseEntity<byte[]> downloadAttachment(@PathVariable Long attachmentId) {
+        var attachment = taskAttachmentRepository.findById(attachmentId).orElse(null);
         if (attachment == null) {
             return ResponseEntity.notFound().build();
         }
 
+        var contentType = attachment.getContentType() != null ? attachment.getContentType() : OCTET_STREAM;
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + attachment.getOriginalFilename() + "\"")
-                .header(HttpHeaders.CONTENT_TYPE, attachment.getContentType() != null ? attachment.getContentType() : "application/octet-stream")
+                .header(HttpHeaders.CONTENT_TYPE, contentType)
                 .body(attachment.getFileData());
     }
 
     // ── VIEW TASK ATTACHMENT INLINE ───────────────────────────────────────
     @GetMapping("/tasks/view/{attachmentId}")
-    public ResponseEntity<?> viewAttachment(@PathVariable Long attachmentId) {
-        TaskAttachment attachment = taskAttachmentRepository.findById(attachmentId).orElse(null);
+    public ResponseEntity<byte[]> viewAttachment(@PathVariable Long attachmentId) {
+        var attachment = taskAttachmentRepository.findById(attachmentId).orElse(null);
         if (attachment == null) {
             return ResponseEntity.notFound().build();
         }
 
-        String contentType = attachment.getContentType() != null ? attachment.getContentType() : "application/octet-stream";
+        var contentType = attachment.getContentType() != null ? attachment.getContentType() : OCTET_STREAM;
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + attachment.getOriginalFilename() + "\"")
                 .header(HttpHeaders.CONTENT_TYPE, contentType)
@@ -964,36 +1042,38 @@ public class EmployeeController {
 
     @GetMapping("/payroll")
     public String payrollPage(Model model) {
-        User emp = getCurrentEmployee();
-        if (emp == null) return "redirect:/login";
+        var emp = getCurrentEmployee();
+        if (emp == null) {
+            return "redirect:/login";
+        }
 
         injectUser(model);
         injectStats(model);
-        String tenant = getTenantSegment(emp);
-        Optional<PayrollTemplate> ptOpt = payrollTemplateRepository.findByEmployeeAndTenantSegment(emp, tenant);
+        var tenant = getTenantSegment(emp);
+        var ptOpt = payrollTemplateRepository.findByEmployeeAndTenantSegment(emp, tenant);
         if (ptOpt.isPresent()) {
-            PayrollTemplate pt = ptOpt.get();
-            model.addAttribute("payroll", pt);
+            var pt = ptOpt.get();
+            model.addAttribute(PAYROLL, pt);
             
             // Calculate real-time estimated leave deductions for the current month
-            int currentMonth = java.time.LocalDate.now().getMonthValue();
-            int currentYear = java.time.LocalDate.now().getYear();
-            java.math.BigDecimal leaveDeduction = payslipService.calculateLeaveDeduction(emp, pt.getBasicSalary(), currentMonth, currentYear);
-            java.math.BigDecimal estimatedNet = pt.getNetSalary().subtract(leaveDeduction);
+            var currentMonth = java.time.LocalDate.now().getMonthValue();
+            var currentYear = java.time.LocalDate.now().getYear();
+            var leaveDeduction = payslipService.calculateLeaveDeduction(emp, pt.getBasicSalary(), currentMonth, currentYear);
+            var estimatedNet = pt.getNetSalary().subtract(leaveDeduction);
             if (estimatedNet.compareTo(java.math.BigDecimal.ZERO) < 0) {
                 estimatedNet = java.math.BigDecimal.ZERO;
             }
             model.addAttribute("payrollLeaveDeduction", leaveDeduction);
             model.addAttribute("payrollEstimatedNet", estimatedNet);
         } else {
-            model.addAttribute("payroll", null);
+            model.addAttribute(PAYROLL, null);
         }
 
         // Fetch personal generated payslips
-        List<Payslip> myPayslips = payslipRepository.findByEmployeeOrderByIdDesc(emp);
+        var myPayslips = payslipRepository.findByEmployeeOrderByIdDesc(emp);
         model.addAttribute("myPayslips", myPayslips);
 
-        model.addAttribute("activePage", "payroll");
+        model.addAttribute(ATTR_ACTIVE_PAGE, PAYROLL);
         return "employee-payroll";
     }
 

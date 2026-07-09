@@ -1,6 +1,5 @@
 package com.crm.demo.controller;
 
-import java.io.InputStream;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -11,12 +10,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -41,11 +39,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.crm.demo.model.Attendance;
 import com.crm.demo.model.AttendanceDay;
-import com.crm.demo.model.Holiday;
-import com.crm.demo.model.LeaveRequest;
 import com.crm.demo.model.Meeting;
-import com.crm.demo.model.Report;
-import com.crm.demo.model.ReportAttachment;
 import com.crm.demo.model.Task;
 import com.crm.demo.model.Team;
 import com.crm.demo.model.User;
@@ -55,14 +49,11 @@ import com.crm.demo.repository.LeaveRequestRepository;
 import com.crm.demo.repository.MeetingRepository;
 import com.crm.demo.repository.PasswordResetTokenRepository;
 import com.crm.demo.repository.PerformanceReviewRepository;
-import com.crm.demo.repository.ReportAttachmentRepository;
-import com.crm.demo.repository.ReportRepository;
 import com.crm.demo.repository.TaskRepository;
 import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.repository.UserRepository;
 import com.crm.demo.model.PayrollTemplate;
 import com.crm.demo.repository.PayrollTemplateRepository;
-import com.crm.demo.model.Payslip;
 import com.crm.demo.repository.PayslipRepository;
 import com.crm.demo.service.PayslipService;
 import com.crm.demo.service.NotificationService;
@@ -98,37 +89,114 @@ public class HrController {
     @Autowired private PayslipService payslipService;
     @Autowired private com.crm.demo.repository.DomainCategoryRepository domainCategoryRepository;
 
+    private static final String ROLE_SUPER_ADMIN = "SUPER_ADMIN";
+    private static final String ROLE_ADMIN = "ADMIN";
+    private static final String ROLE_EMPLOYEE = "EMPLOYEE";
+    private static final String ATTR_LOGGED_IN_USER = "loggedInUser";
+    private static final String STATUS_ABSENT = "absent";
+    private static final String STATUS_APPROVED = "Approved";
+    private static final String STATUS_PENDING_ATTR = "statusPending";
+    private static final String STATUS_REJECTED = "rejected";
+    private static final String STATUS_ACTIVE = "active";
+    private static final String STATUS_PRESENT = "present";
+    private static final String ATTR_ERROR_MESSAGE = "errorMessage";
+    private static final String ATTR_SUCCESS_MESSAGE = "successMessage";
+    private static final String ATTR_ACTIVE_PAGE = "activePage";
+    private static final String ATTR_EMPLOYEES = "employees";
+    private static final String ATTR_TEAMS = "teams";
+    private static final String ATTR_UPCOMING_MEETINGS = "upcomingMeetings";
+    private static final String ATTR_PAST_MEETINGS = "pastMeetings";
+    private static final String ATTR_TENANT_USERS = "tenantUsers";
+    private static final String ATTR_MEETING_FORM = "meetingForm";
+
+    private static final String REDIRECT_HR_ADD_USER = "redirect:/hr/add-user";
+    private static final String REDIRECT_HR_EMPLOYEES = "redirect:/hr/employees";
+    private static final String REDIRECT_HR_EDIT_EMPLOYEE = "redirect:/hr/edit-employee/";
+    private static final String REDIRECT_HR_ATTENDANCE = "redirect:/hr/attendance";
+    private static final String REDIRECT_HR_LEAVES = "redirect:/hr/leaves";
+    private static final String REDIRECT_HR_TEAMS = "redirect:/hr/teams";
+    private static final String REDIRECT_HR_MEETINGS = "redirect:/hr/meetings";
+    private static final String REDIRECT_HR_PAYROLL = "redirect:/hr/payroll";
+    private static final String REDIRECT_HR_SETTINGS = "redirect:/hr/settings";
+
+    private static final String MSG_TEAM_NOT_FOUND = "Team not found.";
+    private static final String MSG_MEETING_NOT_FOUND = "Meeting not found.";
+    private static final String MSG_NOT_PUNCHED_IN = "You haven't punched in today.";
+
+    private static final String DOMAIN_SUFFIX = "@crm.com).";
+    private static final String OCTET_STREAM = "application/octet-stream";
+    private static final String TIME_FORMAT = "%02d:%02d";
+    private static final String PAGE_MEETINGS = "hr-meetings";
+
+    // ── Validation Helpers ──────────────────────────────────────────────────
+
+    private String validateUsername(String username) {
+        if (username == null || username.trim().isBlank()) {
+            return "Username is required.";
+        }
+        if (!username.trim().matches("^[A-Za-z0-9._-]{3,50}$")) {
+            return "Username must be 3-50 characters and contain only letters, numbers, dots, hyphens, or underscores.";
+        }
+        return null;
+    }
+
+    private String validateEmail(String email, String segment) {
+        if (email == null || email.trim().isBlank()) {
+            return "Email is required.";
+        }
+        if (!email.trim().matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
+            return "Please provide a valid email address.";
+        }
+        if (segment != null && !segment.isBlank() && !email.trim().contains("." + segment + "@")) {
+            return "Email must belong to your tenant domain (expected format: name." + segment + DOMAIN_SUFFIX;
+        }
+        return null;
+    }
+
+    private String validatePassword(String password, String confirmPassword) {
+        if (password == null || password.length() < 4) {
+            return "Password must be at least 4 characters long.";
+        }
+        if (!password.matches("^[A-Za-z0-9]+$")) {
+            return "Password must contain only letters and numbers (no special characters).";
+        }
+        if (!password.equals(confirmPassword)) {
+            return "Passwords do not match.";
+        }
+        return null;
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────
 
     private void injectUser(HttpServletRequest request, Model model) {
-        String username = (String) request.getAttribute("loggedInUser");
+        var username = (String) request.getAttribute(ATTR_LOGGED_IN_USER);
         model.addAttribute("adminName", username != null ? username : "HR User");
         model.addAttribute("adminRole", "HR");
     }
 
     /** Resolve the currently logged-in HR user via SecurityContextHolder. */
     private User getCurrentHr() {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        var username = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByUsername(username);
     }
 
     /** Extract tenant segment from the logged-in HR user's email. */
     private String getTenantSegment(HttpServletRequest request) {
-        String username = (String) request.getAttribute("loggedInUser");
+        var username = (String) request.getAttribute(ATTR_LOGGED_IN_USER);
         if (username == null) return "";
-        User hr = userRepository.findByUsername(username);
+        var hr = userRepository.findByUsername(username);
         if (hr == null || hr.getEmail() == null) return "";
-        String email = hr.getEmail();
-        String local = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
-        int dot = local.lastIndexOf('.');
+        var email = hr.getEmail();
+        var local = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
+        var dot = local.lastIndexOf('.');
         return dot >= 0 ? local.substring(dot + 1) : local;
     }
 
     private String getTenantSegmentFromUser(User user) {
         if (user == null || user.getEmail() == null) return "";
-        String email = user.getEmail();
-        String local = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
-        int dot = local.lastIndexOf('.');
+        var email = user.getEmail();
+        var local = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
+        var dot = local.lastIndexOf('.');
         return dot >= 0 ? local.substring(dot + 1) : local;
     }
 
@@ -140,23 +208,23 @@ public class HrController {
     private List<AttendanceDay> buildDayList(List<Attendance> records,
                                               LocalDate from, LocalDate to,
                                               Map<LocalDate, String> holidays) {
-        Map<LocalDate, Attendance> byDate = new LinkedHashMap<>();
-        for (Attendance a : records) byDate.put(a.getDate(), a);
+        var byDate = new LinkedHashMap<LocalDate, Attendance>();
+        for (var a : records) byDate.put(a.getDate(), a);
 
-        List<AttendanceDay> days = new ArrayList<>();
-        LocalDate today  = LocalDate.now();
-        LocalDate cursor = to;
+        var days = new ArrayList<AttendanceDay>();
+        var today  = LocalDate.now();
+        var cursor = to;
         while (!cursor.isBefore(from)) {
             if (holidays.containsKey(cursor)) {
                 days.add(new AttendanceDay(cursor, holidays.get(cursor), true));
             } else {
-                DayOfWeek dow = cursor.getDayOfWeek();
+                var dow = cursor.getDayOfWeek();
                 if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
                     days.add(new AttendanceDay(cursor, "weekend"));
                 } else if (byDate.containsKey(cursor)) {
                     days.add(new AttendanceDay(byDate.get(cursor)));
                 } else if (!cursor.isAfter(today)) {
-                    days.add(new AttendanceDay(cursor, "absent"));
+                    days.add(new AttendanceDay(cursor, STATUS_ABSENT));
                 }
             }
             cursor = cursor.minusDays(1);
@@ -166,54 +234,54 @@ public class HrController {
 
     /** Build holiday map (date → name) for a tenant within a date range. */
     private Map<LocalDate, String> fetchHolidays(String tenant, LocalDate from, LocalDate to) {
-        Map<LocalDate, String> map = new LinkedHashMap<>();
+        var map = new LinkedHashMap<LocalDate, String>();
         if (tenant == null || tenant.isBlank()) return map;
-        List<Holiday> list = holidayRepository.findByTenantAndDateRange(
+        var list = holidayRepository.findByTenantAndDateRange(
                 tenant, from.toString(), to.toString());
-        for (Holiday h : list) map.put(LocalDate.parse(h.getDate()), h.getName());
+        for (var h : list) map.put(LocalDate.parse(h.getDate()), h.getName());
         return map;
     }
 
     /** Returns true for roles that HR should manage (not ADMIN / SUPER_ADMIN). */
     private boolean isNonAdminRole(String role) {
         if (role == null) return false;
-        return !role.equalsIgnoreCase("ADMIN") && !role.equalsIgnoreCase("SUPER_ADMIN");
+        return !role.equalsIgnoreCase(ROLE_ADMIN) && !role.equalsIgnoreCase(ROLE_SUPER_ADMIN);
     }
 
     private void injectStats(HttpServletRequest request, Model model) {
-        String tenant = getTenantSegment(request);
-        String currentUsername = (String) request.getAttribute("loggedInUser");
+        var tenant = getTenantSegment(request);
+        var currentUsername = (String) request.getAttribute(ATTR_LOGGED_IN_USER);
 
         // Include EMPLOYEE, MANAGER — exclude ADMIN, SUPER_ADMIN, and the logged-in HR themselves
-        List<User> employees = tenant.isEmpty()
+        var employees = tenant.isEmpty()
                 ? userRepository.findAll().stream()
                         .filter(u -> isNonAdminRole(u.getRole()))
                         .filter(u -> !u.getUsername().equals(currentUsername))
                         .sorted(java.util.Comparator.comparing(User::getId).reversed())
-                        .toList()
+                        .collect(Collectors.toList())
                 : userRepository.findByTenantSegment(tenant).stream()
                         .filter(u -> isNonAdminRole(u.getRole()))
                         .filter(u -> !u.getUsername().equals(currentUsername))
-                        .toList();
+                        .collect(Collectors.toList());
 
-        long active   = employees.stream().filter(User::isActive).count();
-        long inactive = employees.size() - active;
+        var active   = employees.stream().filter(User::isActive).count();
+        var inactive = employees.size() - active;
 
-        model.addAttribute("employees",         employees);
+        model.addAttribute(ATTR_EMPLOYEES,         employees);
         model.addAttribute("totalEmployees",    employees.size());
         model.addAttribute("activeEmployees",   active);
         model.addAttribute("inactiveEmployees", inactive);
         model.addAttribute("newHires",          0);
-        LocalDate today = LocalDate.now();
-        LocalDate monthStart = today.withDayOfMonth(1);
-        LocalDate monthEnd = today.withDayOfMonth(today.lengthOfMonth());
-        long onLeaveToday = tenant.isEmpty() ? 0
+        var today = LocalDate.now();
+        var monthStart = today.withDayOfMonth(1);
+        var monthEnd = today.withDayOfMonth(today.lengthOfMonth());
+        var onLeaveToday = tenant.isEmpty() ? 0
                 : leaveRequestRepository.countByTenantSegmentAndStatusAndFromDateLessThanEqualAndToDateGreaterThanEqual(
-                        tenant, "Approved", today, today);
-        long pendingLeaves = tenant.isEmpty() ? 0 : leaveRequestRepository.countByTenantSegmentAndStatus(tenant, "Pending");
-        long approvedThisMonth = tenant.isEmpty() ? 0
+                        tenant, STATUS_APPROVED, today, today);
+        var pendingLeaves = tenant.isEmpty() ? 0 : leaveRequestRepository.countByTenantSegmentAndStatus(tenant, "Pending");
+        var approvedThisMonth = tenant.isEmpty() ? 0
                 : leaveRequestRepository.countByTenantSegmentAndStatusAndFromDateBetween(
-                        tenant, "Approved", monthStart, monthEnd);
+                        tenant, STATUS_APPROVED, monthStart, monthEnd);
 
         model.addAttribute("onLeaveToday",      onLeaveToday);
         model.addAttribute("pendingLeaves",     pendingLeaves);
@@ -239,62 +307,62 @@ public class HrController {
     @GetMapping("/dashboard/analytics")
     @ResponseBody
     public Map<String, Object> dashboardAnalytics(HttpServletRequest request) {
-        String tenant = getTenantSegment(request);
-        String currentUsername = (String) request.getAttribute("loggedInUser");
+        var tenant = getTenantSegment(request);
+        var currentUsername = (String) request.getAttribute(ATTR_LOGGED_IN_USER);
 
-        List<User> employees = tenant.isBlank()
+        var employees = tenant.isBlank()
                 ? userRepository.findAll().stream()
                         .filter(u -> isNonAdminRole(u.getRole()))
                         .filter(u -> currentUsername == null || !u.getUsername().equals(currentUsername))
-                        .toList()
+                        .collect(Collectors.toList())
                 : userRepository.findByTenantSegment(tenant).stream()
                         .filter(u -> isNonAdminRole(u.getRole()))
                         .filter(u -> currentUsername == null || !u.getUsername().equals(currentUsername))
-                        .toList();
+                        .collect(Collectors.toList());
 
-        List<Task> tasks = tenant.isBlank()
+        var tasks = tenant.isBlank()
                 ? taskRepository.findAll()
                 : taskRepository.findByTenantSegment(tenant);
 
-        Map<String, Object> data = buildDashboardAnalytics(tasks, employees);
+        var data = buildDashboardAnalytics(tasks, employees);
         data.put("totalEmployees", employees.size());
-        data.put("pendingTaskTotal", data.get("statusPending"));
+        data.put("pendingTaskTotal", data.get(STATUS_PENDING_ATTR));
         return data;
     }
 
     private Map<String, Object> buildDashboardAnalytics(List<Task> tasks, List<User> employees) {
-        Map<String, Object> data = new LinkedHashMap<>();
-        List<Task> scopedTasks = tasks != null ? tasks : Collections.emptyList();
-        List<User> scopedEmployees = employees != null ? employees : Collections.emptyList();
+        var data = new LinkedHashMap<String, Object>();
+        var scopedTasks = tasks != null ? tasks : Collections.<Task>emptyList();
+        var scopedEmployees = employees != null ? employees : Collections.<User>emptyList();
 
-        long statusDone = scopedTasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
-        long statusInProgress = scopedTasks.stream().filter(t -> "in-progress".equalsIgnoreCase(t.getStatus())).count();
-        long statusPending = scopedTasks.stream().filter(t -> "pending".equalsIgnoreCase(t.getStatus())).count();
-        long statusReview = scopedTasks.stream().filter(t -> "waiting-for-review".equalsIgnoreCase(t.getStatus())).count();
-        long priorityHigh = scopedTasks.stream().filter(t -> "High".equalsIgnoreCase(t.getPriority())).count();
-        long priorityMedium = scopedTasks.stream().filter(t -> "Medium".equalsIgnoreCase(t.getPriority())).count();
-        long priorityLow = scopedTasks.stream().filter(t -> "Low".equalsIgnoreCase(t.getPriority())).count();
+        var statusDone = scopedTasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
+        var statusInProgress = scopedTasks.stream().filter(t -> "in-progress".equalsIgnoreCase(t.getStatus())).count();
+        var statusPending = scopedTasks.stream().filter(t -> "pending".equalsIgnoreCase(t.getStatus())).count();
+        var statusReview = scopedTasks.stream().filter(t -> "waiting-for-review".equalsIgnoreCase(t.getStatus())).count();
+        var priorityHigh = scopedTasks.stream().filter(t -> "High".equalsIgnoreCase(t.getPriority())).count();
+        var priorityMedium = scopedTasks.stream().filter(t -> "Medium".equalsIgnoreCase(t.getPriority())).count();
+        var priorityLow = scopedTasks.stream().filter(t -> "Low".equalsIgnoreCase(t.getPriority())).count();
 
-        List<String> memberLabels = new ArrayList<>();
-        List<Long> memberTaskCounts = new ArrayList<>();
-        for (User employee : scopedEmployees) {
-            long count = scopedTasks.stream()
+        var memberLabels = new ArrayList<String>();
+        var memberTaskCounts = new ArrayList<Long>();
+        for (var employee : scopedEmployees) {
+            var count = scopedTasks.stream()
                     .filter(t -> employee.getUsername() != null && employee.getUsername().equalsIgnoreCase(t.getAssignedTo()))
                     .count();
             memberLabels.add(employee.getUsername());
             memberTaskCounts.add(count);
         }
 
-        long activeCount = scopedEmployees.stream().filter(User::isActive).count();
-        long inactiveCount = scopedEmployees.size() - activeCount;
-        long verified = scopedTasks.stream().filter(t -> "approved".equalsIgnoreCase(t.getVerificationStatus())).count();
-        long rejected = scopedTasks.stream().filter(t -> "rejected".equalsIgnoreCase(t.getVerificationStatus())).count();
-        long waiting = scopedTasks.stream().filter(t -> "waiting-for-review".equalsIgnoreCase(t.getVerificationStatus())).count();
-        long unverified = scopedTasks.size() - verified - rejected - waiting;
+        var activeCount = scopedEmployees.stream().filter(User::isActive).count();
+        var inactiveCount = scopedEmployees.size() - activeCount;
+        var verified = scopedTasks.stream().filter(t -> "approved".equalsIgnoreCase(t.getVerificationStatus())).count();
+        var rejected = scopedTasks.stream().filter(t -> STATUS_REJECTED.equalsIgnoreCase(t.getVerificationStatus())).count();
+        var waiting = scopedTasks.stream().filter(t -> "waiting-for-review".equalsIgnoreCase(t.getVerificationStatus())).count();
+        var unverified = scopedTasks.size() - verified - rejected - waiting;
 
         data.put("statusDone", statusDone);
         data.put("statusInProgress", statusInProgress);
-        data.put("statusPending", statusPending);
+        data.put(STATUS_PENDING_ATTR, statusPending);
         data.put("statusReview", statusReview);
         data.put("priorityHigh", priorityHigh);
         data.put("priorityMedium", priorityMedium);
@@ -304,7 +372,7 @@ public class HrController {
         data.put("activeTeam", activeCount);
         data.put("inactiveTeam", inactiveCount);
         data.put("verified", verified);
-        data.put("rejected", rejected);
+        data.put(STATUS_REJECTED, rejected);
         data.put("waiting", waiting);
         data.put("unverified", Math.max(unverified, 0));
         data.put("totalMyTasks", scopedTasks.size());
@@ -314,7 +382,7 @@ public class HrController {
     private void addAnalyticsAttributes(Model model, Map<String, Object> data) {
         model.addAttribute("chartStatusDone", data.get("statusDone"));
         model.addAttribute("chartStatusInProgress", data.get("statusInProgress"));
-        model.addAttribute("chartStatusPending", data.get("statusPending"));
+        model.addAttribute("chartStatusPending", data.get(STATUS_PENDING_ATTR));
         model.addAttribute("chartStatusReview", data.get("statusReview"));
         model.addAttribute("chartPriorityHigh", data.get("priorityHigh"));
         model.addAttribute("chartPriorityMedium", data.get("priorityMedium"));
@@ -324,7 +392,7 @@ public class HrController {
         model.addAttribute("chartActiveTeam", data.get("activeTeam"));
         model.addAttribute("chartInactiveTeam", data.get("inactiveTeam"));
         model.addAttribute("chartVerified", data.get("verified"));
-        model.addAttribute("chartRejected", data.get("rejected"));
+        model.addAttribute("chartRejected", data.get(STATUS_REJECTED));
         model.addAttribute("chartWaiting", data.get("waiting"));
         model.addAttribute("chartUnverified", data.get("unverified"));
         model.addAttribute("chartTotalMyTasks", data.get("totalMyTasks"));
@@ -388,76 +456,60 @@ public class HrController {
                           @RequestParam(required = false) String joiningDate,
                           HttpServletRequest request,
                           RedirectAttributes ra) {
-        if (username == null || username.trim().isBlank()) {
-            ra.addFlashAttribute("errorMessage", "Username is required.");
-            return "redirect:/hr/add-user";
+        var usernameError = validateUsername(username);
+        if (usernameError != null) {
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, usernameError);
+            return REDIRECT_HR_ADD_USER;
         }
-        if (!username.trim().matches("^[A-Za-z0-9._-]{3,50}$")) {
-            ra.addFlashAttribute("errorMessage", "Username must be 3-50 characters and contain only letters, numbers, dots, hyphens, or underscores.");
-            return "redirect:/hr/add-user";
+
+        var segment = getTenantSegment(request);
+
+        var emailError = validateEmail(email, segment);
+        if (emailError != null) {
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, emailError);
+            return REDIRECT_HR_ADD_USER;
         }
-        if (email == null || email.trim().isBlank()) {
-            ra.addFlashAttribute("errorMessage", "Email is required.");
-            return "redirect:/hr/add-user";
-        }
-        if (!email.trim().matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
-            ra.addFlashAttribute("errorMessage", "Please provide a valid email address.");
-            return "redirect:/hr/add-user";
-        }
-        if (password == null || password.length() < 4) {
-            ra.addFlashAttribute("errorMessage", "Password must be at least 4 characters long.");
-            return "redirect:/hr/add-user";
-        }
-        if (!password.matches("^[A-Za-z0-9]+$")) {
-            ra.addFlashAttribute("errorMessage", "Password must contain only letters and numbers (no special characters).");
-            return "redirect:/hr/add-user";
-        }
-        if (!password.equals(confirmPassword)) {
-            ra.addFlashAttribute("errorMessage", "Passwords do not match.");
-            return "redirect:/hr/add-user";
+
+        var passwordError = validatePassword(password, confirmPassword);
+        if (passwordError != null) {
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, passwordError);
+            return REDIRECT_HR_ADD_USER;
         }
 
         // Block creating ADMIN or SUPER_ADMIN accounts
-        if ("ADMIN".equalsIgnoreCase(role) || "SUPER_ADMIN".equalsIgnoreCase(role)) {
-            ra.addFlashAttribute("errorMessage", "You cannot create an account with that role.");
-            return "redirect:/hr/add-user";
+        if (ROLE_ADMIN.equalsIgnoreCase(role) || ROLE_SUPER_ADMIN.equalsIgnoreCase(role)) {
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You cannot create an account with that role.");
+            return REDIRECT_HR_ADD_USER;
         }
 
         // Enforce tenant domain: new user's email must contain the HR's tenant segment
-        String segment = getTenantSegment(request);
         if (segment != null && !segment.isBlank()) {
-            User tenantAdmin = userRepository.findByTenantSegment(segment).stream()
-                    .filter(u -> "ADMIN".equalsIgnoreCase(u.getRole()))
+            var tenantAdmin = userRepository.findByTenantSegment(segment).stream()
+                    .filter(u -> ROLE_ADMIN.equalsIgnoreCase(u.getRole()))
                     .findFirst().orElse(null);
             if (tenantAdmin != null) {
-                long employeeCount = userRepository.findByTenantSegment(segment).stream()
-                        .filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole()) && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
+                var employeeCount = userRepository.findByTenantSegment(segment).stream()
+                        .filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole()) && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole()))
                         .count();
-                int limit = tenantAdmin.getEmployeeLimit() != null ? tenantAdmin.getEmployeeLimit() : 10;
+                var limit = tenantAdmin.getEmployeeLimit() != null ? tenantAdmin.getEmployeeLimit() : 10;
                 if (employeeCount >= limit) {
-                    ra.addFlashAttribute("errorMessage", "Employee limit reached (" + limit + "). You cannot add more employees.");
-                    return "redirect:/hr/add-user";
+                    ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Employee limit reached (" + limit + "). You cannot add more employees.");
+                    return REDIRECT_HR_ADD_USER;
                 }
             }
         }
 
-        if (segment != null && !segment.isBlank() && !email.trim().contains("." + segment + "@")) {
-            ra.addFlashAttribute("errorMessage",
-                    "Email must belong to your tenant domain (e.g. user." + segment + "@crm.com).");
-            return "redirect:/hr/add-user";
-        }
-
         if (userRepository.existsByUsernameOrEmail(username.trim(), email.trim())) {
-            ra.addFlashAttribute("errorMessage", "Username or email already exists.");
-            return "redirect:/hr/add-user";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Username or email already exists.");
+            return REDIRECT_HR_ADD_USER;
         }
 
-        User user = new User();
+        var user = new User();
         user.setUsername(username.trim());
         user.setEmail(email.trim());
         user.setPassword(passwordEncoder.encode(password));
         user.setRole(role.toUpperCase());
-        user.setStatus("active");
+        user.setStatus(STATUS_ACTIVE);
         
         if (domain != null && !domain.trim().isEmpty()) {
             user.setDomain(domain.trim());
@@ -474,8 +526,8 @@ public class HrController {
 
         userRepository.save(user);
         notificationService.notifyEmployeeManagementChanged(getTenantSegment(request), "added", username.trim());
-        ra.addFlashAttribute("successMessage", "User '" + username.trim() + "' added successfully.");
-        return "redirect:/hr/employees";
+        ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "User '" + username.trim() + "' added successfully.");
+        return REDIRECT_HR_EMPLOYEES;
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -487,131 +539,136 @@ public class HrController {
     //  the entire file and save nothing. Only save when everything is clean.
     // ═══════════════════════════════════════════════════════════════════════
 
+    private void processUploadRow(Row row, int rowIndex, String segment, List<String> errors, List<User> toSave) {
+        var username = getCellString(row, 0);
+        var email    = getCellString(row, 1);
+        var password = getCellString(row, 2);
+        var role     = getCellString(row, 3);
+
+        // Skip completely blank rows silently
+        if (username.isBlank() && email.isBlank() && password.isBlank() && role.isBlank()) {
+            return;
+        }
+
+        var rowLabel = "Row " + (rowIndex + 1);
+
+        // Missing fields
+        if (username.isBlank()) {
+            errors.add(rowLabel + ": username is empty.");
+            return;
+        }
+        if (email.isBlank()) {
+            errors.add(rowLabel + " (" + username + "): email is empty.");
+            return;
+        }
+        if (password.isBlank()) {
+            errors.add(rowLabel + " (" + username + "): password is empty.");
+            return;
+        }
+        if (role.isBlank()) {
+            errors.add(rowLabel + " (" + username + "): role is empty.");
+            return;
+        }
+
+        // Role check
+        if (ROLE_ADMIN.equalsIgnoreCase(role) || ROLE_SUPER_ADMIN.equalsIgnoreCase(role)) {
+            errors.add(rowLabel + " (" + username + "): role '" + role + "' is not allowed. Use EMPLOYEE or MANAGER.");
+            return;
+        }
+
+        // Tenant domain check
+        if (segment != null && !segment.isBlank() && !email.contains("." + segment + "@")) {
+            errors.add(rowLabel + " (" + username + "): email '" + email
+                    + "' does not belong to tenant domain (expected format: name." + segment + "@crm.com).");
+            return;
+        }
+
+        // Duplicate check in DB
+        if (userRepository.existsByUsernameOrEmail(username, email)) {
+            errors.add(rowLabel + " (" + username + "): username or email already exists in the system.");
+            return;
+        }
+
+        // Duplicate check within the same file (two rows with same username/email)
+        var duplicateInFile = toSave.stream().anyMatch(u ->
+                u.getUsername().equalsIgnoreCase(username) || u.getEmail().equalsIgnoreCase(email));
+        if (duplicateInFile) {
+            errors.add(rowLabel + " (" + username + "): username or email is duplicated within this file.");
+            return;
+        }
+
+        // Valid — stage for saving
+        var user = new User();
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setRole(role.toUpperCase());
+        user.setStatus(STATUS_ACTIVE);
+        toSave.add(user);
+    }
+
     @PostMapping("/bulk-upload")
     public String bulkUpload(@RequestParam("file") MultipartFile file,
                               HttpServletRequest request,
                               RedirectAttributes ra) {
 
         if (file == null || file.isEmpty()) {
-            ra.addFlashAttribute("errorMessage", "Please select an Excel file to upload.");
-            return "redirect:/hr/add-user";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Please select an Excel file to upload.");
+            return REDIRECT_HR_ADD_USER;
         }
 
-        String originalFilename = file.getOriginalFilename();
+        var originalFilename = file.getOriginalFilename();
         if (originalFilename == null ||
                 (!originalFilename.endsWith(".xlsx") && !originalFilename.endsWith(".xls"))) {
-            ra.addFlashAttribute("errorMessage", "Only .xlsx or .xls files are supported.");
-            return "redirect:/hr/add-user";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Only .xlsx or .xls files are supported.");
+            return REDIRECT_HR_ADD_USER;
         }
 
-        String segment = getTenantSegment(request);
+        var segment = getTenantSegment(request);
 
         // ── Phase 1: parse and validate every row, collect all errors ────────
-        List<String> errors = new ArrayList<>();
-        List<User>   toSave = new ArrayList<>();
+        var errors = new ArrayList<String>();
+        var toSave = new ArrayList<User>();
 
-        try (InputStream is = file.getInputStream();
-             Workbook workbook = new XSSFWorkbook(is)) {
+        try (var is = file.getInputStream();
+             var workbook = new XSSFWorkbook(is)) {
 
-            Sheet sheet = workbook.getSheetAt(0);
+            var sheet = workbook.getSheetAt(0);
 
             if (sheet.getLastRowNum() < 1) {
-                ra.addFlashAttribute("errorMessage", "The file has no data rows.");
-                return "redirect:/hr/add-user";
+                ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "The file has no data rows.");
+                return REDIRECT_HR_ADD_USER;
             }
 
-            for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
-                Row row = sheet.getRow(rowIndex);
+            for (var rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+                var row = sheet.getRow(rowIndex);
                 if (row == null) continue;
-
-                String username = getCellString(row, 0);
-                String email    = getCellString(row, 1);
-                String password = getCellString(row, 2);
-                String role     = getCellString(row, 3);
-
-                // Skip completely blank rows silently
-                if (username.isBlank() && email.isBlank() && password.isBlank() && role.isBlank()) continue;
-
-                String rowLabel = "Row " + (rowIndex + 1);
-
-                // Missing fields
-                if (username.isBlank()) {
-                    errors.add(rowLabel + ": username is empty.");
-                    continue;
-                }
-                if (email.isBlank()) {
-                    errors.add(rowLabel + " (" + username + "): email is empty.");
-                    continue;
-                }
-                if (password.isBlank()) {
-                    errors.add(rowLabel + " (" + username + "): password is empty.");
-                    continue;
-                }
-                if (role.isBlank()) {
-                    errors.add(rowLabel + " (" + username + "): role is empty.");
-                    continue;
-                }
-
-                // Role check
-                if ("ADMIN".equalsIgnoreCase(role) || "SUPER_ADMIN".equalsIgnoreCase(role)) {
-                    errors.add(rowLabel + " (" + username + "): role '" + role + "' is not allowed. Use EMPLOYEE or MANAGER.");
-                    continue;
-                }
-
-                // Tenant domain check
-                if (segment != null && !segment.isBlank() && !email.contains("." + segment + "@")) {
-                    errors.add(rowLabel + " (" + username + "): email '" + email
-                            + "' does not belong to tenant domain (expected format: name." + segment + "@crm.com).");
-                    continue;
-                }
-
-                // Duplicate check in DB
-                if (userRepository.existsByUsernameOrEmail(username, email)) {
-                    errors.add(rowLabel + " (" + username + "): username or email already exists in the system.");
-                    continue;
-                }
-
-                // Duplicate check within the same file (two rows with same username/email)
-                boolean duplicateInFile = toSave.stream().anyMatch(u ->
-                        u.getUsername().equalsIgnoreCase(username) || u.getEmail().equalsIgnoreCase(email));
-                if (duplicateInFile) {
-                    errors.add(rowLabel + " (" + username + "): username or email is duplicated within this file.");
-                    continue;
-                }
-
-                // Valid — stage for saving
-                User user = new User();
-                user.setUsername(username);
-                user.setEmail(email);
-                user.setPassword(passwordEncoder.encode(password));
-                user.setRole(role.toUpperCase());
-                user.setStatus("active");
-                toSave.add(user);
+                processUploadRow(row, rowIndex, segment, errors, toSave);
             }
 
         } catch (Exception e) {
-            ra.addFlashAttribute("errorMessage", "Failed to parse file: " + e.getMessage());
-            return "redirect:/hr/add-user";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Failed to parse file: " + e.getMessage());
+            return REDIRECT_HR_ADD_USER;
         }
 
         // ── Phase 2: if any errors found, reject everything ──────────────────
         if (!errors.isEmpty()) {
             ra.addFlashAttribute("bulkErrors", errors);
-            ra.addFlashAttribute("errorMessage",
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE,
                     "Upload rejected — " + errors.size() + " error(s) found. No employees were saved. Fix the issues and re-upload.");
-            return "redirect:/hr/add-user";
+            return REDIRECT_HR_ADD_USER;
         }
 
         // ── Phase 3: all rows valid — save them all ──────────────────────────
         if (toSave.isEmpty()) {
-            ra.addFlashAttribute("errorMessage", "No valid data rows found in the file.");
-            return "redirect:/hr/add-user";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "No valid data rows found in the file.");
+            return REDIRECT_HR_ADD_USER;
         }
 
         userRepository.saveAll(toSave);
-        ra.addFlashAttribute("successMessage",
+        ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
                 toSave.size() + " employee(s) imported successfully.");
-        return "redirect:/hr/employees";
+        return REDIRECT_HR_EMPLOYEES;
     }
 
     /** Safely read a cell value as a trimmed String regardless of cell type. */
@@ -626,25 +683,25 @@ public class HrController {
 
     @PostMapping("/toggle-user/{id}")
     public String toggleUser(@PathVariable Long id, RedirectAttributes ra) {
-        User hr = getCurrentHr();
-        User user = userRepository.findById(id).orElse(null);
+        var hr = getCurrentHr();
+        var user = userRepository.findById(id).orElse(null);
         if (user != null && isNonAdminRole(user.getRole())) {
-            String newStatus = "active".equalsIgnoreCase(user.getStatus()) ? "inactive" : "active";
+            var newStatus = STATUS_ACTIVE.equalsIgnoreCase(user.getStatus()) ? "inactive" : STATUS_ACTIVE;
             user.setStatus(newStatus);
             userRepository.save(user);
             notificationService.notifyEmployeeManagementChanged(getTenantSegmentFromUser(hr), "updated", user.getUsername());
-            ra.addFlashAttribute("successMessage", user.getUsername() + " is now " + newStatus + ".");
+            ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, user.getUsername() + " is now " + newStatus + ".");
         }
-        return "redirect:/hr/employees";
+        return REDIRECT_HR_EMPLOYEES;
     }
 
     @PostMapping("/delete-user/{id}")
     @Transactional
     public String deleteUser(@PathVariable Long id, RedirectAttributes ra) {
-        User hr = getCurrentHr();
-        User user = userRepository.findById(id).orElse(null);
+        var hr = getCurrentHr();
+        var user = userRepository.findById(id).orElse(null);
         if (user != null && isNonAdminRole(user.getRole())) {
-            String name = user.getUsername();
+            var name = user.getUsername();
             removeUserFromTeams(user);
             notificationService.deleteAllForUser(user.getId());
             passwordResetTokenRepository.deleteByUser(user);
@@ -653,9 +710,9 @@ public class HrController {
             attendanceRepository.deleteByUser(user);
             userRepository.delete(user);
             notificationService.notifyEmployeeManagementChanged(getTenantSegmentFromUser(hr), "deleted", name);
-            ra.addFlashAttribute("successMessage", "User '" + name + "' deleted.");
+            ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "User '" + name + "' deleted.");
         }
-        return "redirect:/hr/employees";
+        return REDIRECT_HR_EMPLOYEES;
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -685,11 +742,11 @@ public class HrController {
     @GetMapping("/edit-employee/{id}")
     public String editEmployeePage(@PathVariable Long id, HttpServletRequest request, Model model) {
         injectUser(request, model);
-        User emp = userRepository.findById(id).orElse(null);
+        var emp = userRepository.findById(id).orElse(null);
         if (emp == null || !isNonAdminRole(emp.getRole())) {
-            return "redirect:/hr/employees";
+            return REDIRECT_HR_EMPLOYEES;
         }
-        String tenant = getTenantSegment(request);
+        var tenant = getTenantSegment(request);
         model.addAttribute("domainCategories", domainCategoryRepository.findByTenantSegment(tenant));
         model.addAttribute("employee", emp);
         return "hr-edit-employee";
@@ -706,51 +763,42 @@ public class HrController {
                                  @RequestParam(required = false) String joiningDate,
                                  HttpServletRequest request,
                                  RedirectAttributes ra) {
-        User emp = userRepository.findById(id).orElse(null);
+        var emp = userRepository.findById(id).orElse(null);
         if (emp == null || !isNonAdminRole(emp.getRole())) {
-            ra.addFlashAttribute("errorMessage", "User not found or cannot be edited.");
-            return "redirect:/hr/employees";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "User not found or cannot be edited.");
+            return REDIRECT_HR_EMPLOYEES;
         }
 
-        if (username == null || username.trim().isBlank()) {
-            ra.addFlashAttribute("errorMessage", "Username is required.");
-            return "redirect:/hr/edit-employee/" + id;
+        var usernameError = validateUsername(username);
+        if (usernameError != null) {
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, usernameError);
+            return REDIRECT_HR_EDIT_EMPLOYEE + id;
         }
-        if (!username.trim().matches("^[A-Za-z0-9._-]{3,50}$")) {
-            ra.addFlashAttribute("errorMessage", "Username must be 3-50 characters and contain only letters, numbers, dots, hyphens, or underscores.");
-            return "redirect:/hr/edit-employee/" + id;
-        }
-        if (email == null || email.trim().isBlank()) {
-            ra.addFlashAttribute("errorMessage", "Email is required.");
-            return "redirect:/hr/edit-employee/" + id;
-        }
-        if (!email.trim().matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
-            ra.addFlashAttribute("errorMessage", "Please provide a valid email address.");
-            return "redirect:/hr/edit-employee/" + id;
+
+        var segment = getTenantSegment(request);
+
+        var emailError = validateEmail(email, segment);
+        if (emailError != null) {
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, emailError);
+            return REDIRECT_HR_EDIT_EMPLOYEE + id;
         }
 
         // Block promoting to ADMIN / SUPER_ADMIN
-        if ("ADMIN".equalsIgnoreCase(role) || "SUPER_ADMIN".equalsIgnoreCase(role)) {
-            ra.addFlashAttribute("errorMessage", "You cannot assign that role.");
-            return "redirect:/hr/edit-employee/" + id;
-        }
-
-        String segment = getTenantSegment(request);
-        if (segment != null && !segment.isBlank() && !email.trim().contains("." + segment + "@")) {
-            ra.addFlashAttribute("errorMessage", "Email must belong to your tenant domain (expected format: name." + segment + "@crm.com).");
-            return "redirect:/hr/edit-employee/" + id;
+        if (ROLE_ADMIN.equalsIgnoreCase(role) || ROLE_SUPER_ADMIN.equalsIgnoreCase(role)) {
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You cannot assign that role.");
+            return REDIRECT_HR_EDIT_EMPLOYEE + id;
         }
 
         // Check uniqueness
-        User existingUserByUname = userRepository.findByUsername(username.trim());
+        var existingUserByUname = userRepository.findByUsername(username.trim());
         if (existingUserByUname != null && !existingUserByUname.getId().equals(emp.getId())) {
-            ra.addFlashAttribute("errorMessage", "Username is already taken.");
-            return "redirect:/hr/edit-employee/" + id;
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Username is already taken.");
+            return REDIRECT_HR_EDIT_EMPLOYEE + id;
         }
-        User existingUserByEmail = userRepository.findByEmail(email.trim());
+        var existingUserByEmail = userRepository.findByEmail(email.trim());
         if (existingUserByEmail != null && !existingUserByEmail.getId().equals(emp.getId())) {
-            ra.addFlashAttribute("errorMessage", "Email is already taken.");
-            return "redirect:/hr/edit-employee/" + id;
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Email is already taken.");
+            return REDIRECT_HR_EDIT_EMPLOYEE + id;
         }
 
         emp.setUsername(username.trim());
@@ -758,17 +806,10 @@ public class HrController {
 
         // Optional password change
         if (password != null && !password.isBlank()) {
-            if (password.length() < 4) {
-                ra.addFlashAttribute("errorMessage", "Password must be at least 4 characters long.");
-                return "redirect:/hr/edit-employee/" + id;
-            }
-            if (!password.matches("^[A-Za-z0-9]+$")) {
-                ra.addFlashAttribute("errorMessage", "Password must contain only letters and numbers (no special characters).");
-                return "redirect:/hr/edit-employee/" + id;
-            }
-            if (!password.equals(confirmPassword)) {
-                ra.addFlashAttribute("errorMessage", "Passwords do not match.");
-                return "redirect:/hr/edit-employee/" + id;
+            var passwordError = validatePassword(password, confirmPassword);
+            if (passwordError != null) {
+                ra.addFlashAttribute(ATTR_ERROR_MESSAGE, passwordError);
+                return REDIRECT_HR_EDIT_EMPLOYEE + id;
             }
             emp.setPassword(passwordEncoder.encode(password));
         }
@@ -786,8 +827,8 @@ public class HrController {
         }
         userRepository.save(emp);
         notificationService.notifyEmployeeManagementChanged(getTenantSegment(request), "updated", emp.getUsername());
-        ra.addFlashAttribute("successMessage", "'" + emp.getUsername() + "' updated successfully.");
-        return "redirect:/hr/employees";
+        ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "'" + emp.getUsername() + "' updated successfully.");
+        return REDIRECT_HR_EMPLOYEES;
     }
 
     /**
@@ -859,6 +900,30 @@ public class HrController {
         return "redirect:/hr/dashboard";
     }
 
+    private void populatePunchModel(Map<LocalDate, String> holidays, Optional<Attendance> todayOpt, Model model) {
+        var today = LocalDate.now();
+        var todayHolidayName = holidays.get(today);
+        var isHolidayToday = todayHolidayName != null;
+
+        var punchedIn = todayOpt.isPresent();
+        var punchedOut = todayOpt.map(a -> a.getCheckOut() != null).orElse(false);
+        var onBreak = todayOpt.map(a ->
+                (a.getBreakStart() != null && a.getBreakEnd() == null) ||
+                (a.getBreak2Start() != null && a.getBreak2End() == null)).orElse(false);
+        var breakDone = todayOpt.map(a -> a.getBreak2End() != null).orElse(false);
+        var canStartBreak = punchedIn && !punchedOut && !onBreak && !breakDone &&
+                todayOpt.map(a -> a.getBreakStart() == null ||
+                        (a.getBreakEnd() != null && a.getBreak2Start() == null)).orElse(false);
+
+        model.addAttribute("punchedIn", punchedIn);
+        model.addAttribute("punchedOut", punchedOut);
+        model.addAttribute("onBreak", onBreak);
+        model.addAttribute("breakDone", breakDone);
+        model.addAttribute("canStartBreak", canStartBreak);
+        model.addAttribute("isHolidayToday", isHolidayToday);
+        model.addAttribute("todayHolidayName", todayHolidayName);
+    }
+
     @GetMapping("/attendance")
     public String attendancePage(
             HttpServletRequest request,
@@ -870,77 +935,56 @@ public class HrController {
         injectUser(request, model);
         injectStats(request, model);
 
-        User hr = getCurrentHr();
-        LocalDate today = LocalDate.now();
+        var hr = getCurrentHr();
+        var today = LocalDate.now();
 
         // Date range (default: last 30 days)
-        LocalDate filterFrom = (from != null && !from.isBlank()) ? LocalDate.parse(from) : today.minusDays(29);
-        LocalDate filterTo   = (to   != null && !to.isBlank())   ? LocalDate.parse(to)   : today;
+        var filterFrom = (from != null && !from.isBlank()) ? LocalDate.parse(from) : today.minusDays(29);
+        var filterTo   = (to   != null && !to.isBlank())   ? LocalDate.parse(to)   : today;
         if (filterTo.isAfter(today))      filterTo   = today;
         if (filterFrom.isAfter(filterTo)) filterFrom = filterTo;
 
         // Fetch real records in range
-        String tenant = getTenantSegmentFromUser(hr);
-        List<Attendance> records = hr != null
+        var tenant = getTenantSegmentFromUser(hr);
+        var records = hr != null
                 ? attendanceRepository.findByUserAndDateBetweenOrderByDateDesc(hr, filterFrom, filterTo)
-                : Collections.emptyList();
+                : Collections.<Attendance>emptyList();
 
         // Holidays in range
-        Map<LocalDate, String> holidays = fetchHolidays(tenant, filterFrom, filterTo);
+        var holidays = fetchHolidays(tenant, filterFrom, filterTo);
 
         // Today's record — drives button state
-        Optional<Attendance> todayOpt = hr != null
+        var todayOpt = hr != null
                 ? attendanceRepository.findByUserAndDate(hr, today)
-                : Optional.empty();
+                : Optional.<Attendance>empty();
 
-        // Is today a holiday?
-        String todayHolidayName = holidays.get(today);
-        boolean isHolidayToday  = todayHolidayName != null;
-
-        boolean punchedIn  = todayOpt.isPresent();
-        boolean punchedOut = todayOpt.map(a -> a.getCheckOut() != null).orElse(false);
-        boolean onBreak    = todayOpt.map(a ->
-                (a.getBreakStart() != null && a.getBreakEnd() == null) ||
-                (a.getBreak2Start() != null && a.getBreak2End() == null)).orElse(false);
-        boolean breakDone  = todayOpt.map(a -> a.getBreak2End() != null).orElse(false);
-        boolean canStartBreak = punchedIn && !punchedOut && !onBreak && !breakDone &&
-                todayOpt.map(a -> a.getBreakStart() == null ||
-                        (a.getBreakEnd() != null && a.getBreak2Start() == null)).orElse(false);
+        populatePunchModel(holidays, todayOpt, model);
 
         // Build merged day list (fills absent/weekend/holiday gaps)
-        List<AttendanceDay> allDays = buildDayList(records, filterFrom, filterTo, holidays);
+        var allDays = buildDayList(records, filterFrom, filterTo, holidays);
 
         // Apply status filter
-        List<AttendanceDay> filteredDays = allDays;
+        var filteredDays = allDays;
         if (status != null && !status.isBlank() && !"all".equalsIgnoreCase(status)) {
-            List<AttendanceDay> tmp = new ArrayList<>();
-            for (AttendanceDay d : allDays) {
-                if (d.getStatus().equalsIgnoreCase(status)) tmp.add(d);
-            }
-            filteredDays = tmp;
+            filteredDays = allDays.stream()
+                    .filter(d -> d.getStatus().equalsIgnoreCase(status))
+                    .collect(Collectors.toList());
         }
 
         // Stats from all-time records
-        List<Attendance> allRecords = hr != null
+        var allRecords = hr != null
                 ? attendanceRepository.findByUserOrderByDateDesc(hr)
-                : Collections.emptyList();
-        long presentCount = allRecords.stream()
-                .filter(a -> "present".equalsIgnoreCase(a.getStatus()) || "late".equalsIgnoreCase(a.getStatus()))
+                : Collections.<Attendance>emptyList();
+        var presentCount = allRecords.stream()
+                .filter(a -> STATUS_PRESENT.equalsIgnoreCase(a.getStatus()) || "late".equalsIgnoreCase(a.getStatus()))
                 .count();
-        long lateCount = allRecords.stream()
+        var lateCount = allRecords.stream()
                 .filter(a -> "late".equalsIgnoreCase(a.getStatus()))
                 .count();
 
         model.addAttribute("attendanceDays",    filteredDays);
         model.addAttribute("totalRecords",      filteredDays.size());
         model.addAttribute("todayRecord",       todayOpt.orElse(null));
-        model.addAttribute("punchedIn",         punchedIn);
-        model.addAttribute("punchedOut",        punchedOut);
-        model.addAttribute("onBreak",           onBreak);
-        model.addAttribute("breakDone",         breakDone);
-        model.addAttribute("canStartBreak",     canStartBreak);
-        model.addAttribute("isHolidayToday",    isHolidayToday);
-        model.addAttribute("todayHolidayName",  todayHolidayName);
         model.addAttribute("presentCount",      presentCount);
         model.addAttribute("lateCount",         lateCount);
         model.addAttribute("filterFrom",        filterFrom.toString());
@@ -952,27 +996,27 @@ public class HrController {
 
     @PostMapping("/attendance/punch-in")
     public String punchIn(HttpServletRequest request, RedirectAttributes ra) {
-        User hr = getCurrentHr();
-        if (hr == null) return "redirect:/hr/attendance";
+        var hr = getCurrentHr();
+        if (hr == null) return REDIRECT_HR_ATTENDANCE;
 
-        LocalDate today  = LocalDate.now();
-        String    tenant = getTenantSegmentFromUser(hr);
+        var today  = LocalDate.now();
+        var tenant = getTenantSegmentFromUser(hr);
 
         // Block punch-in on holidays
         if (holidayRepository.findByDateAndTenantSegment(today.toString(), tenant).isPresent()) {
-            ra.addFlashAttribute("errorMessage", "Today is a holiday. Punch-in is not allowed.");
-            return "redirect:/hr/attendance";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Today is a holiday. Punch-in is not allowed.");
+            return REDIRECT_HR_ATTENDANCE;
         }
 
         if (attendanceRepository.findByUserAndDate(hr, today).isPresent()) {
-            ra.addFlashAttribute("errorMessage", "You have already punched in today.");
-            return "redirect:/hr/attendance";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You have already punched in today.");
+            return REDIRECT_HR_ATTENDANCE;
         }
 
-        LocalTime now    = LocalTime.now();
-        String   status  = now.isAfter(LocalTime.of(9, 30)) ? "late" : "present";
+        var now    = LocalTime.now();
+        var status  = now.isAfter(LocalTime.of(9, 30)) ? "late" : STATUS_PRESENT;
 
-        Attendance att = new Attendance();
+        var att = new Attendance();
         att.setUser(hr);
         att.setDate(today);
         att.setCheckIn(now);
@@ -981,135 +1025,135 @@ public class HrController {
         attendanceRepository.save(att);
         notificationService.notifyAttendanceUpdated(hr, "punch-in");
 
-        ra.addFlashAttribute("successMessage",
-                "Punched in at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
-        return "redirect:/hr/attendance";
+        ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
+                "Punched in at " + String.format(TIME_FORMAT, now.getHour(), now.getMinute()) + ".");
+        return REDIRECT_HR_ATTENDANCE;
     }
 
     @PostMapping("/attendance/punch-out")
     public String punchOut(RedirectAttributes ra) {
-        User hr = getCurrentHr();
-        if (hr == null) return "redirect:/hr/attendance";
+        var hr = getCurrentHr();
+        if (hr == null) return REDIRECT_HR_ATTENDANCE;
 
-        LocalDate today = LocalDate.now();
-        Optional<Attendance> opt = attendanceRepository.findByUserAndDate(hr, today);
+        var today = LocalDate.now();
+        var opt = attendanceRepository.findByUserAndDate(hr, today);
         if (opt.isEmpty()) {
-            ra.addFlashAttribute("errorMessage", "You haven't punched in today.");
-            return "redirect:/hr/attendance";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_NOT_PUNCHED_IN);
+            return REDIRECT_HR_ATTENDANCE;
         }
-        Attendance att = opt.get();
+        var att = opt.get();
         if (att.getCheckOut() != null) {
-            ra.addFlashAttribute("errorMessage", "You have already punched out today.");
-            return "redirect:/hr/attendance";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You have already punched out today.");
+            return REDIRECT_HR_ATTENDANCE;
         }
-        LocalTime now = LocalTime.now();
+        var now = LocalTime.now();
         att.setCheckOut(now);
         
         // Recalculate status based on worked hours:
-        long mins = att.getWorkedMinutes();
+        var mins = att.getWorkedMinutes();
         if (mins >= 0 && mins < 240) {
-            att.setStatus("absent");
+            att.setStatus(STATUS_ABSENT);
         } else if (mins >= 240 && mins < 360) {
             att.setStatus("half-day");
         }
         
         attendanceRepository.save(att);
         notificationService.notifyAttendanceUpdated(hr, "punch-out");
-        ra.addFlashAttribute("successMessage",
-                "Punched out at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
-        return "redirect:/hr/attendance";
+        ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
+                "Punched out at " + String.format(TIME_FORMAT, now.getHour(), now.getMinute()) + ".");
+        return REDIRECT_HR_ATTENDANCE;
     }
 
     @PostMapping("/attendance/break-start")
     public String breakStart(RedirectAttributes ra) {
-        User hr = getCurrentHr();
-        if (hr == null) return "redirect:/hr/attendance";
+        var hr = getCurrentHr();
+        if (hr == null) return REDIRECT_HR_ATTENDANCE;
 
-        LocalDate today = LocalDate.now();
-        Optional<Attendance> opt = attendanceRepository.findByUserAndDate(hr, today);
+        var today = LocalDate.now();
+        var opt = attendanceRepository.findByUserAndDate(hr, today);
         if (opt.isEmpty()) {
-            ra.addFlashAttribute("errorMessage", "You haven't punched in today.");
-            return "redirect:/hr/attendance";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_NOT_PUNCHED_IN);
+            return REDIRECT_HR_ATTENDANCE;
         }
-        Attendance att = opt.get();
+        var att = opt.get();
         if (att.getCheckOut() != null) {
-            ra.addFlashAttribute("errorMessage", "You have already punched out.");
-            return "redirect:/hr/attendance";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You have already punched out.");
+            return REDIRECT_HR_ATTENDANCE;
         }
-        LocalTime now = LocalTime.now();
+        var now = LocalTime.now();
         if (att.getBreakStart() == null) {
             att.setBreakStart(now);
             attendanceRepository.save(att);
             notificationService.notifyAttendanceUpdated(hr, "break-1-start");
-            ra.addFlashAttribute("successMessage",
-                    "Break 1 started at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
-            return "redirect:/hr/attendance";
+            ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
+                    "Break 1 started at " + String.format(TIME_FORMAT, now.getHour(), now.getMinute()) + ".");
+            return REDIRECT_HR_ATTENDANCE;
         }
         if (att.getBreakEnd() != null && att.getBreak2Start() == null) {
             att.setBreak2Start(now);
             attendanceRepository.save(att);
             notificationService.notifyAttendanceUpdated(hr, "break-2-start");
-            ra.addFlashAttribute("successMessage",
-                    "Break 2 started at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
-            return "redirect:/hr/attendance";
+            ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
+                    "Break 2 started at " + String.format(TIME_FORMAT, now.getHour(), now.getMinute()) + ".");
+            return REDIRECT_HR_ATTENDANCE;
         }
-        ra.addFlashAttribute("errorMessage", "No more breaks available today.");
-        return "redirect:/hr/attendance";
+        ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "No more breaks available today.");
+        return REDIRECT_HR_ATTENDANCE;
     }
 
     @PostMapping("/attendance/break-end")
     public String breakEnd(RedirectAttributes ra) {
-        User hr = getCurrentHr();
-        if (hr == null) return "redirect:/hr/attendance";
+        var hr = getCurrentHr();
+        if (hr == null) return REDIRECT_HR_ATTENDANCE;
 
-        LocalDate today = LocalDate.now();
-        Optional<Attendance> opt = attendanceRepository.findByUserAndDate(hr, today);
+        var today = LocalDate.now();
+        var opt = attendanceRepository.findByUserAndDate(hr, today);
         if (opt.isEmpty()) {
-            ra.addFlashAttribute("errorMessage", "You haven't punched in today.");
-            return "redirect:/hr/attendance";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_NOT_PUNCHED_IN);
+            return REDIRECT_HR_ATTENDANCE;
         }
-        Attendance att = opt.get();
-        LocalTime now = LocalTime.now();
+        var att = opt.get();
+        var now = LocalTime.now();
         if (att.getBreak2Start() != null && att.getBreak2End() == null) {
             att.setBreak2End(now);
             attendanceRepository.save(att);
             notificationService.notifyAttendanceUpdated(hr, "break-2-end");
-            ra.addFlashAttribute("successMessage",
-                    "Break 2 ended at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
-            return "redirect:/hr/attendance";
+            ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
+                    "Break 2 ended at " + String.format(TIME_FORMAT, now.getHour(), now.getMinute()) + ".");
+            return REDIRECT_HR_ATTENDANCE;
         }
         if (att.getBreakStart() != null && att.getBreakEnd() == null) {
             att.setBreakEnd(now);
             attendanceRepository.save(att);
             notificationService.notifyAttendanceUpdated(hr, "break-1-end");
-            ra.addFlashAttribute("successMessage",
-                    "Break 1 ended at " + String.format("%02d:%02d", now.getHour(), now.getMinute()) + ".");
-            return "redirect:/hr/attendance";
+            ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
+                    "Break 1 ended at " + String.format(TIME_FORMAT, now.getHour(), now.getMinute()) + ".");
+            return REDIRECT_HR_ATTENDANCE;
         }
-        ra.addFlashAttribute("errorMessage", "No active break to end.");
-        return "redirect:/hr/attendance";
+        ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "No active break to end.");
+        return REDIRECT_HR_ATTENDANCE;
     }
 
     @GetMapping("/leaves")
     public String leavesPage(HttpServletRequest request, Model model) {
         injectUser(request, model);
         injectStats(request, model);
-        String tenant = getTenantSegment(request);
+        var tenant = getTenantSegment(request);
         model.addAttribute("leaveRequests", tenant.isEmpty() ? Collections.emptyList() : leaveRequestRepository.findByTenantSegmentOrderByCreatedAtDesc(tenant));
         return "hr-leaves";
     }
 
     @GetMapping("/leaves/view/{id}")
-    public ResponseEntity<?> viewLeaveAttachment(@PathVariable Long id, HttpServletRequest request) {
-        String tenant = getTenantSegment(request);
-        LeaveRequest leave = leaveRequestRepository.findById(id).orElse(null);
+    public ResponseEntity<byte[]> viewLeaveAttachment(@PathVariable Long id, HttpServletRequest request) {
+        var tenant = getTenantSegment(request);
+        var leave = leaveRequestRepository.findById(id).orElse(null);
         if (leave == null || !tenant.equals(leave.getTenantSegment()) || leave.getAttachmentData() == null || leave.getAttachmentData().length == 0) {
             return ResponseEntity.notFound().build();
         }
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + (leave.getAttachmentName() != null ? leave.getAttachmentName() : "leave-attachment") + "\"")
-                .header(HttpHeaders.CONTENT_TYPE, leave.getAttachmentContentType() != null ? leave.getAttachmentContentType() : "application/octet-stream")
+                .header(HttpHeaders.CONTENT_TYPE, leave.getAttachmentContentType() != null ? leave.getAttachmentContentType() : OCTET_STREAM)
                 .body(leave.getAttachmentData());
     }
 
@@ -1119,28 +1163,28 @@ public class HrController {
                               @RequestParam(required = false) String rejectionMessage,
                               HttpServletRequest request,
                               RedirectAttributes ra) {
-        String tenant = getTenantSegment(request);
-        User hr = getCurrentHr();
-        LeaveRequest leave = leaveRequestRepository.findById(id).orElse(null);
+        var tenant = getTenantSegment(request);
+        var hr = getCurrentHr();
+        var leave = leaveRequestRepository.findById(id).orElse(null);
         if (leave == null || !tenant.equals(leave.getTenantSegment())) {
-            ra.addFlashAttribute("errorMessage", "Leave request not found.");
-            return "redirect:/hr/leaves";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Leave request not found.");
+            return REDIRECT_HR_LEAVES;
         }
 
         if ("approve".equalsIgnoreCase(action)) {
-            leave.setStatus("Approved");
-            ra.addFlashAttribute("successMessage", "Leave request approved.");
+            leave.setStatus(STATUS_APPROVED);
+            ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Leave request approved.");
         } else if ("reject".equalsIgnoreCase(action)) {
             if (rejectionMessage != null && rejectionMessage.trim().length() > 255) {
-                ra.addFlashAttribute("errorMessage", "Rejection message/reason cannot exceed 255 characters.");
-                return "redirect:/hr/leaves";
+                ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Rejection message/reason cannot exceed 255 characters.");
+                return REDIRECT_HR_LEAVES;
             }
-            leave.setStatus("Rejected");
+            leave.setStatus(STATUS_REJECTED);
             leave.setRejectionMessage(rejectionMessage != null ? rejectionMessage.trim() : "");
-            ra.addFlashAttribute("successMessage", "Leave request rejected.");
+            ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Leave request rejected.");
         } else {
-            ra.addFlashAttribute("errorMessage", "Invalid leave action.");
-            return "redirect:/hr/leaves";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Invalid leave action.");
+            return REDIRECT_HR_LEAVES;
         }
 
         leave.setReviewedBy(hr != null ? hr.getUsername() : null);
@@ -1156,7 +1200,7 @@ public class HrController {
                     leave.getToDate(),
                     hr != null ? hr.getUsername() : "HR");
         }
-        return "redirect:/hr/leaves";
+        return REDIRECT_HR_LEAVES;
     }
 
     @GetMapping("/calendar")
@@ -1164,7 +1208,7 @@ public class HrController {
         injectUser(request, model);
         model.addAttribute("pageTitle",   "HR — Calendar");
         model.addAttribute("pageHeading", "Holiday Calendar");
-        model.addAttribute("activePage",  "calendar");
+        model.addAttribute(ATTR_ACTIVE_PAGE,  "calendar");
         return "hr-calendar";
     }
 
@@ -1172,15 +1216,12 @@ public class HrController {
     public String reportsPage(HttpServletRequest request, Model model) {
         injectUser(request, model);
         injectStats(request, model);
-        String tenant = getTenantSegment(request);
+        var tenant = getTenantSegment(request);
 
-        User hr = getCurrentHr();
-        java.util.List<com.crm.demo.model.Report> allReports;
-        if (hr != null) {
-            allReports = reportRepository.findByRecipientId(String.valueOf(hr.getId()), tenant);
-        } else {
-            allReports = java.util.Collections.emptyList();
-        }
+        var hr = getCurrentHr();
+        var allReports = hr != null
+                ? reportRepository.findByRecipientId(String.valueOf(hr.getId()), tenant)
+                : Collections.<com.crm.demo.model.Report>emptyList();
 
         model.addAttribute("allReports",  allReports);
         model.addAttribute("reportCount", allReports.size());
@@ -1188,24 +1229,22 @@ public class HrController {
     }
 
     @GetMapping("/reports/view/{attachmentId}")
-    public org.springframework.http.ResponseEntity<?> viewReportAttachment(
-            @PathVariable Long attachmentId) {
-        com.crm.demo.model.ReportAttachment att = reportAttachmentRepository.findById(attachmentId).orElse(null);
-        if (att == null) return org.springframework.http.ResponseEntity.notFound().build();
-        String ct = att.getContentType() != null ? att.getContentType() : "application/octet-stream";
-        return org.springframework.http.ResponseEntity.ok()
+    public ResponseEntity<byte[]> viewReportAttachment(@PathVariable Long attachmentId) {
+        var att = reportAttachmentRepository.findById(attachmentId).orElse(null);
+        if (att == null) return ResponseEntity.notFound().build();
+        var ct = att.getContentType() != null ? att.getContentType() : OCTET_STREAM;
+        return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + att.getOriginalFilename() + "\"")
                 .header(HttpHeaders.CONTENT_TYPE, ct)
                 .body(att.getFileData());
     }
 
     @GetMapping("/reports/download/{attachmentId}")
-    public org.springframework.http.ResponseEntity<?> downloadReportAttachment(
-            @PathVariable Long attachmentId) {
-        com.crm.demo.model.ReportAttachment att = reportAttachmentRepository.findById(attachmentId).orElse(null);
-        if (att == null) return org.springframework.http.ResponseEntity.notFound().build();
-        String ct = att.getContentType() != null ? att.getContentType() : "application/octet-stream";
-        return org.springframework.http.ResponseEntity.ok()
+    public ResponseEntity<byte[]> downloadReportAttachment(@PathVariable Long attachmentId) {
+        var att = reportAttachmentRepository.findById(attachmentId).orElse(null);
+        if (att == null) return ResponseEntity.notFound().build();
+        var ct = att.getContentType() != null ? att.getContentType() : OCTET_STREAM;
+        return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + att.getOriginalFilename() + "\"")
                 .header(HttpHeaders.CONTENT_TYPE, ct)
                 .body(att.getFileData());
@@ -1215,8 +1254,8 @@ public class HrController {
     public String profilePage(HttpServletRequest request, Model model) {
         injectUser(request, model);
         injectStats(request, model);
-        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-        User hr = userRepository.findByUsername(currentUsername);
+        var currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        var hr = userRepository.findByUsername(currentUsername);
         model.addAttribute("hrEmail", hr != null ? hr.getEmail() : "");
         return "hr-profile";
     }
@@ -1228,8 +1267,8 @@ public class HrController {
                                 @RequestParam(required = false) String confirmPassword,
                                 HttpServletResponse response,
                                 RedirectAttributes ra) {
-        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-        User hr = userRepository.findByUsername(currentUsername);
+        var currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        var hr = userRepository.findByUsername(currentUsername);
         if (hr == null) return "redirect:/hr/profile";
 
         profileUpdateService.updateProfile(hr, username, email, password, confirmPassword, ra, response);
@@ -1244,25 +1283,25 @@ public class HrController {
     @GetMapping("/teams")
     public String teamsPage(HttpServletRequest request, Model model) {
         injectUser(request, model);
-        String tenant = getTenantSegment(request);
+        var tenant = getTenantSegment(request);
 
-        List<Team> teams = teamRepository.findByTenantSegmentOrderByIdDesc(tenant);
+        var teams = teamRepository.findByTenantSegmentOrderByIdDesc(tenant);
 
         // Managers and employees available in this tenant
-        List<User> tenantUsers = tenant.isEmpty()
+        var tenantUsers = tenant.isEmpty()
                 ? userRepository.findAll()
                 : userRepository.findByTenantSegment(tenant);
 
-        List<User> managers  = tenantUsers.stream()
-                .filter(u -> "MANAGER".equalsIgnoreCase(u.getRole()) && u.isActive()).toList();
-        List<User> employees = tenantUsers.stream()
-                .filter(u -> "EMPLOYEE".equalsIgnoreCase(u.getRole()) && u.isActive()).toList();
+        var managers  = tenantUsers.stream()
+                .filter(u -> "MANAGER".equalsIgnoreCase(u.getRole()) && u.isActive()).collect(Collectors.toList());
+        var employees = tenantUsers.stream()
+                .filter(u -> ROLE_EMPLOYEE.equalsIgnoreCase(u.getRole()) && u.isActive()).collect(Collectors.toList());
 
-        model.addAttribute("teams",     teams);
+        model.addAttribute(ATTR_TEAMS,     teams);
         model.addAttribute("managers",  managers);
-        model.addAttribute("employees", employees);
+        model.addAttribute(ATTR_EMPLOYEES, employees);
         model.addAttribute("teamCount", teams.size());
-        model.addAttribute("activePage", "teams");
+        model.addAttribute(ATTR_ACTIVE_PAGE, ATTR_TEAMS);
         return "hr-teams";
     }
 
@@ -1272,22 +1311,22 @@ public class HrController {
                              @RequestParam(required = false) Long managerId,
                              HttpServletRequest request,
                              RedirectAttributes ra) {
-        String tenant = getTenantSegment(request);
+        var tenant = getTenantSegment(request);
 
         if (name == null || name.isBlank()) {
-            ra.addFlashAttribute("errorMessage", "Team name is required.");
-            return "redirect:/hr/teams";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Team name is required.");
+            return REDIRECT_HR_TEAMS;
         }
         if (name.trim().length() > 255) {
-            ra.addFlashAttribute("errorMessage", "Team name cannot exceed 255 characters.");
-            return "redirect:/hr/teams";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Team name cannot exceed 255 characters.");
+            return REDIRECT_HR_TEAMS;
         }
         if (teamRepository.existsByNameAndTenantSegment(name.trim(), tenant)) {
-            ra.addFlashAttribute("errorMessage", "A team named '" + name.trim() + "' already exists.");
-            return "redirect:/hr/teams";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "A team named '" + name.trim() + "' already exists.");
+            return REDIRECT_HR_TEAMS;
         }
 
-        Team team = new Team();
+        var team = new Team();
         team.setName(name.trim());
         team.setTenantSegment(tenant);
 
@@ -1296,8 +1335,8 @@ public class HrController {
         }
 
         teamRepository.save(team);
-        ra.addFlashAttribute("successMessage", "Team '" + name.trim() + "' created.");
-        return "redirect:/hr/teams";
+        ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Team '" + name.trim() + "' created.");
+        return REDIRECT_HR_TEAMS;
     }
 
     /** POST /hr/teams/{id}/assign-manager — assign or change the manager. */
@@ -1306,19 +1345,34 @@ public class HrController {
                                 @RequestParam Long managerId,
                                 HttpServletRequest request,
                                 RedirectAttributes ra) {
-        String tenant = getTenantSegment(request);
-        Team team = teamRepository.findById(id).orElse(null);
+        var tenant = getTenantSegment(request);
+        var team = teamRepository.findById(id).orElse(null);
         if (team == null || !tenant.equals(team.getTenantSegment())) {
-            ra.addFlashAttribute("errorMessage", "Team not found.");
-            return "redirect:/hr/teams";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_TEAM_NOT_FOUND);
+            return REDIRECT_HR_TEAMS;
         }
         userRepository.findById(managerId).ifPresent(manager -> {
             team.setManager(manager);
             notificationService.notifyManagerAssigned(manager, team.getName());
         });
         teamRepository.save(team);
-        ra.addFlashAttribute("successMessage", "Manager assigned to team '" + team.getName() + "'.");
-        return "redirect:/hr/teams";
+        ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Manager assigned to team '" + team.getName() + "'.");
+        return REDIRECT_HR_TEAMS;
+    }
+
+    private void processMemberAddition(Long empId, Team team, List<String> skipped, int[] added) {
+        var emp = userRepository.findById(empId).orElse(null);
+        if (emp == null || !ROLE_EMPLOYEE.equalsIgnoreCase(emp.getRole())) {
+            skipped.add("ID " + empId + " not found");
+            return;
+        }
+        if (team.getMembers().contains(emp)) {
+            skipped.add(emp.getUsername() + " already in team");
+            return;
+        }
+        team.getMembers().add(emp);
+        notificationService.notifyTeamAdded(emp, team.getName());
+        added[0]++;
     }
 
     /** POST /hr/teams/{id}/add-member — add one or more employees to the team. */
@@ -1327,45 +1381,34 @@ public class HrController {
                             @RequestParam(value = "employeeIds", required = false) List<Long> employeeIds,
                             HttpServletRequest request,
                             RedirectAttributes ra) {
-        String tenant = getTenantSegment(request);
-        Team team = teamRepository.findById(id).orElse(null);
+        var tenant = getTenantSegment(request);
+        var team = teamRepository.findById(id).orElse(null);
         if (team == null || !tenant.equals(team.getTenantSegment())) {
-            ra.addFlashAttribute("errorMessage", "Team not found.");
-            return "redirect:/hr/teams";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_TEAM_NOT_FOUND);
+            return REDIRECT_HR_TEAMS;
         }
         if (employeeIds == null || employeeIds.isEmpty()) {
-            ra.addFlashAttribute("errorMessage", "Please select at least one employee.");
-            return "redirect:/hr/teams";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Please select at least one employee.");
+            return REDIRECT_HR_TEAMS;
         }
 
-        int added = 0;
-        List<String> skipped = new ArrayList<>();
+        var added = new int[]{0};
+        var skipped = new ArrayList<String>();
 
-        for (Long empId : employeeIds) {
-            User emp = userRepository.findById(empId).orElse(null);
-            if (emp == null || !"EMPLOYEE".equalsIgnoreCase(emp.getRole())) {
-                skipped.add("ID " + empId + " not found");
-                continue;
-            }
-            if (team.getMembers().contains(emp)) {
-                skipped.add(emp.getUsername() + " already in team");
-                continue;
-            }
-            team.getMembers().add(emp);
-            notificationService.notifyTeamAdded(emp, team.getName());
-            added++;
+        for (var empId : employeeIds) {
+            processMemberAddition(empId, team, skipped, added);
         }
 
-        if (added > 0) {
+        if (added[0] > 0) {
             teamRepository.save(team);
-            String msg = added + " member(s) added to team '" + team.getName() + "'.";
+            var msg = added[0] + " member(s) added to team '" + team.getName() + "'.";
             if (!skipped.isEmpty()) msg += " Skipped: " + String.join(", ", skipped) + ".";
-            ra.addFlashAttribute("successMessage", msg);
+            ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, msg);
         } else {
-            ra.addFlashAttribute("errorMessage",
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE,
                     "No members added. " + (skipped.isEmpty() ? "" : "Skipped: " + String.join(", ", skipped)));
         }
-        return "redirect:/hr/teams";
+        return REDIRECT_HR_TEAMS;
     }
 
     /** POST /hr/teams/{id}/remove-member — remove an employee from the team. */
@@ -1374,15 +1417,15 @@ public class HrController {
                                @RequestParam Long employeeId,
                                HttpServletRequest request,
                                RedirectAttributes ra) {
-        String tenant = getTenantSegment(request);
-        Team team = teamRepository.findById(id).orElse(null);
+        var tenant = getTenantSegment(request);
+        var team = teamRepository.findById(id).orElse(null);
         if (team == null || !tenant.equals(team.getTenantSegment())) {
-            ra.addFlashAttribute("errorMessage", "Team not found.");
-            return "redirect:/hr/teams";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_TEAM_NOT_FOUND);
+            return REDIRECT_HR_TEAMS;
         }
         team.getMembers().removeIf(m -> m.getId().equals(employeeId));
         teamRepository.save(team);
-        ra.addFlashAttribute("successMessage", "Member removed from team '" + team.getName() + "'.");
+        ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Member removed from team '" + team.getName() + "'.");
         return "redirect:/hr/teams";
     }
 
@@ -1407,84 +1450,71 @@ public class HrController {
     //  MEETINGS
     // ═══════════════════════════════════════════════════════════════════════
 
-    /**
-     * Filter a list of today's meetings to only those that have not yet ended.
-     * A meeting ends at meetingTime + duration minutes. Meetings with no time are always shown.
-     */
-    private List<Meeting> filterActiveMeetings(List<Meeting> meetings) {
-        LocalTime now = LocalTime.now();
-        return meetings.stream().filter(m -> {
-            if (m.getMeetingTime() == null) return true;
-            int durationMins = (m.getDuration() != null) ? m.getDuration() : 0;
-            LocalTime endTime = m.getMeetingTime().plusMinutes(durationMins);
-            return !endTime.isBefore(now);
-        }).toList();
-    }
 
     private List<Meeting> getPastMeetings(String tenant, String username) {
-        List<Meeting> all = meetingRepository.findAllMeetingsForUserOrHost(tenant, username);
-        LocalDate today = LocalDate.now();
-        LocalTime now   = LocalTime.now();
+        var all = meetingRepository.findAllMeetingsForUserOrHost(tenant, username);
+        var today = LocalDate.now();
+        var now   = LocalTime.now();
         return all.stream().filter(m -> {
             if (m.getMeetingDate().isBefore(today)) return true;
             if (!m.getMeetingDate().equals(today)) return false;
             if (m.getMeetingTime() == null) return false;
-            int dur = (m.getDuration() != null) ? m.getDuration() : 0;
+            var dur = (m.getDuration() != null) ? m.getDuration() : 0;
             return m.getMeetingTime().plusMinutes(dur).isBefore(now);
-        }).toList();
+        }).collect(Collectors.toList());
     }
 
     /** Returns upcoming meetings (today + future) where the user is a participant OR the host,
      *  excluding today's meetings that have already ended. */
     private List<Meeting> getUpcomingMeetings(String tenant, String username) {
-        List<Meeting> all = meetingRepository
+        var all = meetingRepository
                 .findUpcomingMeetingsForUserOrHost(tenant, username, LocalDate.now());
-        LocalDate today = LocalDate.now();
-        LocalTime now   = LocalTime.now();
+        var today = LocalDate.now();
+        var now   = LocalTime.now();
         return all.stream().filter(m -> {
             if (!m.getMeetingDate().equals(today)) return true;
             if (m.getMeetingTime() == null) return true;
-            int dur = (m.getDuration() != null) ? m.getDuration() : 0;
+            var dur = (m.getDuration() != null) ? m.getDuration() : 0;
             return !m.getMeetingTime().plusMinutes(dur).isBefore(now);
-        }).toList();
+        }).collect(Collectors.toList());
     }
 
     /** GET /hr/meetings — side-by-side schedule form + meetings list */
     @GetMapping("/meetings")
     public String meetingsPage(HttpServletRequest request, Model model) {
         injectUser(request, model);
-        String tenant   = getTenantSegment(request);
-        String username = (String) request.getAttribute("loggedInUser");
+        var tenant   = getTenantSegment(request);
+        var username = (String) request.getAttribute(ATTR_LOGGED_IN_USER);
 
-        model.addAttribute("upcomingMeetings", getUpcomingMeetings(tenant, username != null ? username : ""));
-        model.addAttribute("pastMeetings", getPastMeetings(tenant, username != null ? username : ""));
+        model.addAttribute(ATTR_UPCOMING_MEETINGS, getUpcomingMeetings(tenant, username != null ? username : ""));
+        model.addAttribute(ATTR_PAST_MEETINGS, getPastMeetings(tenant, username != null ? username : ""));
 
         // All non-admin users in this tenant as potential participants (excluding the host)
-        List<User> tenantUsers = tenant.isEmpty()
+        var tenantUsers = tenant.isEmpty()
                 ? userRepository.findAll()
                 : userRepository.findByTenantSegment(tenant);
-        final String currentUsername = username != null ? username : "";
-        model.addAttribute("tenantUsers", tenantUsers.stream()
-                .filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
-                          && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole())
+        final var currentUsername = username != null ? username : "";
+        model.addAttribute(ATTR_TENANT_USERS, tenantUsers.stream()
+                .filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole())
+                          && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole())
                           && !u.getUsername().equalsIgnoreCase(currentUsername))
-                .toList());
+                .collect(Collectors.toList()));
 
-        if (!model.containsAttribute("meetingForm")) {
-            model.addAttribute("meetingForm", new Meeting());
+        if (!model.containsAttribute(ATTR_MEETING_FORM)) {
+            model.addAttribute(ATTR_MEETING_FORM, new Meeting());
         }
-        return "hr-meetings";
+        return PAGE_MEETINGS;
     }
 
     /** POST /hr/meetings — create a new meeting */
     @PostMapping("/meetings")
-    public String scheduleMeeting(@Valid @ModelAttribute("meetingForm") Meeting meetingForm,
+    public String scheduleMeeting(@Valid @ModelAttribute(ATTR_MEETING_FORM) Meeting meetingForm,
                                   BindingResult result,
                                   HttpServletRequest request,
                                   Model model,
                                   RedirectAttributes ra) {
-        String tenant   = getTenantSegment(request);
-        String username = (String) request.getAttribute("loggedInUser");
+        var tenant   = getTenantSegment(request);
+        var username = (String) request.getAttribute(ATTR_LOGGED_IN_USER);
 
         if ("in-person".equalsIgnoreCase(meetingForm.getMeetingType()) && (meetingForm.getLocation() == null || meetingForm.getLocation().isBlank())) {
             result.rejectValue("location", "NotBlank", "Location is required for in-person meetings.");
@@ -1492,27 +1522,27 @@ public class HrController {
 
         if (result.hasErrors()) {
             injectUser(request, model);
-            model.addAttribute("upcomingMeetings", getUpcomingMeetings(tenant, username != null ? username : ""));
-            model.addAttribute("pastMeetings", getPastMeetings(tenant, username != null ? username : ""));
-            List<User> tenantUsers = tenant.isEmpty()
+            model.addAttribute(ATTR_UPCOMING_MEETINGS, getUpcomingMeetings(tenant, username != null ? username : ""));
+            model.addAttribute(ATTR_PAST_MEETINGS, getPastMeetings(tenant, username != null ? username : ""));
+            var tenantUsers = tenant.isEmpty()
                     ? userRepository.findAll()
                     : userRepository.findByTenantSegment(tenant);
-            final String currentUsername = username != null ? username : "";
-            model.addAttribute("tenantUsers", tenantUsers.stream()
-                    .filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
-                              && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole())
+            final var currentUsername = username != null ? username : "";
+            model.addAttribute(ATTR_TENANT_USERS, tenantUsers.stream()
+                    .filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole())
+                              && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole())
                               && !u.getUsername().equalsIgnoreCase(currentUsername))
-                    .toList());
-            model.addAttribute("errorMessage", "Please fix the errors below.");
-            return "hr-meetings";
+                    .collect(Collectors.toList()));
+            model.addAttribute(ATTR_ERROR_MESSAGE, "Please fix the errors below.");
+            return PAGE_MEETINGS;
         }
 
         meetingForm.setTenantSegment(tenant);
         meetingForm.setScheduledBy(username != null ? username : "");
         meetingRepository.save(meetingForm);
         notificationService.notifyMeetingParticipants(meetingForm);
-        ra.addFlashAttribute("successMessage", "Meeting scheduled successfully.");
-        return "redirect:/hr/meetings";
+        ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Meeting scheduled successfully.");
+        return REDIRECT_HR_MEETINGS;
     }
 
     /** GET /hr/meetings/edit/{id} — load meeting into form */
@@ -1522,40 +1552,40 @@ public class HrController {
                                   Model model,
                                   RedirectAttributes ra) {
         injectUser(request, model);
-        String tenant   = getTenantSegment(request);
-        String username = (String) request.getAttribute("loggedInUser");
+        var tenant   = getTenantSegment(request);
+        var username = (String) request.getAttribute(ATTR_LOGGED_IN_USER);
 
-        Meeting meeting = meetingRepository.findById(id).orElse(null);
+        var meeting = meetingRepository.findById(id).orElse(null);
         if (meeting == null || !tenant.equals(meeting.getTenantSegment())) {
-            ra.addFlashAttribute("errorMessage", "Meeting not found.");
-            return "redirect:/hr/meetings";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_MEETING_NOT_FOUND);
+            return REDIRECT_HR_MEETINGS;
         }
 
-        model.addAttribute("meetingForm", meeting);
-        model.addAttribute("upcomingMeetings", getUpcomingMeetings(tenant, username != null ? username : ""));
-        model.addAttribute("pastMeetings", getPastMeetings(tenant, username != null ? username : ""));
-        List<User> tenantUsers = tenant.isEmpty()
+        model.addAttribute(ATTR_MEETING_FORM, meeting);
+        model.addAttribute(ATTR_UPCOMING_MEETINGS, getUpcomingMeetings(tenant, username != null ? username : ""));
+        model.addAttribute(ATTR_PAST_MEETINGS, getPastMeetings(tenant, username != null ? username : ""));
+        var tenantUsers = tenant.isEmpty()
                 ? userRepository.findAll()
                 : userRepository.findByTenantSegment(tenant);
-        final String currentUsername = username != null ? username : "";
-        model.addAttribute("tenantUsers", tenantUsers.stream()
-                .filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
-                          && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole())
+        final var currentUsername = username != null ? username : "";
+        model.addAttribute(ATTR_TENANT_USERS, tenantUsers.stream()
+                .filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole())
+                          && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole())
                           && !u.getUsername().equalsIgnoreCase(currentUsername))
-                .toList());
-        return "hr-meetings";
+                .collect(Collectors.toList()));
+        return PAGE_MEETINGS;
     }
 
     /** POST /hr/meetings/edit/{id} — update existing meeting */
     @PostMapping("/meetings/edit/{id}")
     public String updateMeeting(@PathVariable Long id,
-                                @Valid @ModelAttribute("meetingForm") Meeting meetingForm,
+                                @Valid @ModelAttribute(ATTR_MEETING_FORM) Meeting meetingForm,
                                 BindingResult result,
                                 HttpServletRequest request,
                                 Model model,
                                 RedirectAttributes ra) {
-        String tenant   = getTenantSegment(request);
-        String username = (String) request.getAttribute("loggedInUser");
+        var tenant   = getTenantSegment(request);
+        var username = (String) request.getAttribute(ATTR_LOGGED_IN_USER);
 
         if ("in-person".equalsIgnoreCase(meetingForm.getMeetingType()) && (meetingForm.getLocation() == null || meetingForm.getLocation().isBlank())) {
             result.rejectValue("location", "NotBlank", "Location is required for in-person meetings.");
@@ -1563,25 +1593,25 @@ public class HrController {
 
         if (result.hasErrors()) {
             injectUser(request, model);
-            model.addAttribute("upcomingMeetings", getUpcomingMeetings(tenant, username != null ? username : ""));
-            model.addAttribute("pastMeetings", getPastMeetings(tenant, username != null ? username : ""));
-            List<User> tenantUsers = tenant.isEmpty()
+            model.addAttribute(ATTR_UPCOMING_MEETINGS, getUpcomingMeetings(tenant, username != null ? username : ""));
+            model.addAttribute(ATTR_PAST_MEETINGS, getPastMeetings(tenant, username != null ? username : ""));
+            var tenantUsers = tenant.isEmpty()
                     ? userRepository.findAll()
                     : userRepository.findByTenantSegment(tenant);
-            final String currentUsername = username != null ? username : "";
-            model.addAttribute("tenantUsers", tenantUsers.stream()
-                    .filter(u -> !"ADMIN".equalsIgnoreCase(u.getRole())
-                              && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole())
+            final var currentUsername = username != null ? username : "";
+            model.addAttribute(ATTR_TENANT_USERS, tenantUsers.stream()
+                    .filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole())
+                              && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole())
                               && !u.getUsername().equalsIgnoreCase(currentUsername))
-                    .toList());
-            model.addAttribute("errorMessage", "Please fix the errors below.");
-            return "hr-meetings";
+                    .collect(Collectors.toList()));
+            model.addAttribute(ATTR_ERROR_MESSAGE, "Please fix the errors below.");
+            return PAGE_MEETINGS;
         }
 
-        Meeting existing = meetingRepository.findById(id).orElse(null);
+        var existing = meetingRepository.findById(id).orElse(null);
         if (existing == null || !tenant.equals(existing.getTenantSegment())) {
-            ra.addFlashAttribute("errorMessage", "Meeting not found.");
-            return "redirect:/hr/meetings";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_MEETING_NOT_FOUND);
+            return REDIRECT_HR_MEETINGS;
         }
 
         existing.setTitle(meetingForm.getTitle());
@@ -1596,8 +1626,8 @@ public class HrController {
         meetingRepository.save(existing);
         notificationService.notifyMeetingParticipants(existing);
 
-        ra.addFlashAttribute("successMessage", "Meeting updated successfully.");
-        return "redirect:/hr/meetings";
+        ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Meeting updated successfully.");
+        return REDIRECT_HR_MEETINGS;
     }
 
     /** POST /hr/meetings/delete/{id} — delete a meeting */
@@ -1605,28 +1635,29 @@ public class HrController {
     public String deleteMeeting(@PathVariable Long id,
                                 HttpServletRequest request,
                                 RedirectAttributes ra) {
-        String tenant = getTenantSegment(request);
-        Meeting meeting = meetingRepository.findById(id).orElse(null);
+        var tenant = getTenantSegment(request);
+        var meeting = meetingRepository.findById(id).orElse(null);
         if (meeting == null || !tenant.equals(meeting.getTenantSegment())) {
-            ra.addFlashAttribute("errorMessage", "Meeting not found.");
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_MEETING_NOT_FOUND);
         } else {
             meetingRepository.delete(meeting);
-            ra.addFlashAttribute("successMessage", "Meeting deleted successfully.");
+            ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Meeting deleted successfully.");
         }
-        return "redirect:/hr/meetings";
+        return REDIRECT_HR_MEETINGS;
     }
 
+    @SuppressWarnings("unchecked")
     @GetMapping("/performance")
     public String performancePage(HttpServletRequest request, Model model) {
         injectUser(request, model);
         injectStats(request, model);
         
-        List<User> allEmployees = (List<User>) model.getAttribute("employees");
+        var allEmployees = (List<User>) model.getAttribute(ATTR_EMPLOYEES);
         if (allEmployees != null) {
-            List<User> onlyEmployees = allEmployees.stream()
-                    .filter(u -> "EMPLOYEE".equalsIgnoreCase(u.getRole()))
-                    .toList();
-            model.addAttribute("employees", onlyEmployees);
+            var onlyEmployees = allEmployees.stream()
+                    .filter(u -> ROLE_EMPLOYEE.equalsIgnoreCase(u.getRole()))
+                    .collect(Collectors.toList());
+            model.addAttribute(ATTR_EMPLOYEES, onlyEmployees);
         }
         
         return "hr-performance";
@@ -1638,26 +1669,26 @@ public class HrController {
     public String payrollPage(HttpServletRequest request, Model model) {
         injectUser(request, model);
         injectStats(request, model);
-        String tenant = getTenantSegment(request);
-        List<PayrollTemplate> payrolls = payrollTemplateRepository.findByTenantSegmentOrderByCreatedAtDesc(tenant);
+        var tenant = getTenantSegment(request);
+        var payrolls = payrollTemplateRepository.findByTenantSegmentOrderByCreatedAtDesc(tenant);
         model.addAttribute("payrolls", payrolls);
         model.addAttribute("totalPayroll", payrolls.size());
-        java.math.BigDecimal totalNet = payrolls.stream()
+        var totalNet = payrolls.stream()
                 .map(PayrollTemplate::getNetSalary)
                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
         model.addAttribute("totalNetSalary", totalNet);
         // For the create/edit modal — list of employees without a template yet
-        List<User> tenantEmployees = userRepository.findEmployeesAndManagersByTenant(tenant);
-        List<Long> existingIds = payrolls.stream()
-                .map(p -> p.getEmployee().getId()).toList();
-        List<User> unassigned = tenantEmployees.stream()
-                .filter(u -> !existingIds.contains(u.getId())).toList();
+        var tenantEmployees = userRepository.findEmployeesAndManagersByTenant(tenant);
+        var existingIds = payrolls.stream()
+                .map(p -> p.getEmployee().getId()).collect(Collectors.toList());
+        var unassigned = tenantEmployees.stream()
+                .filter(u -> !existingIds.contains(u.getId())).collect(Collectors.toList());
         model.addAttribute("unassignedEmployees", unassigned);
 
-        List<Payslip> payslips = payslipRepository.findByTenantSegmentOrderByIdDesc(tenant);
+        var payslips = payslipRepository.findByTenantSegmentOrderByIdDesc(tenant);
         model.addAttribute("payslips", payslips);
 
-        model.addAttribute("activePage", "payroll");
+        model.addAttribute(ATTR_ACTIVE_PAGE, "payroll");
         return "hr-payroll";
     }
 
@@ -1677,20 +1708,20 @@ public class HrController {
                                  @RequestParam(required = false) Integer paymentMonth,
                                  @RequestParam(required = false) Integer paymentYear,
                                  RedirectAttributes ra) {
-        String tenant = getTenantSegment(request);
-        Optional<User> empOpt = userRepository.findById(employeeId);
+        var tenant = getTenantSegment(request);
+        var empOpt = userRepository.findById(employeeId);
         if (empOpt.isEmpty()) {
-            ra.addFlashAttribute("errorMessage", "Employee not found.");
-            return "redirect:/hr/payroll";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Employee not found.");
+            return REDIRECT_HR_PAYROLL;
         }
-        User emp = empOpt.get();
+        var emp = empOpt.get();
         // Check if template already exists
-        Optional<PayrollTemplate> existing = payrollTemplateRepository.findByEmployeeAndTenantSegment(emp, tenant);
+        var existing = payrollTemplateRepository.findByEmployeeAndTenantSegment(emp, tenant);
         if (existing.isPresent()) {
-            ra.addFlashAttribute("errorMessage", "Payroll template already exists for this employee. Use Edit.");
-            return "redirect:/hr/payroll";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Payroll template already exists for this employee. Use Edit.");
+            return REDIRECT_HR_PAYROLL;
         }
-        PayrollTemplate pt = new PayrollTemplate();
+        var pt = new PayrollTemplate();
         pt.setEmployee(emp);
         pt.setTenantSegment(tenant);
         pt.setDesignation(designation);
@@ -1708,8 +1739,8 @@ public class HrController {
         pt.setCreatedAt(LocalDateTime.now());
         pt.setUpdatedAt(LocalDateTime.now());
         payrollTemplateRepository.save(pt);
-        ra.addFlashAttribute("successMessage", "Payroll template created for " + emp.getUsername() + ".");
-        return "redirect:/hr/payroll";
+        ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Payroll template created for " + emp.getUsername() + ".");
+        return REDIRECT_HR_PAYROLL;
     }
 
     @PostMapping("/payroll/edit/{id}")
@@ -1728,13 +1759,13 @@ public class HrController {
                                @RequestParam(required = false) Integer paymentMonth,
                                @RequestParam(required = false) Integer paymentYear,
                                RedirectAttributes ra) {
-        String tenant = getTenantSegment(request);
-        Optional<PayrollTemplate> opt = payrollTemplateRepository.findById(id);
+        var tenant = getTenantSegment(request);
+        var opt = payrollTemplateRepository.findById(id);
         if (opt.isEmpty() || !tenant.equals(opt.get().getTenantSegment())) {
-            ra.addFlashAttribute("errorMessage", "Payroll template not found.");
-            return "redirect:/hr/payroll";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Payroll template not found.");
+            return REDIRECT_HR_PAYROLL;
         }
-        PayrollTemplate pt = opt.get();
+        var pt = opt.get();
         pt.setDesignation(designation);
         pt.setDepartment(department);
         pt.setBasicSalary(basicSalary);
@@ -1749,37 +1780,37 @@ public class HrController {
         if (paymentYear != null) pt.setPaymentYear(paymentYear);
         pt.setUpdatedAt(LocalDateTime.now());
         payrollTemplateRepository.save(pt);
-        ra.addFlashAttribute("successMessage", "Payroll template updated.");
-        return "redirect:/hr/payroll";
+        ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Payroll template updated.");
+        return REDIRECT_HR_PAYROLL;
     }
 
     @PostMapping("/payroll/delete/{id}")
     public String deletePayroll(HttpServletRequest request,
                                  @PathVariable Long id,
                                  RedirectAttributes ra) {
-        String tenant = getTenantSegment(request);
-        Optional<PayrollTemplate> opt = payrollTemplateRepository.findById(id);
+        var tenant = getTenantSegment(request);
+        var opt = payrollTemplateRepository.findById(id);
         if (opt.isPresent() && tenant.equals(opt.get().getTenantSegment())) {
             payrollTemplateRepository.deleteById(id);
-            ra.addFlashAttribute("successMessage", "Payroll template deleted.");
+            ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Payroll template deleted.");
         } else {
-            ra.addFlashAttribute("errorMessage", "Template not found.");
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Template not found.");
         }
-        return "redirect:/hr/payroll";
+        return REDIRECT_HR_PAYROLL;
     }
 
     /** Returns payroll data as JSON for the edit modal. */
     @GetMapping("/payroll/data/{id}")
     @ResponseBody
     public Map<String, Object> getPayrollData(HttpServletRequest request, @PathVariable Long id) {
-        String tenant = getTenantSegment(request);
-        Optional<PayrollTemplate> opt = payrollTemplateRepository.findById(id);
-        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        var tenant = getTenantSegment(request);
+        var opt = payrollTemplateRepository.findById(id);
+        var result = new java.util.LinkedHashMap<String, Object>();
         if (opt.isEmpty() || !tenant.equals(opt.get().getTenantSegment())) {
             result.put("error", "Not found");
             return result;
         }
-        PayrollTemplate pt = opt.get();
+        var pt = opt.get();
         result.put("id", pt.getId());
         result.put("employeeName", pt.getEmployee().getUsername());
         result.put("designation", pt.getDesignation());
@@ -1802,41 +1833,41 @@ public class HrController {
                                          @RequestParam Integer month,
                                          @RequestParam Integer year,
                                          RedirectAttributes ra) {
-        String tenant = getTenantSegment(request);
+        var tenant = getTenantSegment(request);
         if (month == null || month < 1 || month > 12 || year == null) {
-            ra.addFlashAttribute("errorMessage", "Invalid month or year.");
-            return "redirect:/hr/payroll";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Invalid month or year.");
+            return REDIRECT_HR_PAYROLL;
         }
 
         // Payslips can only be generated on or after the 2nd day of the next month
-        java.time.LocalDate today = java.time.LocalDate.now();
-        java.time.LocalDate earliestAllowedDate = java.time.LocalDate.of(year, month, 1).plusMonths(1).withDayOfMonth(2);
+        var today = java.time.LocalDate.now();
+        var earliestAllowedDate = java.time.LocalDate.of(year, month, 1).plusMonths(1).withDayOfMonth(2);
         if (today.isBefore(earliestAllowedDate)) {
-            ra.addFlashAttribute("errorMessage", "Payslips for " + java.time.Month.of(month).name() + " " + year + 
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Payslips for " + java.time.Month.of(month).name() + " " + year + 
                 " can only be generated on or after the 2nd day of the next month (" + 
                 earliestAllowedDate.format(java.time.format.DateTimeFormatter.ofPattern("MMMM d, yyyy")) + ").");
-            return "redirect:/hr/payroll";
+            return REDIRECT_HR_PAYROLL;
         }
 
-        int generated = payslipService.generatePayslipsForTenant(tenant, month, year);
+        var generated = payslipService.generatePayslipsForTenant(tenant, month, year);
         if (generated == 0) {
-            ra.addFlashAttribute("errorMessage", "No payslips were generated. They may already exist, or there are no active templates.");
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "No payslips were generated. They may already exist, or there are no active templates.");
         } else {
-            ra.addFlashAttribute("successMessage", "Successfully generated " + generated + " payslip(s) for " + java.time.Month.of(month).name() + " " + year + ".");
+            ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Successfully generated " + generated + " payslip(s) for " + java.time.Month.of(month).name() + " " + year + ".");
         }
-        return "redirect:/hr/payroll";
+        return REDIRECT_HR_PAYROLL;
     }
 
     @GetMapping("/payroll/payslip/{id}")
     @ResponseBody
-    public ResponseEntity<?> getPayslipData(@PathVariable Long id, HttpServletRequest request) {
-        String tenant = getTenantSegment(request);
-        Optional<Payslip> opt = payslipRepository.findById(id);
+    public ResponseEntity<Map<String, Object>> getPayslipData(@PathVariable Long id, HttpServletRequest request) {
+        var tenant = getTenantSegment(request);
+        var opt = payslipRepository.findById(id);
         if (opt.isEmpty() || !tenant.equals(opt.get().getTenantSegment())) {
             return ResponseEntity.notFound().build();
         }
-        Payslip p = opt.get();
-        java.util.Map<String, Object> data = new java.util.LinkedHashMap<>();
+        var p = opt.get();
+        var data = new java.util.LinkedHashMap<String, Object>();
         data.put("id", p.getId());
         data.put("employeeName", p.getEmployee().getUsername());
         data.put("employeeEmail", p.getEmployee().getEmail());
@@ -1860,42 +1891,42 @@ public class HrController {
     @GetMapping("/settings")
     public String settingsPage(HttpServletRequest request, Model model) {
         injectUser(request, model);
-        String tenant = getTenantSegment(request);
+        var tenant = getTenantSegment(request);
         model.addAttribute("categories", domainCategoryRepository.findByTenantSegment(tenant));
-        model.addAttribute("activePage", "settings");
+        model.addAttribute(ATTR_ACTIVE_PAGE, "settings");
         return "hr-settings";
     }
 
     @PostMapping("/settings/domain-categories")
     public String addDomainCategory(@RequestParam String name, HttpServletRequest request, RedirectAttributes ra) {
-        String tenant = getTenantSegment(request);
+        var tenant = getTenantSegment(request);
         if (name == null || name.trim().isEmpty()) {
-            ra.addFlashAttribute("errorMessage", "Domain category name is required.");
-            return "redirect:/hr/settings";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Domain category name is required.");
+            return REDIRECT_HR_SETTINGS;
         }
-        String cleanName = name.trim();
+        var cleanName = name.trim();
         if (domainCategoryRepository.existsByNameAndTenantSegment(cleanName, tenant)) {
-            ra.addFlashAttribute("errorMessage", "Domain category already exists.");
-            return "redirect:/hr/settings";
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Domain category already exists.");
+            return REDIRECT_HR_SETTINGS;
         }
-        com.crm.demo.model.DomainCategory cat = new com.crm.demo.model.DomainCategory();
+        var cat = new com.crm.demo.model.DomainCategory();
         cat.setName(cleanName);
         cat.setTenantSegment(tenant);
         domainCategoryRepository.save(cat);
-        ra.addFlashAttribute("successMessage", "Domain category '" + cleanName + "' added successfully.");
-        return "redirect:/hr/settings";
+        ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Domain category '" + cleanName + "' added successfully.");
+        return REDIRECT_HR_SETTINGS;
     }
 
     @PostMapping("/settings/domain-categories/delete/{id}")
     public String deleteDomainCategory(@PathVariable Long id, HttpServletRequest request, RedirectAttributes ra) {
-        String tenant = getTenantSegment(request);
-        Optional<com.crm.demo.model.DomainCategory> catOpt = domainCategoryRepository.findById(id);
+        var tenant = getTenantSegment(request);
+        var catOpt = domainCategoryRepository.findById(id);
         if (catOpt.isPresent() && tenant.equals(catOpt.get().getTenantSegment())) {
             domainCategoryRepository.delete(catOpt.get());
-            ra.addFlashAttribute("successMessage", "Domain category deleted successfully.");
+            ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Domain category deleted successfully.");
         } else {
-            ra.addFlashAttribute("errorMessage", "Domain category not found.");
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Domain category not found.");
         }
-        return "redirect:/hr/settings";
+        return REDIRECT_HR_SETTINGS;
     }
 }
