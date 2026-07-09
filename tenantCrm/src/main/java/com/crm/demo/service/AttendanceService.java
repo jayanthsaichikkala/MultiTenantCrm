@@ -1,6 +1,5 @@
 package com.crm.demo.service;
 
-import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,19 +35,26 @@ public class AttendanceService {
      */
     @Transactional
     public void processAutoPunchOuts() {
-        List<Attendance> active = attendanceRepository.findByCheckOutIsNull();
-        LocalDateTime now = LocalDateTime.now();
+        var active = attendanceRepository.findByCheckOutIsNull();
+        var now = LocalDateTime.now();
         
         // 1. Process active records that need auto punch-out
+        autoPunchOutExpiredSessions(active, now);
+
+        // 2. Self-healing: Repair any incorrect auto-punch-outs that were triggered today by the midnight-wrap bug
+        repairIncorrectPunchOuts(now);
+    }
+
+    private void autoPunchOutExpiredSessions(List<Attendance> active, LocalDateTime now) {
         for (Attendance a : active) {
             if (a.getDate() == null || a.getCheckIn() == null) {
                 continue;
             }
-            LocalDateTime checkInDateTime = LocalDateTime.of(a.getDate(), a.getCheckIn());
-            LocalDateTime limit = checkInDateTime.plusHours(9);
+            var checkInDateTime = LocalDateTime.of(a.getDate(), a.getCheckIn());
+            var limit = checkInDateTime.plusHours(9);
             
             if (now.isAfter(limit)) {
-                LocalTime autoCheckOutTime = a.getCheckIn().plusHours(9);
+                var autoCheckOutTime = a.getCheckIn().plusHours(9);
                 a.setCheckOut(autoCheckOutTime);
                 
                 // Recalculate status based on worked hours:
@@ -65,16 +71,17 @@ public class AttendanceService {
                 }
             }
         }
+    }
 
-        // 2. Self-healing: Repair any incorrect auto-punch-outs that were triggered today by the midnight-wrap bug
-        List<Attendance> allRecords = attendanceRepository.findAll();
+    private void repairIncorrectPunchOuts(LocalDateTime now) {
+        var allRecords = attendanceRepository.findAll();
         for (Attendance a : allRecords) {
             if (a.getCheckIn() != null && a.getCheckOut() != null && a.getDate() != null) {
-                LocalDateTime checkInDateTime = LocalDateTime.of(a.getDate(), a.getCheckIn());
-                LocalDateTime limit = checkInDateTime.plusHours(9);
+                var checkInDateTime = LocalDateTime.of(a.getDate(), a.getCheckIn());
+                var limit = checkInDateTime.plusHours(9);
                 
                 if (limit.isAfter(now)) {
-                    LocalTime expectedAutoCheckOut = a.getCheckIn().plusHours(9);
+                    var expectedAutoCheckOut = a.getCheckIn().plusHours(9);
                     if (expectedAutoCheckOut.equals(a.getCheckOut())) {
                         // Restore back to active checked-in state
                         a.setCheckOut(null);

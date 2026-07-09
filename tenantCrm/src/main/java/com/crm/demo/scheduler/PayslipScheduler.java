@@ -19,8 +19,8 @@ public class PayslipScheduler {
      */
     @Scheduled(cron = "0 0 0 2 * *")
     public void generateMonthlyPayslips() {
-        LocalDate today = LocalDate.now();
-        LocalDate prevMonthDate = today.minusMonths(1);
+        var today = LocalDate.now();
+        var prevMonthDate = today.minusMonths(1);
         int month = prevMonthDate.getMonthValue();
         int year = prevMonthDate.getYear();
         payslipService.generateAllPayslips(month, year);

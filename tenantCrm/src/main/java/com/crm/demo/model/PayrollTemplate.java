@@ -12,12 +12,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Data;
 
 /**
  * Payroll template — stores salary structure for each employee.
  * One record per employee. HR can create / edit; no actual payslip processing.
  */
 @Entity
+@Data
 @Table(name = "payroll_template")
 public class PayrollTemplate {
 
@@ -88,11 +90,10 @@ public class PayrollTemplate {
     // ── Derived helpers ────────────────────────────────────────────────────
 
     public BigDecimal getGrossSalary() {
-        BigDecimal gross = safeVal(basicSalary)
+        return safeVal(basicSalary)
                 .add(safeVal(hra))
                 .add(safeVal(transportAllowance))
                 .add(safeVal(otherAllowance));
-        return gross;
     }
 
     public BigDecimal getTotalDeductions() {

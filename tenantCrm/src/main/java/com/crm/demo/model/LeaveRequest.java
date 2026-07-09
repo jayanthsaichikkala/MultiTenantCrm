@@ -115,7 +115,7 @@ public class LeaveRequest {
 
     public String getDateRange() {
         if (fromDate == null || toDate == null) return "";
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy");
+        var formatter = DateTimeFormatter.ofPattern("dd MMM yyyy");
         if (fromDate.equals(toDate)) return fromDate.format(formatter);
         return fromDate.format(formatter) + " - " + toDate.format(formatter);
     }

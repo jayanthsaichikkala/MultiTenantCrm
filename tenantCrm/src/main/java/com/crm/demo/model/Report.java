@@ -127,7 +127,11 @@ public class Report {
         if (recipientIds == null || recipientIds.isBlank()) return java.util.Collections.emptyList();
         List<Long> ids = new ArrayList<>();
         for (String s : recipientIds.split(",")) {
-            try { ids.add(Long.parseLong(s.trim())); } catch (NumberFormatException ignored) {}
+            try { 
+                ids.add(Long.parseLong(s.trim())); 
+            } catch (NumberFormatException ignored) {
+                // Ignore invalid or empty recipient IDs in the CSV
+            }
         }
         return ids;
     }
@@ -135,8 +139,8 @@ public class Report {
     /** Formatted sent date for display */
     public String getSentAtFormatted() {
         if (sentAt == null) return "—";
-        java.time.Instant instant = java.time.Instant.ofEpochMilli(sentAt);
-        java.time.LocalDateTime ldt = java.time.LocalDateTime.ofInstant(
+        var instant = java.time.Instant.ofEpochMilli(sentAt);
+        var ldt = java.time.LocalDateTime.ofInstant(
                 instant, java.time.ZoneId.systemDefault());
         return String.format("%04d-%02d-%02d %02d:%02d",
                 ldt.getYear(), ldt.getMonthValue(), ldt.getDayOfMonth(),

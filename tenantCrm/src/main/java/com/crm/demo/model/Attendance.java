@@ -17,6 +17,8 @@ import jakarta.persistence.Table;
 @Table(name = "attendance")
 public class Attendance {
 
+    private static final String TIME_FORMAT = "%02d:%02d";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -83,27 +85,27 @@ public class Attendance {
     // ── Derived helpers ────────────────────────────────────────────────────
 
     public String getCheckInDisplay() {
-        return checkIn != null ? String.format("%02d:%02d", checkIn.getHour(), checkIn.getMinute()) : "—";
+        return checkIn != null ? String.format(TIME_FORMAT, checkIn.getHour(), checkIn.getMinute()) : "—";
     }
 
     public String getCheckOutDisplay() {
-        return checkOut != null ? String.format("%02d:%02d", checkOut.getHour(), checkOut.getMinute()) : "—";
+        return checkOut != null ? String.format(TIME_FORMAT, checkOut.getHour(), checkOut.getMinute()) : "—";
     }
 
     public String getBreakStartDisplay() {
-        return breakStart != null ? String.format("%02d:%02d", breakStart.getHour(), breakStart.getMinute()) : "—";
+        return breakStart != null ? String.format(TIME_FORMAT, breakStart.getHour(), breakStart.getMinute()) : "—";
     }
 
     public String getBreakEndDisplay() {
-        return breakEnd != null ? String.format("%02d:%02d", breakEnd.getHour(), breakEnd.getMinute()) : "—";
+        return breakEnd != null ? String.format(TIME_FORMAT, breakEnd.getHour(), breakEnd.getMinute()) : "—";
     }
 
     public String getBreak2StartDisplay() {
-        return break2Start != null ? String.format("%02d:%02d", break2Start.getHour(), break2Start.getMinute()) : "—";
+        return break2Start != null ? String.format(TIME_FORMAT, break2Start.getHour(), break2Start.getMinute()) : "—";
     }
 
     public String getBreak2EndDisplay() {
-        return break2End != null ? String.format("%02d:%02d", break2End.getHour(), break2End.getMinute()) : "—";
+        return break2End != null ? String.format(TIME_FORMAT, break2End.getHour(), break2End.getMinute()) : "—";
     }
 
     /** Total break minutes across both breaks, including any active break in progress. */
@@ -134,8 +136,8 @@ public class Attendance {
 
     public String getBreak1Summary() {
         if (breakStart != null || breakEnd != null) {
-            String start = breakStart != null ? String.format("%02d:%02d", breakStart.getHour(), breakStart.getMinute()) : "—";
-            String end   = breakEnd != null ? String.format("%02d:%02d", breakEnd.getHour(), breakEnd.getMinute()) : "—";
+            String start = breakStart != null ? String.format(TIME_FORMAT, breakStart.getHour(), breakStart.getMinute()) : "—";
+            String end   = breakEnd != null ? String.format(TIME_FORMAT, breakEnd.getHour(), breakEnd.getMinute()) : "—";
             return "Break 1: " + start + " - " + end;
         }
         return "—";
@@ -143,8 +145,8 @@ public class Attendance {
 
     public String getBreak2Summary() {
         if (break2Start != null || break2End != null) {
-            String start = break2Start != null ? String.format("%02d:%02d", break2Start.getHour(), break2Start.getMinute()) : "—";
-            String end   = break2End != null ? String.format("%02d:%02d", break2End.getHour(), break2End.getMinute()) : "—";
+            String start = break2Start != null ? String.format(TIME_FORMAT, break2Start.getHour(), break2Start.getMinute()) : "—";
+            String end   = break2End != null ? String.format(TIME_FORMAT, break2End.getHour(), break2End.getMinute()) : "—";
             return "Break 2: " + start + " - " + end;
         }
         return "—";

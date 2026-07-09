@@ -36,8 +36,8 @@ public class JwtUtil {
 
     /** Generate a signed JWT containing username and role. */
     public String generateToken(String username, String role) {
-        Date now    = new Date();
-        Date expiry = new Date(now.getTime() + expirationMs);
+        var now    = new Date();
+        var expiry = new Date(now.getTime() + expirationMs);
 
         return Jwts.builder()
                 .subject(username)
@@ -61,7 +61,7 @@ public class JwtUtil {
     /** Returns true if the token is well-formed, correctly signed, and not expired. */
     public boolean isValid(String token) {
         try {
-            Claims claims = parseClaims(token);
+            var claims = parseClaims(token);
             return claims.getExpiration().after(new Date());
         } catch (JwtException | IllegalArgumentException e) {
             return false;

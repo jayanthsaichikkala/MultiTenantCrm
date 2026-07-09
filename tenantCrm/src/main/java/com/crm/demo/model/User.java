@@ -11,6 +11,8 @@ import jakarta.persistence.Table;
 @Table(name = "users")
 public class User {
 
+    public static final String STATUS_ACTIVE = "active";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -23,8 +25,8 @@ public class User {
 
     private String role;
 
-    @Column(nullable = false, columnDefinition = "VARCHAR(10) DEFAULT 'active'")
-    private String status = "active";
+    @Column(nullable = false, columnDefinition = "VARCHAR(10) DEFAULT '" + STATUS_ACTIVE + "'")
+    private String status = STATUS_ACTIVE;
 
     @Column(name = "employee_limit", nullable = false, columnDefinition = "int default 10")
     private Integer employeeLimit = 10;
@@ -49,7 +51,7 @@ public class User {
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
 
-    public String getStatus() { return status != null ? status : "active"; }
+    public String getStatus() { return status != null ? status : STATUS_ACTIVE; }
     public void setStatus(String status) { this.status = status; }
 
     public Integer getEmployeeLimit() { return employeeLimit != null ? employeeLimit : 10; }
@@ -61,6 +63,6 @@ public class User {
     public java.time.LocalDate getJoiningDate() { return joiningDate; }
     public void setJoiningDate(java.time.LocalDate joiningDate) { this.joiningDate = joiningDate; }
 
-    public boolean isActive() { return "active".equalsIgnoreCase(getStatus()); }
+    public boolean isActive() { return STATUS_ACTIVE.equalsIgnoreCase(getStatus()); }
 	
 }

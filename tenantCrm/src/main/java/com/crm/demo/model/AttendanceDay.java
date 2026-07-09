@@ -9,26 +9,29 @@ import java.time.LocalDate;
  */
 public class AttendanceDay {
 
+    private static final String STATUS_ABSENT = "absent";
+    private static final String STATUS_HALF_DAY = "half-day";
+
     private final LocalDate date;
-    private final Attendance record;      // null for synthetic days
+    private final Attendance attendance;      // null for synthetic days
     private final String     status;      // "present","late","half-day","absent","leave","weekend","holiday"
     private final String     holidayName; // non-null only when status == "holiday"
 
     /** Wrap a real attendance record */
-    public AttendanceDay(Attendance record) {
-        this.date        = record.getDate();
-        this.record      = record;
+    public AttendanceDay(Attendance attendance) {
+        this.date        = attendance.getDate();
+        this.attendance  = attendance;
         this.holidayName = null;
         // Derive status: if worked < 4h -> absent, 4-6h -> half-day, 6+h -> base status (present/late)
-        long mins = record.getWorkedMinutes();
-        String base = record.getStatus(); // "present" or "late"
-        if (record.getCheckOut() != null) {
+        long mins = attendance.getWorkedMinutes();
+        String base = attendance.getStatus(); // "present" or "late"
+        if (attendance.getCheckOut() != null) {
             if (mins >= 0 && mins < 240) {
-                this.status = "absent";
+                this.status = STATUS_ABSENT;
             } else if (mins >= 240 && mins < 360) {
-                this.status = "half-day";
+                this.status = STATUS_HALF_DAY;
             } else {
-                this.status = "absent".equals(base) || "half-day".equals(base) ? "present" : base;
+                this.status = STATUS_ABSENT.equals(base) || STATUS_HALF_DAY.equals(base) ? "present" : base;
             }
         } else {
             this.status = base;
@@ -38,7 +41,7 @@ public class AttendanceDay {
     /** Synthetic day (absent, weekend, or holiday) */
     public AttendanceDay(LocalDate date, String status) {
         this.date        = date;
-        this.record      = null;
+        this.attendance  = null;
         this.status      = status;
         this.holidayName = null;
     }
@@ -46,31 +49,31 @@ public class AttendanceDay {
     /** Holiday day */
     public AttendanceDay(LocalDate date, String holidayName, boolean isHoliday) {
         this.date        = date;
-        this.record      = null;
-        this.status      = "holiday";
+        this.attendance  = null;
+        this.status      = isHoliday ? "holiday" : STATUS_ABSENT;
         this.holidayName = holidayName;
     }
 
     public LocalDate  getDate()        { return date; }
-    public Attendance getRecord()      { return record; }
+    public Attendance getRecord()      { return attendance; }
     public String     getStatus()      { return status; }
     public String     getHolidayName() { return holidayName; }
 
-    public boolean isReal()     { return record != null; }
+    public boolean isReal()     { return attendance != null; }
     public boolean isWeekend()  { return "weekend".equals(status); }
-    public boolean isAbsent()   { return "absent".equals(status); }
+    public boolean isAbsent()   { return STATUS_ABSENT.equals(status); }
     public boolean isOnLeave()  { return "leave".equals(status); }
     public boolean isHoliday()  { return "holiday".equals(status); }
-    public boolean isHalfDay()  { return "half-day".equals(status); }
+    public boolean isHalfDay()  { return STATUS_HALF_DAY.equals(status); }
 
     // ── Delegating helpers so Thymeleaf can call them directly ────────────
 
-    public String getCheckInDisplay()  { return record != null ? record.getCheckInDisplay()  : "—"; }
-    public String getCheckOutDisplay() { return record != null ? record.getCheckOutDisplay() : "—"; }
-    public String getWorkedHours()     { return record != null ? record.getWorkedHours()     : "—"; }
-    public String getBreakDuration()   { return record != null ? record.getBreakDuration()   : "—"; }
-    public String getBreakSummary()    { return record != null ? record.getBreakSummary()    : "—"; }
-    public String getBreak1Summary()   { return record != null ? record.getBreak1Summary()   : "—"; }
-    public String getBreak2Summary()   { return record != null ? record.getBreak2Summary()   : "—"; }
-    public String getDayType()         { return record != null ? record.getDayType()         : "—"; }
+    public String getCheckInDisplay()  { return attendance != null ? attendance.getCheckInDisplay()  : "—"; }
+    public String getCheckOutDisplay() { return attendance != null ? attendance.getCheckOutDisplay() : "—"; }
+    public String getWorkedHours()     { return attendance != null ? attendance.getWorkedHours()     : "—"; }
+    public String getBreakDuration()   { return attendance != null ? attendance.getBreakDuration()   : "—"; }
+    public String getBreakSummary()    { return attendance != null ? attendance.getBreakSummary()    : "—"; }
+    public String getBreak1Summary()   { return attendance != null ? attendance.getBreak1Summary()   : "—"; }
+    public String getBreak2Summary()   { return attendance != null ? attendance.getBreak2Summary()   : "—"; }
+    public String getDayType()         { return attendance != null ? attendance.getDayType()         : "—"; }
 }

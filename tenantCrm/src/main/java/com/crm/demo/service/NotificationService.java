@@ -31,82 +31,81 @@ public class NotificationService {
 
     private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
 
+    private static final String ROLE_ADMIN = "ADMIN";
+    private static final String ROLE_HR = "HR";
+    private static final String ROLE_MANAGER = "MANAGER";
+    private static final String ROLE_EMPLOYEE = "EMPLOYEE";
+    private static final String ROLE_SUPER_ADMIN = "SUPER_ADMIN";
+
+    private static final String TYPE_REPORT = "REPORT";
+    private static final String TYPE_HOLIDAY = "HOLIDAY";
+    private static final String TYPE_LEAVE = "LEAVE";
+    private static final String TYPE_MEETING = "MEETING";
+    private static final String TYPE_TASK = "TASK";
+    private static final String TYPE_TEAM = "TEAM";
+
     @Autowired private NotificationRepository notificationRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private TeamRepository teamRepository;
     @Autowired private SimpMessagingTemplate messagingTemplate;
 
-    public Notification notify(User user, String title, String message, String type, String link) {
+    public Notification notify(User user, String title, String message, String type) {
         if (user == null || user.getId() == null) return null;
 
         // Enforce role-based notification policies
-        String role = roleOf(user);
-        String normType = type != null ? type.toUpperCase() : "";
+        var role = roleOf(user);
+        var normType = type != null ? type.toUpperCase() : "";
 
-        boolean allowed = false;
-        switch (role) {
-            case "ADMIN" -> {
-                if ("REPORT".equals(normType) || "HOLIDAY".equals(normType)) {
-                    allowed = true;
-                }
-            }
-            case "HR" -> {
-                if ("LEAVE".equals(normType) || "MEETING".equals(normType) 
-                        || "HOLIDAY".equals(normType) || "REPORT".equals(normType)) {
-                    allowed = true;
-                }
-            }
-            case "MANAGER" -> {
-                if ("TEAM".equals(normType) || "TASK".equals(normType) 
-                        || "MEETING".equals(normType) || "HOLIDAY".equals(normType)) {
-                    allowed = true;
-                }
-            }
-            case "EMPLOYEE" -> {
-                if ("TASK".equals(normType) || "LEAVE".equals(normType) 
-                        || "MEETING".equals(normType) || "HOLIDAY".equals(normType) 
-                        || "REPORT".equals(normType)) {
-                    allowed = true;
-                }
-            }
-        }
-
-        if (!allowed) {
+        if (!isNotificationAllowed(role, normType)) {
             return null;
         }
 
         try {
-            Notification n = new Notification();
+            var n = new Notification();
             n.setUserId(user.getId());
             n.setTitle(title);
             n.setMessage(message);
             n.setType(type);
             n.setLink(resolveLink(user, type));
-            Notification saved = notificationRepository.save(n);
+            var saved = notificationRepository.save(n);
 
             if (TransactionSynchronizationManager.isActualTransactionActive()) {
                 TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
-                        try {
-                            messagingTemplate.convertAndSend("/topic/notifications/" + user.getId(), toDto(saved));
-                        } catch (Exception e) {
-                            log.error("Failed to send WebSocket notification to user {}: {}", user.getUsername(), e.getMessage());
-                        }
+                        sendWebSocketNotification(user, saved);
                     }
                 });
             } else {
-                try {
-                    messagingTemplate.convertAndSend("/topic/notifications/" + user.getId(), toDto(saved));
-                } catch (Exception e) {
-                    log.error("Failed to send WebSocket notification to user {}: {}", user.getUsername(), e.getMessage());
-                }
+                sendWebSocketNotification(user, saved);
             }
 
             return saved;
         } catch (Exception e) {
             log.error("Failed to save notification for user {}: {}", user.getUsername(), e.getMessage());
             return null;
+        }
+    }
+
+    private boolean isNotificationAllowed(String role, String normType) {
+        return switch (role) {
+            case ROLE_ADMIN -> TYPE_REPORT.equals(normType) || TYPE_HOLIDAY.equals(normType);
+            case ROLE_HR -> TYPE_LEAVE.equals(normType) || TYPE_MEETING.equals(normType) 
+                    || TYPE_HOLIDAY.equals(normType) || TYPE_REPORT.equals(normType);
+            case ROLE_MANAGER -> TYPE_TEAM.equals(normType) || TYPE_TASK.equals(normType) 
+                    || TYPE_MEETING.equals(normType) || TYPE_HOLIDAY.equals(normType);
+            case ROLE_EMPLOYEE -> TYPE_TASK.equals(normType) || TYPE_LEAVE.equals(normType) 
+                    || TYPE_MEETING.equals(normType) || TYPE_HOLIDAY.equals(normType) 
+                    || TYPE_REPORT.equals(normType);
+            default -> false;
+        };
+    }
+
+    private void sendWebSocketNotification(User user, Notification notification) {
+        try {
+            messagingTemplate.convertAndSend("/topic/notifications/" + user.getId(), toDto(notification));
+        } catch (Exception e) {
+            log.error("Failed to send WebSocket notification to user {}: {}", user.getUsername(), e.getMessage());
         }
     }
 
@@ -124,9 +123,9 @@ public class NotificationService {
 
     public void notifyByUsername(String username, String title, String message, String type, String link) {
         if (username == null || username.isBlank()) return;
-        User user = userRepository.findByUsername(username.trim());
+        var user = userRepository.findByUsername(username.trim());
         if (user != null) {
-            notify(user, title, message, type, link);
+            notify(user, title, message, type);
         }
     }
 
@@ -134,14 +133,14 @@ public class NotificationService {
         if (tenant == null || tenant.isBlank() || role == null) return;
         userRepository.findByTenantSegment(tenant).stream()
                 .filter(u -> role.equalsIgnoreCase(u.getRole()))
-                .forEach(u -> notify(u, title, message, type, link));
+                .forEach(u -> notify(u, title, message, type));
     }
 
     public void notifyAllInTenant(String tenant, String title, String message, String type, String link) {
         if (tenant == null || tenant.isBlank()) return;
         userRepository.findByTenantSegment(tenant).stream()
-                .filter(u -> u.getRole() != null && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
-                .forEach(u -> notify(u, title, message, type, linkFor(u, link)));
+                .filter(u -> u.getRole() != null && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole()))
+                .forEach(u -> notify(u, title, message, type));
     }
 
     public List<Notification> getRecentForUser(Long userId) {
@@ -195,13 +194,12 @@ public class NotificationService {
                 .map(String::trim)
                 .filter(name -> !name.isEmpty() && !name.equalsIgnoreCase(scheduledBy))
                 .forEach(username -> {
-                    User user = userRepository.findByUsername(username);
+                    var user = userRepository.findByUsername(username);
                     if (user == null) return;
                     notify(user,
                             "New Meeting Scheduled",
                             "You have been invited to \"" + meeting.getTitle() + "\" on " + dateStr + ".",
-                            "MEETING",
-                            meetingsLink(user));
+                            TYPE_MEETING);
                 });
     }
 
@@ -210,8 +208,7 @@ public class NotificationService {
         notify(employee,
                 "New Task Assigned",
                 assignerName + " assigned you: \"" + taskTitle + "\"",
-                "TASK",
-                tasksLink(employee));
+                TYPE_TASK);
     }
 
     public void notifyTaskSubmittedForReview(User employee, Task task) {
@@ -224,7 +221,7 @@ public class NotificationService {
         Map<Long, User> managers = new LinkedHashMap<>();
 
         if (task.getCreatedBy() != null && !task.getCreatedBy().isBlank()) {
-            User creator = userRepository.findByUsername(task.getCreatedBy().trim());
+            var creator = userRepository.findByUsername(task.getCreatedBy().trim());
             addTaskStatusRecipient(managers, creator, employee, task);
         }
 
@@ -245,8 +242,7 @@ public class NotificationService {
             notify(manager,
                     title,
                     message,
-                    "TASK",
-                    tasksLink(manager));
+                    TYPE_TASK);
         }
     }
 
@@ -273,51 +269,47 @@ public class NotificationService {
             notify(employee,
                     "Task Approved",
                     managerName + " approved your completed task \"" + taskTitle + "\".",
-                    "TASK",
-                    tasksLink(employee));
+                    TYPE_TASK);
         } else if ("reject".equalsIgnoreCase(action)) {
-            String msg = managerName + " returned \"" + taskTitle + "\" for rework.";
+            var msg = managerName + " returned \"" + taskTitle + "\" for rework.";
             if (reason != null && !reason.isBlank()) {
                 msg += " Feedback: " + reason.trim();
             }
-            notify(employee, "Task Returned", msg, "TASK", tasksLink(employee));
+            notify(employee, "Task Returned", msg, TYPE_TASK);
         } else if ("reopen".equalsIgnoreCase(action)) {
             notify(employee,
                     "Task Reopened",
                     managerName + " reopened \"" + taskTitle + "\". Please continue working on it.",
-                    "TASK",
-                    tasksLink(employee));
+                    TYPE_TASK);
         }
     }
 
     public void notifyLeaveSubmitted(LeaveRequest leave) {
         if (leave == null || leave.getTenantSegment() == null) return;
-        String employeeName = leave.getEmployeeName() != null ? leave.getEmployeeName() : "An employee";
+        var employeeName = leave.getEmployeeName() != null ? leave.getEmployeeName() : "An employee";
         notifyUsersInTenantByRole(
                 leave.getTenantSegment(),
-                "HR",
+                ROLE_HR,
                 "New Leave Request",
                 employeeName + " applied for leave.",
-                "LEAVE",
+                TYPE_LEAVE,
                 "/hr/leaves");
     }
 
     public void notifyLeaveReviewed(User employee, String status, String leaveType,
                                     LocalDate from, LocalDate to, String reviewer) {
         if (employee == null) return;
-        String period = from + " to " + to;
+        var period = from + " to " + to;
         if ("Approved".equalsIgnoreCase(status)) {
             notify(employee,
                     "Leave Request Approved",
                     "Your " + leaveType + " leave (" + period + ") was approved by " + reviewer + ".",
-                    "LEAVE",
-                    leavesLink(employee));
+                    TYPE_LEAVE);
         } else if ("Rejected".equalsIgnoreCase(status)) {
             notify(employee,
                     "Leave Request Rejected",
                     "Your " + leaveType + " leave (" + period + ") was rejected by " + reviewer + ".",
-                    "LEAVE",
-                    leavesLink(employee));
+                    TYPE_LEAVE);
         }
     }
 
@@ -326,8 +318,7 @@ public class NotificationService {
         notify(employee,
                 "Added to Team",
                 "You have been added to team \"" + teamName + "\".",
-                "TEAM",
-                dashboardLink(employee));
+                TYPE_TEAM);
     }
 
     public void notifyManagerAssigned(User manager, String teamName) {
@@ -335,8 +326,7 @@ public class NotificationService {
         notify(manager,
                 "Team Assignment",
                 "You have been assigned as manager of team \"" + teamName + "\".",
-                "TEAM",
-                teamLink(manager));
+                TYPE_TEAM);
     }
 
     public void notifyPerformanceReview(User employee, String reviewer, String reviewMonth, int rating) {
@@ -345,8 +335,7 @@ public class NotificationService {
                 "Performance Review Updated",
                 reviewer + " submitted your performance review for " + reviewMonth
                         + " (Rating: " + rating + "/5).",
-                "PERFORMANCE",
-                performanceLink(employee));
+                "PERFORMANCE");
     }
 
     public void notifyReportReceived(User recipient, String senderName, String reportTitle) {
@@ -354,8 +343,7 @@ public class NotificationService {
         notify(recipient,
                 "New Report Received",
                 senderName + " sent you a report: \"" + reportTitle + "\".",
-                "REPORT",
-                reportsLink(recipient));
+                TYPE_REPORT);
     }
 
     public void notifyHolidayAdded(String tenant, String holidayName, String date) {
@@ -363,14 +351,14 @@ public class NotificationService {
                 tenant,
                 "Holiday Announced",
                 holidayName + " on " + date + " has been added to the company calendar.",
-                "HOLIDAY",
+                TYPE_HOLIDAY,
                 "calendar");
     }
 
     public void sendLiveUpdate(User recipient, String type, String title, String message, String link) {
         if (recipient == null || recipient.getId() == null) return;
         try {
-            notify(recipient, title, message, type, link);
+            notify(recipient, title, message, type);
         } catch (Exception e) {
             log.error("Failed to save and send live update to user {}: {}", recipient.getUsername(), e.getMessage());
         }
@@ -379,7 +367,7 @@ public class NotificationService {
     public void sendLiveUpdateToTenant(String tenant, String type, String title, String message, String link) {
         if (tenant == null || tenant.isBlank()) return;
         userRepository.findByTenantSegment(tenant).stream()
-                .filter(u -> u.getRole() != null && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
+                .filter(u -> u.getRole() != null && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole()))
                 .forEach(u -> sendLiveUpdate(u, type, title, message, link));
     }
 
@@ -415,92 +403,92 @@ public class NotificationService {
     }
 
     private String dashboardLink(User user) {
-        String role = roleOf(user);
+        var role = roleOf(user);
         return switch (role) {
-            case "EMPLOYEE" -> "/employee/dashboard";
-            case "MANAGER" -> "/manager/dashboard";
-            case "HR" -> "/hr/dashboard";
-            case "ADMIN" -> "/admin/dashboard";
-            case "SUPER_ADMIN" -> "/superadmin/dashboard";
+            case ROLE_EMPLOYEE -> "/employee/dashboard";
+            case ROLE_MANAGER -> "/manager/dashboard";
+            case ROLE_HR -> "/hr/dashboard";
+            case ROLE_ADMIN -> "/admin/dashboard";
+            case ROLE_SUPER_ADMIN -> "/superadmin/dashboard";
             default -> "/login";
         };
     }
 
     private String tasksLink(User user) {
         return switch (roleOf(user)) {
-            case "EMPLOYEE" -> "/employee/tasks";
-            case "MANAGER" -> "/manager/tasks";
-            case "HR" -> "/hr/tasks";
-            case "ADMIN" -> "/admin/tasks";
+            case ROLE_EMPLOYEE -> "/employee/tasks";
+            case ROLE_MANAGER -> "/manager/tasks";
+            case ROLE_HR -> "/hr/tasks";
+            case ROLE_ADMIN -> "/admin/tasks";
             default -> dashboardLink(user);
         };
     }
 
     private String leavesLink(User user) {
         return switch (roleOf(user)) {
-            case "EMPLOYEE" -> "/employee/leaves";
-            case "MANAGER" -> "/manager/leave";
-            case "HR" -> "/hr/leaves";
+            case ROLE_EMPLOYEE -> "/employee/leaves";
+            case ROLE_MANAGER -> "/manager/leave";
+            case ROLE_HR -> "/hr/leaves";
             default -> dashboardLink(user);
         };
     }
 
     private String meetingsLink(User user) {
         return switch (roleOf(user)) {
-            case "EMPLOYEE" -> "/employee/meetings";
-            case "MANAGER" -> "/manager/meetings";
-            case "HR" -> "/hr/meetings";
-            case "ADMIN" -> "/admin/schedule-meeting";
+            case ROLE_EMPLOYEE -> "/employee/meetings";
+            case ROLE_MANAGER -> "/manager/meetings";
+            case ROLE_HR -> "/hr/meetings";
+            case ROLE_ADMIN -> "/admin/schedule-meeting";
             default -> dashboardLink(user);
         };
     }
 
     private String reportsLink(User user) {
         return switch (roleOf(user)) {
-            case "EMPLOYEE" -> "/employee/reports";
-            case "MANAGER" -> "/manager/reports";
-            case "HR" -> "/hr/reports";
-            case "ADMIN" -> "/admin/reports";
+            case ROLE_EMPLOYEE -> "/employee/reports";
+            case ROLE_MANAGER -> "/manager/reports";
+            case ROLE_HR -> "/hr/reports";
+            case ROLE_ADMIN -> "/admin/reports";
             default -> dashboardLink(user);
         };
     }
 
     private String calendarLink(User user) {
         return switch (roleOf(user)) {
-            case "EMPLOYEE" -> "/employee/calendar";
-            case "MANAGER" -> "/manager/calendar";
-            case "HR" -> "/hr/calendar";
-            case "ADMIN" -> "/admin/calendar";
+            case ROLE_EMPLOYEE -> "/employee/calendar";
+            case ROLE_MANAGER -> "/manager/calendar";
+            case ROLE_HR -> "/hr/calendar";
+            case ROLE_ADMIN -> "/admin/calendar";
             default -> dashboardLink(user);
         };
     }
 
     private String performanceLink(User user) {
         return switch (roleOf(user)) {
-            case "EMPLOYEE" -> "/employee/performance";
-            case "MANAGER" -> "/manager/performance";
-            case "HR" -> "/hr/performance";
+            case ROLE_EMPLOYEE -> "/employee/performance";
+            case ROLE_MANAGER -> "/manager/performance";
+            case ROLE_HR -> "/hr/performance";
             default -> dashboardLink(user);
         };
     }
 
     private String teamLink(User user) {
-        return "MANAGER".equals(roleOf(user)) ? "/manager/team" : dashboardLink(user);
+        return ROLE_MANAGER.equals(roleOf(user)) ? "/manager/team" : dashboardLink(user);
     }
 
     private String resolveLink(User user, String type) {
-        String normType = type != null ? type.toUpperCase() : "";
+        var normType = type != null ? type.toUpperCase() : "";
         return switch (normType) {
-            case "TASK" -> tasksLink(user);
-            case "LEAVE" -> leavesLink(user);
-            case "MEETING" -> meetingsLink(user);
-            case "REPORT" -> reportsLink(user);
-            case "HOLIDAY" -> calendarLink(user);
-            case "TEAM" -> {
-                String role = roleOf(user);
+            case TYPE_TASK -> tasksLink(user);
+            case TYPE_LEAVE -> leavesLink(user);
+            case TYPE_MEETING -> meetingsLink(user);
+            case TYPE_REPORT -> reportsLink(user);
+            case TYPE_HOLIDAY -> calendarLink(user);
+            case TYPE_TEAM -> {
+                var role = roleOf(user);
                 yield switch (role) {
-                    case "MANAGER" -> "/manager/team";
-                    case "HR" -> "/hr/teams";
+                    case ROLE_MANAGER -> "/manager/team";
+                    case ROLE_HR -> "/hr/teams";
                     default -> dashboardLink(user);
                 };
             }

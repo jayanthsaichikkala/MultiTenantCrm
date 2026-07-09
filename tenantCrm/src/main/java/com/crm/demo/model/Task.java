@@ -15,6 +15,8 @@ import java.util.List;
 @Table(name = "tasks")
 public class Task {
 
+    public static final String STATUS_PENDING = "pending";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -24,12 +26,12 @@ public class Task {
     @Column(length = 1000)
     private String description;
 
-    @Column(nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'pending'")
-    private String status = "pending";
+    @Column(nullable = false, columnDefinition = "VARCHAR(20) DEFAULT '" + STATUS_PENDING + "'")
+    private String status = STATUS_PENDING;
 
     /** Verification status: 'pending', 'waiting-for-review', 'approved', 'rejected' */
-    @Column(nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'pending'")
-    private String verificationStatus = "pending";
+    @Column(nullable = false, columnDefinition = "VARCHAR(20) DEFAULT '" + STATUS_PENDING + "'")
+    private String verificationStatus = STATUS_PENDING;
 
     @Column(nullable = false, columnDefinition = "VARCHAR(10) DEFAULT 'Medium'")
     private String priority = "Medium";
@@ -77,10 +79,10 @@ public class Task {
     public String getDescription()             { return description; }
     public void setDescription(String d)       { this.description = d; }
 
-    public String getStatus()                  { return status != null ? status : "pending"; }
+    public String getStatus()                  { return status != null ? status : STATUS_PENDING; }
     public void setStatus(String status)       { this.status = status; }
 
-    public String getVerificationStatus()      { return verificationStatus != null ? verificationStatus : "pending"; }
+    public String getVerificationStatus()      { return verificationStatus != null ? verificationStatus : STATUS_PENDING; }
     public void setVerificationStatus(String vs) { this.verificationStatus = vs; }
 
     public String getPriority()                { return priority != null ? priority : "Medium"; }

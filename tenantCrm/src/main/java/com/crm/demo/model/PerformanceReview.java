@@ -75,8 +75,8 @@ public class PerformanceReview {
 
     public String getReviewedAtFormatted() {
         if (reviewedAt == null) return "—";
-        java.time.Instant instant = java.time.Instant.ofEpochMilli(reviewedAt);
-        java.time.LocalDateTime ldt = java.time.LocalDateTime.ofInstant(
+        var instant = java.time.Instant.ofEpochMilli(reviewedAt);
+        var ldt = java.time.LocalDateTime.ofInstant(
                 instant, java.time.ZoneId.systemDefault());
         return String.format("%04d-%02d-%02d %02d:%02d",
                 ldt.getYear(), ldt.getMonthValue(), ldt.getDayOfMonth(),

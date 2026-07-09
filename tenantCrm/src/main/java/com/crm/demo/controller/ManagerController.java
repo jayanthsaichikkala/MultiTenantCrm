@@ -1908,8 +1908,6 @@ public class ManagerController {
 	// =========================
 
 	/** Inner DTO holding computed stats for one employee. */
-	@lombok.Getter
-	@lombok.Setter
 	public static class EmployeePerf {
 		private User   employee;
 		private int    totalTasks;
@@ -1926,6 +1924,51 @@ public class ManagerController {
 		private String grade;           // A+/A/B/C/D
 		private PerformanceReview existingReview; // null if not yet reviewed this month
 		private boolean weeklyLocked;
+
+		public User getEmployee() { return employee; }
+		public void setEmployee(User employee) { this.employee = employee; }
+
+		public int getTotalTasks() { return totalTasks; }
+		public void setTotalTasks(int totalTasks) { this.totalTasks = totalTasks; }
+
+		public int getDoneTasks() { return doneTasks; }
+		public void setDoneTasks(int doneTasks) { this.doneTasks = doneTasks; }
+
+		public int getPendingTasks() { return pendingTasks; }
+		public void setPendingTasks(int pendingTasks) { this.pendingTasks = pendingTasks; }
+
+		public int getOverdueTasks() { return overdueTasks; }
+		public void setOverdueTasks(int overdueTasks) { this.overdueTasks = overdueTasks; }
+
+		public int getPresentDays() { return presentDays; }
+		public void setPresentDays(int presentDays) { this.presentDays = presentDays; }
+
+		public int getAbsentDays() { return absentDays; }
+		public void setAbsentDays(int absentDays) { this.absentDays = absentDays; }
+
+		public int getLateDays() { return lateDays; }
+		public void setLateDays(int lateDays) { this.lateDays = lateDays; }
+
+		public int getLeaveDays() { return leaveDays; }
+		public void setLeaveDays(int leaveDays) { this.leaveDays = leaveDays; }
+
+		public int getAttendanceScore() { return attendanceScore; }
+		public void setAttendanceScore(int attendanceScore) { this.attendanceScore = attendanceScore; }
+
+		public int getTaskScore() { return taskScore; }
+		public void setTaskScore(int taskScore) { this.taskScore = taskScore; }
+
+		public int getOverallScore() { return overallScore; }
+		public void setOverallScore(int overallScore) { this.overallScore = overallScore; }
+
+		public String getGrade() { return grade; }
+		public void setGrade(String grade) { this.grade = grade; }
+
+		public PerformanceReview getExistingReview() { return existingReview; }
+		public void setExistingReview(PerformanceReview existingReview) { this.existingReview = existingReview; }
+
+		public boolean isWeeklyLocked() { return weeklyLocked; }
+		public void setWeeklyLocked(boolean weeklyLocked) { this.weeklyLocked = weeklyLocked; }
 	}
 
 	private boolean isWeeklyLocked(User employee) {

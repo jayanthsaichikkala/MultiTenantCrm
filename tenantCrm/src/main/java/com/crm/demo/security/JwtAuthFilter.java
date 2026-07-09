@@ -67,7 +67,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(auth);
             } else {
                 // Clear the superseded cookie immediately
-                jakarta.servlet.http.Cookie cookie = new jakarta.servlet.http.Cookie("jwt_token", "");
+                var cookie = new Cookie(COOKIE_NAME, "");
                 cookie.setPath("/");
                 cookie.setMaxAge(0);
                 response.addCookie(cookie);
