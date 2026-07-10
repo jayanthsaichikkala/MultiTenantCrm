@@ -86,6 +86,7 @@ public class EmployeeController {
     private static final String STATUS_ACTIVE = "active";
     private static final String ATTR_ACTIVE_PAGE = "activePage";
     private static final String PAYROLL = "payroll";
+    private static final String STATUS_DONE_KEY = "statusDone";
 
     @Value("${app.upload.dir:uploads/tasks}")
     private String uploadDir;
@@ -118,6 +119,19 @@ public class EmployeeController {
     private User getCurrentEmployee() {
         var username = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByUsername(username);
+    }
+
+    private Attendance getAndValidateTodayAttendance(User emp, LocalDate today, String leaveErrorMessage, RedirectAttributes ra) {
+        if (hasApprovedLeave(emp, today)) {
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, leaveErrorMessage);
+            return null;
+        }
+        var opt = attendanceRepository.findByUserAndDate(emp, today);
+        if (opt.isEmpty()) {
+            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_NOT_PUNCHED_IN);
+            return null;
+        }
+        return opt.get();
     }
 
     private String getTenantSegment(User user) {
@@ -312,7 +326,7 @@ public class EmployeeController {
         }
 
         var data = buildDashboardAnalytics(myTasks, teammates);
-        data.put(ATTR_COMPLETED_TASKS, data.get("statusDone"));
+        data.put(ATTR_COMPLETED_TASKS, data.get(STATUS_DONE_KEY));
         data.put("pendingTaskTotal", myTasks.stream()
                 .filter(t -> !STATUS_DONE.equalsIgnoreCase(t.getStatus()))
                 .count());
@@ -345,7 +359,7 @@ public class EmployeeController {
         var waiting = scopedTasks.stream().filter(t -> STATUS_WAITING_FOR_REVIEW.equalsIgnoreCase(t.getVerificationStatus())).count();
         var unverified = scopedTasks.size() - verified - rejected - waiting;
 
-        data.put("statusDone", statusDone);
+        data.put(STATUS_DONE_KEY, statusDone);
         data.put("statusInProgress", statusInProgress);
         data.put("statusPending", statusPending);
         data.put("statusReview", statusReview);
@@ -357,7 +371,7 @@ public class EmployeeController {
         data.put("activeTeam", activeCount);
         data.put("inactiveTeam", inactiveCount);
         data.put("verified", verified);
-        data.put("rejected", rejected);
+        data.put(STATUS_REJECTED, rejected);
         data.put("waiting", waiting);
         data.put("unverified", Math.max(unverified, 0));
         data.put("totalMyTasks", scopedTasks.size());
@@ -365,7 +379,7 @@ public class EmployeeController {
     }
 
     private void addAnalyticsAttributes(Model model, Map<String, Object> data) {
-        model.addAttribute("chartStatusDone", data.get("statusDone"));
+        model.addAttribute("chartStatusDone", data.get(STATUS_DONE_KEY));
         model.addAttribute("chartStatusInProgress", data.get("statusInProgress"));
         model.addAttribute("chartStatusPending", data.get("statusPending"));
         model.addAttribute("chartStatusReview", data.get("statusReview"));
@@ -377,11 +391,11 @@ public class EmployeeController {
         model.addAttribute("chartActiveTeam", data.get("activeTeam"));
         model.addAttribute("chartInactiveTeam", data.get("inactiveTeam"));
         model.addAttribute("chartVerified", data.get("verified"));
-        model.addAttribute("chartRejected", data.get("rejected"));
+        model.addAttribute("chartRejected", data.get(STATUS_REJECTED));
         model.addAttribute("chartWaiting", data.get("waiting"));
         model.addAttribute("chartUnverified", data.get("unverified"));
         model.addAttribute("chartTotalMyTasks", data.get("totalMyTasks"));
-        model.addAttribute(ATTR_COMPLETED_TASKS, data.get("statusDone"));
+        model.addAttribute(ATTR_COMPLETED_TASKS, data.get(STATUS_DONE_KEY));
     }
 
     @GetMapping("/tasks")
@@ -457,19 +471,19 @@ public class EmployeeController {
         var emp = getCurrentEmployee();
         if (emp == null) {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You need to sign in to update a task status.");
-            return REDIRECT_EMPLOYEE_TASKS;
+            return REDIRECT_EMPLOYEE_TASKS + "?error=auth";
         }
 
         var task = taskRepository.findById(id).orElse(null);
         if (task == null) {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Task not found.");
-            return REDIRECT_EMPLOYEE_TASKS;
+            return REDIRECT_EMPLOYEE_TASKS + "?error=notfound";
         }
 
         var tenant = getTenantSegment(emp);
         if (!emp.getUsername().equals(task.getAssignedTo()) || !tenant.equals(task.getTenantSegment())) {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You can only update your own assigned tasks.");
-            return REDIRECT_EMPLOYEE_TASKS;
+            return REDIRECT_EMPLOYEE_TASKS + "?error=denied";
         }
 
         // Handle file attachment if provided (optional now)
@@ -478,7 +492,7 @@ public class EmployeeController {
                 handleTaskAttachment(attachment, task, emp);
             } catch (IOException e) {
                 ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "File upload failed: " + e.getMessage());
-                return REDIRECT_EMPLOYEE_TASKS;
+                return REDIRECT_EMPLOYEE_TASKS + "?error=upload";
             }
         }
 
@@ -505,7 +519,7 @@ public class EmployeeController {
 
         var message = "Task status updated to " + normalizedStatus + ".";
         ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, message);
-        return REDIRECT_EMPLOYEE_TASKS;
+        return REDIRECT_EMPLOYEE_TASKS + "?success";
     }
 
     // ── ATTENDANCE ────────────────────────────────────────────────────────
@@ -541,6 +555,9 @@ public class EmployeeController {
         injectStats(model);
 
         var emp = getCurrentEmployee();
+        if (emp == null) {
+            return "redirect:/login";
+        }
         var today = LocalDate.now();
 
         // Date range (default: last 30 days)
@@ -555,17 +572,13 @@ public class EmployeeController {
 
         // Fetch real records in range
         var tenant = getTenantSegment(emp);
-        var records = emp != null
-                ? attendanceRepository.findByUserAndDateBetweenOrderByDateDesc(emp, filterFrom, filterTo)
-                : Collections.<Attendance>emptyList();
+        var records = attendanceRepository.findByUserAndDateBetweenOrderByDateDesc(emp, filterFrom, filterTo);
 
         // Holidays in range
         var holidays = fetchHolidays(tenant, filterFrom, filterTo);
 
         // Today's record — drives button state
-        var todayOpt = emp != null
-                ? attendanceRepository.findByUserAndDate(emp, today)
-                : Optional.<Attendance>empty();
+        var todayOpt = attendanceRepository.findByUserAndDate(emp, today);
 
         // Is today a holiday?
         var todayHolidayName = holidays.get(today);
@@ -587,9 +600,7 @@ public class EmployeeController {
         }
 
         // Stats from all-time records
-        var allRecords = emp != null
-                ? attendanceRepository.findByUserOrderByDateDesc(emp)
-                : Collections.<Attendance>emptyList();
+        var allRecords = attendanceRepository.findByUserOrderByDateDesc(emp);
         var presentCount = allRecords.stream()
                 .filter(a -> "present".equalsIgnoreCase(a.getStatus()) || "late".equalsIgnoreCase(a.getStatus()))
                 .count();
@@ -616,7 +627,7 @@ public class EmployeeController {
     public String punchIn(RedirectAttributes ra) {
         var emp = getCurrentEmployee();
         if (emp == null) {
-            return REDIRECT_EMPLOYEE_ATTENDANCE;
+            return REDIRECT_EMPLOYEE_ATTENDANCE + "?error=auth";
         }
 
         var today  = LocalDate.now();
@@ -625,17 +636,17 @@ public class EmployeeController {
         // Block punch-in on holidays
         if (holidayRepository.findByDateAndTenantSegment(today.toString(), tenant).isPresent()) {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Today is a holiday. Punch-in is not allowed.");
-            return REDIRECT_EMPLOYEE_ATTENDANCE;
+            return REDIRECT_EMPLOYEE_ATTENDANCE + "?error=holiday";
         }
 
         if (hasApprovedLeave(emp, today)) {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You are on approved leave today. Punch-in is not allowed.");
-            return REDIRECT_EMPLOYEE_ATTENDANCE;
+            return REDIRECT_EMPLOYEE_ATTENDANCE + "?error=leave";
         }
 
         if (attendanceRepository.findByUserAndDate(emp, today).isPresent()) {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You have already punched in today.");
-            return REDIRECT_EMPLOYEE_ATTENDANCE;
+            return REDIRECT_EMPLOYEE_ATTENDANCE + "?error=already";
         }
 
         var now   = LocalTime.now();
@@ -652,32 +663,24 @@ public class EmployeeController {
 
         ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
                 "Punched in at " + String.format(TIME_FORMAT, now.getHour(), now.getMinute()) + ".");
-        return REDIRECT_EMPLOYEE_ATTENDANCE;
+        return REDIRECT_EMPLOYEE_ATTENDANCE + "?success";
     }
 
     @PostMapping("/attendance/punch-out")
     public String punchOut(RedirectAttributes ra) {
         var emp = getCurrentEmployee();
         if (emp == null) {
-            return REDIRECT_EMPLOYEE_ATTENDANCE;
+            return REDIRECT_EMPLOYEE_ATTENDANCE + "?error=auth";
         }
 
         var today = LocalDate.now();
-        if (hasApprovedLeave(emp, today)) {
-            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You are on approved leave today. Punch-out is not allowed.");
-            return REDIRECT_EMPLOYEE_ATTENDANCE;
+        var att = getAndValidateTodayAttendance(emp, today, "You are on approved leave today. Punch-out is not allowed.", ra);
+        if (att == null) {
+            return REDIRECT_EMPLOYEE_ATTENDANCE + "?error=invalid";
         }
-
-        var opt = attendanceRepository.findByUserAndDate(emp, today);
-
-        if (opt.isEmpty()) {
-            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_NOT_PUNCHED_IN);
-            return REDIRECT_EMPLOYEE_ATTENDANCE;
-        }
-        var att = opt.get();
         if (att.getCheckOut() != null) {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You have already punched out today.");
-            return REDIRECT_EMPLOYEE_ATTENDANCE;
+            return REDIRECT_EMPLOYEE_ATTENDANCE + "?error=already";
         }
 
         var now = LocalTime.now();
@@ -696,32 +699,24 @@ public class EmployeeController {
 
         ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
                 "Punched out at " + String.format(TIME_FORMAT, now.getHour(), now.getMinute()) + ".");
-        return REDIRECT_EMPLOYEE_ATTENDANCE;
+        return REDIRECT_EMPLOYEE_ATTENDANCE + "?success";
     }
 
     @PostMapping("/attendance/break-start")
     public String breakStart(RedirectAttributes ra) {
         var emp = getCurrentEmployee();
         if (emp == null) {
-            return REDIRECT_EMPLOYEE_ATTENDANCE;
+            return REDIRECT_EMPLOYEE_ATTENDANCE + "?error=auth";
         }
 
         var today = LocalDate.now();
-        if (hasApprovedLeave(emp, today)) {
-            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You are on approved leave today. Break actions are not allowed.");
-            return REDIRECT_EMPLOYEE_ATTENDANCE;
+        var att = getAndValidateTodayAttendance(emp, today, "You are on approved leave today. Break actions are not allowed.", ra);
+        if (att == null) {
+            return REDIRECT_EMPLOYEE_ATTENDANCE + "?error=invalid";
         }
-
-        var opt = attendanceRepository.findByUserAndDate(emp, today);
-
-        if (opt.isEmpty()) {
-            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_NOT_PUNCHED_IN);
-            return REDIRECT_EMPLOYEE_ATTENDANCE;
-        }
-        var att = opt.get();
         if (att.getCheckOut() != null) {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You have already punched out.");
-            return REDIRECT_EMPLOYEE_ATTENDANCE;
+            return REDIRECT_EMPLOYEE_ATTENDANCE + "?error=punchedout";
         }
 
         var now = LocalTime.now();
@@ -733,7 +728,7 @@ public class EmployeeController {
             notificationService.notifyAttendanceUpdated(emp, "break-1-start");
             ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
                     "Break 1 started at " + String.format(TIME_FORMAT, now.getHour(), now.getMinute()) + ".");
-            return REDIRECT_EMPLOYEE_ATTENDANCE;
+            return REDIRECT_EMPLOYEE_ATTENDANCE + "?success=break1";
         }
 
         // Use break 2 slot if break 1 is done and break 2 not yet started
@@ -743,33 +738,25 @@ public class EmployeeController {
             notificationService.notifyAttendanceUpdated(emp, "break-2-start");
             ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
                     "Break 2 started at " + String.format(TIME_FORMAT, now.getHour(), now.getMinute()) + ".");
-            return REDIRECT_EMPLOYEE_ATTENDANCE;
+            return REDIRECT_EMPLOYEE_ATTENDANCE + "?success=break2";
         }
 
         ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "No more breaks available today.");
-        return REDIRECT_EMPLOYEE_ATTENDANCE;
+        return REDIRECT_EMPLOYEE_ATTENDANCE + "?error=nobreaks";
     }
 
     @PostMapping("/attendance/break-end")
     public String breakEnd(RedirectAttributes ra) {
         var emp = getCurrentEmployee();
         if (emp == null) {
-            return REDIRECT_EMPLOYEE_ATTENDANCE;
+            return REDIRECT_EMPLOYEE_ATTENDANCE + "?error=auth";
         }
 
         var today = LocalDate.now();
-        if (hasApprovedLeave(emp, today)) {
-            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You are on approved leave today. Break actions are not allowed.");
-            return REDIRECT_EMPLOYEE_ATTENDANCE;
+        var att = getAndValidateTodayAttendance(emp, today, "You are on approved leave today. Break actions are not allowed.", ra);
+        if (att == null) {
+            return REDIRECT_EMPLOYEE_ATTENDANCE + "?error=invalid";
         }
-
-        var opt = attendanceRepository.findByUserAndDate(emp, today);
-
-        if (opt.isEmpty()) {
-            ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_NOT_PUNCHED_IN);
-            return REDIRECT_EMPLOYEE_ATTENDANCE;
-        }
-        var att = opt.get();
 
         var now = LocalTime.now();
 
@@ -780,7 +767,7 @@ public class EmployeeController {
             notificationService.notifyAttendanceUpdated(emp, "break-2-end");
             ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
                     "Break 2 ended at " + String.format(TIME_FORMAT, now.getHour(), now.getMinute()) + ".");
-            return REDIRECT_EMPLOYEE_ATTENDANCE;
+            return REDIRECT_EMPLOYEE_ATTENDANCE + "?success=break2end";
         }
 
         // End break 1 if it's active
@@ -790,11 +777,11 @@ public class EmployeeController {
             notificationService.notifyAttendanceUpdated(emp, "break-1-end");
             ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
                     "Break 1 ended at " + String.format(TIME_FORMAT, now.getHour(), now.getMinute()) + ".");
-            return REDIRECT_EMPLOYEE_ATTENDANCE;
+            return REDIRECT_EMPLOYEE_ATTENDANCE + "?success=break1end";
         }
 
         ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "No active break to end.");
-        return REDIRECT_EMPLOYEE_ATTENDANCE;
+        return REDIRECT_EMPLOYEE_ATTENDANCE + "?error=noactivebreak";
     }
 
     // ── other pages ───────────────────────────────────────────────────────
@@ -884,13 +871,13 @@ public class EmployeeController {
         var emp = getCurrentEmployee();
         if (emp == null) {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Session expired. Please log in again.");
-            return REDIRECT_EMPLOYEE_LEAVES;
+            return REDIRECT_EMPLOYEE_LEAVES + "?error=auth";
         }
 
         var validationError = validateLeaveRequest(type, fromDate, toDate, reason);
         if (validationError != null) {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, validationError);
-            return REDIRECT_EMPLOYEE_LEAVES;
+            return REDIRECT_EMPLOYEE_LEAVES + "?error=validation";
         }
 
         LocalDate from;
@@ -900,12 +887,12 @@ public class EmployeeController {
             to = LocalDate.parse(toDate);
         } catch (java.time.format.DateTimeParseException e) {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Invalid date value.");
-            return REDIRECT_EMPLOYEE_LEAVES;
+            return REDIRECT_EMPLOYEE_LEAVES + "?error=parse";
         }
 
         if (to.isBefore(from)) {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "To date cannot be before from date.");
-            return REDIRECT_EMPLOYEE_LEAVES;
+            return REDIRECT_EMPLOYEE_LEAVES + "?error=dates";
         }
 
         var leave = new LeaveRequest();
@@ -925,14 +912,14 @@ public class EmployeeController {
                 leave.setAttachmentData(attachment.getBytes());
             } catch (IOException e) {
                 ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Attachment upload failed: " + e.getMessage());
-                return REDIRECT_EMPLOYEE_LEAVES;
+                return REDIRECT_EMPLOYEE_LEAVES + "?error=upload";
             }
         }
 
         leaveRequestRepository.save(leave);
         notificationService.notifyLeaveSubmitted(leave);
         ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Leave request submitted to HR.");
-        return REDIRECT_EMPLOYEE_LEAVES;
+        return REDIRECT_EMPLOYEE_LEAVES + "?success";
     }
 
     // ── REPORTS ───────────────────────────────────────────────────────────
@@ -1001,11 +988,11 @@ public class EmployeeController {
                                 RedirectAttributes ra) {
         var emp = getCurrentEmployee();
         if (emp == null) {
-            return "redirect:/employee/profile";
+            return "redirect:/employee/profile?error=auth";
         }
 
-        profileUpdateService.updateProfile(emp, username, email, password, confirmPassword, ra, response);
-        return "redirect:/employee/profile";
+        var success = profileUpdateService.updateProfile(emp, username, email, password, confirmPassword, ra, response);
+        return success ? "redirect:/employee/profile?success" : "redirect:/employee/profile?error=validation";
     }
 
     // ── DOWNLOAD TASK ATTACHMENT ──────────────────────────────────────────

@@ -55,11 +55,9 @@ public class ProfileUpdateService {
         }
 
         // Update password
-        if (password != null && !password.isBlank()) {
-            if (user.getPassword() == null || !passwordEncoder.matches(password, user.getPassword())) {
-                user.setPassword(passwordEncoder.encode(password));
-                changed = true;
-            }
+        if (password != null && !password.isBlank() && (user.getPassword() == null || !passwordEncoder.matches(password, user.getPassword()))) {
+            user.setPassword(passwordEncoder.encode(password));
+            changed = true;
         }
 
         if (changed) {

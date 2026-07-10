@@ -121,7 +121,7 @@ public class NotificationService {
         return m;
     }
 
-    public void notifyByUsername(String username, String title, String message, String type, String link) {
+    public void notifyByUsername(String username, String title, String message, String type) {
         if (username == null || username.isBlank()) return;
         var user = userRepository.findByUsername(username.trim());
         if (user != null) {
@@ -129,14 +129,14 @@ public class NotificationService {
         }
     }
 
-    public void notifyUsersInTenantByRole(String tenant, String role, String title, String message, String type, String link) {
+    public void notifyUsersInTenantByRole(String tenant, String role, String title, String message, String type) {
         if (tenant == null || tenant.isBlank() || role == null) return;
         userRepository.findByTenantSegment(tenant).stream()
                 .filter(u -> role.equalsIgnoreCase(u.getRole()))
                 .forEach(u -> notify(u, title, message, type));
     }
 
-    public void notifyAllInTenant(String tenant, String title, String message, String type, String link) {
+    public void notifyAllInTenant(String tenant, String title, String message, String type) {
         if (tenant == null || tenant.isBlank()) return;
         userRepository.findByTenantSegment(tenant).stream()
                 .filter(u -> u.getRole() != null && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole()))
@@ -292,8 +292,7 @@ public class NotificationService {
                 ROLE_HR,
                 "New Leave Request",
                 employeeName + " applied for leave.",
-                TYPE_LEAVE,
-                "/hr/leaves");
+                TYPE_LEAVE);
     }
 
     public void notifyLeaveReviewed(User employee, String status, String leaveType,
@@ -351,11 +350,10 @@ public class NotificationService {
                 tenant,
                 "Holiday Announced",
                 holidayName + " on " + date + " has been added to the company calendar.",
-                TYPE_HOLIDAY,
-                "calendar");
+                TYPE_HOLIDAY);
     }
 
-    public void sendLiveUpdate(User recipient, String type, String title, String message, String link) {
+    public void sendLiveUpdate(User recipient, String type, String title, String message) {
         if (recipient == null || recipient.getId() == null) return;
         try {
             notify(recipient, title, message, type);
@@ -364,18 +362,18 @@ public class NotificationService {
         }
     }
 
-    public void sendLiveUpdateToTenant(String tenant, String type, String title, String message, String link) {
+    public void sendLiveUpdateToTenant(String tenant, String type, String title, String message) {
         if (tenant == null || tenant.isBlank()) return;
         userRepository.findByTenantSegment(tenant).stream()
                 .filter(u -> u.getRole() != null && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole()))
-                .forEach(u -> sendLiveUpdate(u, type, title, message, link));
+                .forEach(u -> sendLiveUpdate(u, type, title, message));
     }
 
-    public void sendLiveUpdateToTenantRole(String tenant, String role, String type, String title, String message, String link) {
+    public void sendLiveUpdateToTenantRole(String tenant, String role, String type, String title, String message) {
         if (tenant == null || tenant.isBlank() || role == null) return;
         userRepository.findByTenantSegment(tenant).stream()
                 .filter(u -> role.equalsIgnoreCase(u.getRole()))
-                .forEach(u -> sendLiveUpdate(u, type, title, message, link));
+                .forEach(u -> sendLiveUpdate(u, type, title, message));
     }
 
     public void notifyAttendanceUpdated(User employee, String action) {
@@ -386,21 +384,14 @@ public class NotificationService {
         if (employee == null) return;
         sendLiveUpdate(employee, "ATTENDANCE", 
             "Attendance Record Updated", 
-            reviewerName + " updated your attendance record.", 
-            "/employee/attendance");
+            reviewerName + " updated your attendance record.");
     }
 
     public void notifyEmployeeManagementChanged(String tenant, String action, String employeeName) {
         // Disabled "Employee List Updated" notifications entirely for all roles and dashboards
     }
 
-    private String linkFor(User user, String page) {
-        return switch (page) {
-            case "calendar" -> calendarLink(user);
-            case "dashboard" -> dashboardLink(user);
-            default -> dashboardLink(user);
-        };
-    }
+
 
     private String dashboardLink(User user) {
         var role = roleOf(user);
@@ -463,18 +454,7 @@ public class NotificationService {
         };
     }
 
-    private String performanceLink(User user) {
-        return switch (roleOf(user)) {
-            case ROLE_EMPLOYEE -> "/employee/performance";
-            case ROLE_MANAGER -> "/manager/performance";
-            case ROLE_HR -> "/hr/performance";
-            default -> dashboardLink(user);
-        };
-    }
 
-    private String teamLink(User user) {
-        return ROLE_MANAGER.equals(roleOf(user)) ? "/manager/team" : dashboardLink(user);
-    }
 
     private String resolveLink(User user, String type) {
         var normType = type != null ? type.toUpperCase() : "";

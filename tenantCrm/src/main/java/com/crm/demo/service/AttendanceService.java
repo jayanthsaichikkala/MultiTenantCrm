@@ -76,20 +76,25 @@ public class AttendanceService {
     private void repairIncorrectPunchOuts(LocalDateTime now) {
         var allRecords = attendanceRepository.findAll();
         for (Attendance a : allRecords) {
-            if (a.getCheckIn() != null && a.getCheckOut() != null && a.getDate() != null) {
-                var checkInDateTime = LocalDateTime.of(a.getDate(), a.getCheckIn());
-                var limit = checkInDateTime.plusHours(9);
-                
-                if (limit.isAfter(now)) {
-                    var expectedAutoCheckOut = a.getCheckIn().plusHours(9);
-                    if (expectedAutoCheckOut.equals(a.getCheckOut())) {
-                        // Restore back to active checked-in state
-                        a.setCheckOut(null);
-                        String originalStatus = a.getCheckIn().isAfter(LocalTime.of(9, 30)) ? "late" : "present";
-                        a.setStatus(originalStatus);
-                        attendanceRepository.save(a);
-                    }
-                }
+            repairSingleRecord(a, now);
+        }
+    }
+
+    private void repairSingleRecord(Attendance a, LocalDateTime now) {
+        if (a.getCheckIn() == null || a.getCheckOut() == null || a.getDate() == null) {
+            return;
+        }
+        var checkInDateTime = LocalDateTime.of(a.getDate(), a.getCheckIn());
+        var limit = checkInDateTime.plusHours(9);
+        
+        if (limit.isAfter(now)) {
+            var expectedAutoCheckOut = a.getCheckIn().plusHours(9);
+            if (expectedAutoCheckOut.equals(a.getCheckOut())) {
+                // Restore back to active checked-in state
+                a.setCheckOut(null);
+                String originalStatus = a.getCheckIn().isAfter(LocalTime.of(9, 30)) ? "late" : "present";
+                a.setStatus(originalStatus);
+                attendanceRepository.save(a);
             }
         }
     }

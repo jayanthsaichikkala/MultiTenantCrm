@@ -13,6 +13,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.firewall.HttpFirewall;
 import org.springframework.security.web.firewall.StrictHttpFirewall;
 import org.springframework.http.HttpMethod;
+import org.springframework.beans.factory.annotation.Value;
 
 import com.crm.demo.security.JwtAuthFilter;
 
@@ -22,8 +23,12 @@ import jakarta.servlet.http.HttpServletResponse;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private static final String HOLIDAYS_API_PATH = "/api/holidays/**";
-    private static final String NOTIFICATIONS_API_PATH = "/api/notifications/**";
+    @Value("${app.security.holidays-api-path:/api/holidays/**}")
+    private String holidaysApiPath;
+
+    @Value("${app.security.notifications-api-path:/api/notifications/**}")
+    private String notificationsApiPath;
+
     private static final String ROLE_ADMIN = "ADMIN";
     private static final String ROLE_HR = "HR";
     private static final String ROLE_SUPER_ADMIN = "SUPER_ADMIN";
@@ -67,14 +72,14 @@ public class SecurityConfig {
                         // PUT /api/holidays/* — ADMIN or HR only
                         // DELETE /api/holidays/* — ADMIN or HR only
                         .requestMatchers(HttpMethod.GET, "/api/holidays").authenticated()
-                        .requestMatchers(HttpMethod.GET, HOLIDAYS_API_PATH).authenticated()
+                        .requestMatchers(HttpMethod.GET, holidaysApiPath).authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/holidays").hasAnyRole(ROLE_ADMIN, ROLE_HR)
-                        .requestMatchers(HttpMethod.PUT, HOLIDAYS_API_PATH).hasAnyRole(ROLE_ADMIN, ROLE_HR)
-                        .requestMatchers(HttpMethod.DELETE, HOLIDAYS_API_PATH).hasAnyRole(ROLE_ADMIN, ROLE_HR)
+                        .requestMatchers(HttpMethod.PUT, holidaysApiPath).hasAnyRole(ROLE_ADMIN, ROLE_HR)
+                        .requestMatchers(HttpMethod.DELETE, holidaysApiPath).hasAnyRole(ROLE_ADMIN, ROLE_HR)
                         .requestMatchers(HttpMethod.GET, "/api/notifications").authenticated()
-                        .requestMatchers(HttpMethod.GET, NOTIFICATIONS_API_PATH).authenticated()
-                        .requestMatchers(HttpMethod.POST, NOTIFICATIONS_API_PATH).authenticated()
-                        .requestMatchers(HttpMethod.DELETE, NOTIFICATIONS_API_PATH).authenticated()
+                        .requestMatchers(HttpMethod.GET, notificationsApiPath).authenticated()
+                        .requestMatchers(HttpMethod.POST, notificationsApiPath).authenticated()
+                        .requestMatchers(HttpMethod.DELETE, notificationsApiPath).authenticated()
                         // ── Role-scoped pages ────────────────────────────────────────
                         .requestMatchers("/superadmin/**").hasRole(ROLE_SUPER_ADMIN)
                         .requestMatchers("/admin/**").hasRole(ROLE_ADMIN)

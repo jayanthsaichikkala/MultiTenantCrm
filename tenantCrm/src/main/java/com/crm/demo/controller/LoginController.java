@@ -150,70 +150,41 @@ public class LoginController {
         var role = user.getRole() != null ? user.getRole().toUpperCase() : "";
         var path = request.getRequestURI().toLowerCase();
 
-        if (path.endsWith("/dashboard")) {
-            return REDIRECT_PREFIX + dashboardFor(role);
-        } else if (path.endsWith("/tasks")) {
-            return switch (role) {
-                case ROLE_EMPLOYEE -> "redirect:/employee/tasks";
-                case ROLE_MANAGER -> "redirect:/manager/tasks";
-                case ROLE_HR -> "redirect:/hr/tasks";
-                case ROLE_ADMIN -> "redirect:/admin/tasks";
-                default -> REDIRECT_PREFIX + dashboardFor(role);
-            };
-        } else if (path.endsWith("/meetings")) {
-            return switch (role) {
-                case ROLE_EMPLOYEE -> "redirect:/employee/meetings";
-                case ROLE_MANAGER -> "redirect:/manager/meetings";
-                case ROLE_HR -> "redirect:/hr/meetings";
-                case ROLE_ADMIN -> "redirect:/admin/schedule-meeting";
-                default -> REDIRECT_PREFIX + dashboardFor(role);
-            };
-        } else if (path.endsWith("/leaves") || path.endsWith("/leave")) {
-            return switch (role) {
-                case ROLE_EMPLOYEE -> "redirect:/employee/leaves";
-                case ROLE_MANAGER -> "redirect:/manager/leaves";
-                case ROLE_HR -> "redirect:/hr/leaves";
-                default -> REDIRECT_PREFIX + dashboardFor(role);
-            };
-        } else if (path.endsWith("/teams") || path.endsWith("/team")) {
-            return switch (role) {
-                case ROLE_MANAGER -> "redirect:/manager/team";
-                case ROLE_HR -> "redirect:/hr/teams";
-                default -> REDIRECT_PREFIX + dashboardFor(role);
-            };
-        } else if (path.endsWith("/performance")) {
-            return switch (role) {
-                case ROLE_EMPLOYEE -> "redirect:/employee/performance";
-                case ROLE_MANAGER -> "redirect:/manager/performance";
-                case ROLE_HR -> "redirect:/hr/performance";
-                default -> REDIRECT_PREFIX + dashboardFor(role);
-            };
-        } else if (path.endsWith("/reports")) {
-            return switch (role) {
-                case ROLE_EMPLOYEE -> "redirect:/employee/reports";
-                case ROLE_MANAGER -> "redirect:/manager/reports";
-                case ROLE_HR -> "redirect:/hr/reports";
-                case ROLE_ADMIN -> "redirect:/admin/reports";
-                default -> REDIRECT_PREFIX + dashboardFor(role);
-            };
-        } else if (path.endsWith("/attendance")) {
-            return switch (role) {
-                case ROLE_EMPLOYEE -> "redirect:/employee/attendance";
-                case ROLE_MANAGER -> "redirect:/manager/attendance";
-                case ROLE_HR -> "redirect:/hr/attendance";
-                default -> REDIRECT_PREFIX + dashboardFor(role);
-            };
-        } else if (path.endsWith("/calendar")) {
-            return switch (role) {
-                case ROLE_EMPLOYEE -> "redirect:/employee/calendar";
-                case ROLE_MANAGER -> "redirect:/manager/calendar";
-                case ROLE_HR -> "redirect:/hr/calendar";
-                case ROLE_ADMIN -> "redirect:/admin/calendar";
-                default -> REDIRECT_PREFIX + dashboardFor(role);
-            };
-        }
+        return resolveLegacyRedirect(role, path);
+    }
 
-        return REDIRECT_LOGIN;
+    private String resolveLegacyRedirect(String role, String path) {
+        var lowerRole = role.toLowerCase();
+        
+        if (path.endsWith("/tasks") && (ROLE_EMPLOYEE.equalsIgnoreCase(role) || ROLE_MANAGER.equalsIgnoreCase(role) || ROLE_HR.equalsIgnoreCase(role) || ROLE_ADMIN.equalsIgnoreCase(role))) {
+            return "redirect:/" + lowerRole + "/tasks";
+        }
+        if (path.endsWith("/meetings")) {
+            if (ROLE_ADMIN.equalsIgnoreCase(role)) return "redirect:/admin/schedule-meeting";
+            if (ROLE_EMPLOYEE.equalsIgnoreCase(role) || ROLE_MANAGER.equalsIgnoreCase(role) || ROLE_HR.equalsIgnoreCase(role)) {
+                return "redirect:/" + lowerRole + "/meetings";
+            }
+        }
+        if ((path.endsWith("/leaves") || path.endsWith("/leave")) && (ROLE_EMPLOYEE.equalsIgnoreCase(role) || ROLE_MANAGER.equalsIgnoreCase(role) || ROLE_HR.equalsIgnoreCase(role))) {
+            return "redirect:/" + lowerRole + "/leaves";
+        }
+        if (path.endsWith("/teams") || path.endsWith("/team")) {
+            if (ROLE_MANAGER.equalsIgnoreCase(role)) return "redirect:/manager/team";
+            if (ROLE_HR.equalsIgnoreCase(role)) return "redirect:/hr/teams";
+        }
+        if (path.endsWith("/performance") && (ROLE_EMPLOYEE.equalsIgnoreCase(role) || ROLE_MANAGER.equalsIgnoreCase(role) || ROLE_HR.equalsIgnoreCase(role))) {
+            return "redirect:/" + lowerRole + "/performance";
+        }
+        if (path.endsWith("/reports") && (ROLE_EMPLOYEE.equalsIgnoreCase(role) || ROLE_MANAGER.equalsIgnoreCase(role) || ROLE_HR.equalsIgnoreCase(role) || ROLE_ADMIN.equalsIgnoreCase(role))) {
+            return "redirect:/" + lowerRole + "/reports";
+        }
+        if (path.endsWith("/attendance") && (ROLE_EMPLOYEE.equalsIgnoreCase(role) || ROLE_MANAGER.equalsIgnoreCase(role) || ROLE_HR.equalsIgnoreCase(role))) {
+            return "redirect:/" + lowerRole + "/attendance";
+        }
+        if (path.endsWith("/calendar") && (ROLE_EMPLOYEE.equalsIgnoreCase(role) || ROLE_MANAGER.equalsIgnoreCase(role) || ROLE_HR.equalsIgnoreCase(role) || ROLE_ADMIN.equalsIgnoreCase(role))) {
+            return "redirect:/" + lowerRole + "/calendar";
+        }
+        return REDIRECT_PREFIX + dashboardFor(role);
     }
 
     // ─── Helper ───────────────────────────────────────────────────────────────────

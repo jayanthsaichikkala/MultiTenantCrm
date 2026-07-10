@@ -1,7 +1,6 @@
 package com.crm.demo.controller;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,9 +12,9 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.crm.demo.model.PasswordResetToken;
-import com.crm.demo.model.User;
 import com.crm.demo.repository.PasswordResetTokenRepository;
 import com.crm.demo.repository.UserRepository;
 
@@ -47,7 +46,7 @@ public class PasswordController {
 
 	// Process Forgot Password
 	@PostMapping("/forgot-password")
-	public String processForgotPassword(@RequestParam String email, Model model) {
+	public String processForgotPassword(@RequestParam String email, Model model, RedirectAttributes ra) {
 		if (email == null || email.trim().isBlank()) {
 			model.addAttribute(ATTR_ERROR, "Email is required");
 			return PAGE_FORGOT_PASSWORD;
@@ -97,9 +96,9 @@ public class PasswordController {
 
 		mailSender.send(message);
 
-		model.addAttribute("message", "Password reset link sent to your email");
+		ra.addFlashAttribute("message", "Password reset link sent to your email");
 
-		return PAGE_FORGOT_PASSWORD;
+		return "redirect:/forgot-password";
 	}
 
 	// Reset Password Page

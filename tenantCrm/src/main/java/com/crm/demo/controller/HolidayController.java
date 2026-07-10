@@ -142,7 +142,7 @@ public class HolidayController {
         h.setName(name.trim());
         h.setType(type);
         holidayService.save(h);
-        notificationService.sendLiveUpdateToTenant(tenant, "HOLIDAY", "Holiday Updated", "Holiday was updated", "/calendar");
+        notificationService.sendLiveUpdateToTenant(tenant, "HOLIDAY", "Holiday Updated", "Holiday was updated");
 
         resp.put(RESP_SUCCESS, true);
         resp.put(RESP_MESSAGE, "Holiday updated.");
@@ -167,7 +167,7 @@ public class HolidayController {
         }
 
         holidayService.deleteById(id);
-        notificationService.sendLiveUpdateToTenant(tenant, "HOLIDAY", "Holiday Deleted", "Holiday was deleted", "/calendar");
+        notificationService.sendLiveUpdateToTenant(tenant, "HOLIDAY", "Holiday Deleted", "Holiday was deleted");
         resp.put(RESP_SUCCESS, true);
         resp.put(RESP_MESSAGE, "Holiday deleted.");
         return resp;

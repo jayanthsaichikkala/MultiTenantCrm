@@ -134,6 +134,92 @@ public class AdminController {
 		model.addAttribute("adminRole", role     != null ? role     : ROLE_ADMIN);
 	}
 
+	private String getLoggedInUsername(HttpServletRequest request) {
+		var username = (String) request.getAttribute(ATTR_LOGGED_IN_USER);
+		if (username == null) {
+			username = SecurityContextHolder.getContext().getAuthentication().getName();
+		}
+		return username;
+	}
+
+	private void populateMeetingModel(Model model, String tenant, String username) {
+		model.addAttribute(ATTR_UPCOMING_MEETINGS, getUpcomingMeetingsForUser(tenant, username != null ? username : ""));
+		model.addAttribute(ATTR_PAST_MEETINGS, getPastMeetingsForUser(tenant, username != null ? username : ""));
+		model.addAttribute(ATTR_TENANT_USERS,
+				userRepository.findByTenantSegment(tenant).stream()
+						.filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole())
+								  && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole()))
+						.collect(Collectors.toList()));
+		model.addAttribute(ATTR_ACTIVE_PAGE, PAGE_SCHEDULE_MEETING);
+	}
+
+	private String validateUserData(String username, String email, String password, String confirmPassword, String role, String tenant) {
+		var usernameError = validateUsername(username);
+		if (usernameError != null) return usernameError;
+
+		var emailError = validateEmail(email, tenant);
+		if (emailError != null) return emailError;
+
+		var passwordError = validatePassword(password, confirmPassword);
+		if (passwordError != null) return passwordError;
+
+		if (role == null || role.trim().isBlank() || (!ROLE_HR.equalsIgnoreCase(role) && !ROLE_MANAGER.equalsIgnoreCase(role) && !ROLE_EMPLOYEE.equalsIgnoreCase(role))) {
+			return "Please select a valid role (HR, Manager, or Employee).";
+		}
+		return null;
+	}
+
+	private String checkEmployeeLimit(String adminUser, String tenant) {
+		var currentAdmin = userRepository.findByUsername(adminUser);
+		if (currentAdmin != null) {
+			var employeeCount = userRepository.findByTenantSegment(tenant).stream()
+					.filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole()) && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole()))
+					.count();
+			int limit = currentAdmin.getEmployeeLimit() != null ? currentAdmin.getEmployeeLimit() : 10;
+			if (employeeCount >= limit) {
+				return "Employee limit reached (" + limit + "). You cannot add more employees.";
+			}
+		}
+		return null;
+	}
+
+	private String checkBulkUploadLimit(String adminUser, String tenant, int toAddCount) {
+		var currentAdmin = userRepository.findByUsername(adminUser);
+		if (currentAdmin != null) {
+			var existingCount = userRepository.findByTenantSegment(tenant).stream()
+					.filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole()) && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole()))
+					.count();
+			int limit = currentAdmin.getEmployeeLimit() != null ? currentAdmin.getEmployeeLimit() : 10;
+			if (existingCount + toAddCount > limit) {
+				return "Upload rejected. Adding " + toAddCount
+						+ " employee(s) would exceed your limit of " + limit + " (current count: " + existingCount + ").";
+			}
+		}
+		return null;
+	}
+
+	private String validateUpdateEmployee(User emp, String username, String email, String role, String tenant) {
+		var usernameError = validateUsername(username);
+		if (usernameError != null) return usernameError;
+
+		var emailError = validateEmail(email, tenant);
+		if (emailError != null) return emailError;
+
+		if (role == null || role.trim().isBlank() || ROLE_ADMIN.equalsIgnoreCase(role) || ROLE_SUPER_ADMIN.equalsIgnoreCase(role)) {
+			return "You cannot assign that role.";
+		}
+
+		var existingUserByUname = userRepository.findByUsername(username.trim());
+		if (existingUserByUname != null && !existingUserByUname.getId().equals(emp.getId())) {
+			return "Username is already taken.";
+		}
+		var existingUserByEmail = userRepository.findByEmail(email.trim());
+		if (existingUserByEmail != null && !existingUserByEmail.getId().equals(emp.getId())) {
+			return "Email is already taken.";
+		}
+		return null;
+	}
+
 	private String validateUsername(String username) {
 		if (username == null || username.trim().isBlank()) {
 			return "Username is required.";
@@ -204,7 +290,7 @@ public class AdminController {
 		var tasksDone      = tasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
 		var pendingTasks   = tasks.stream().filter(t -> STATUS_PENDING.equalsIgnoreCase(t.getStatus())).count();
 
-		model.addAttribute("totalEmployees",  employees.size());
+		model.addAttribute(TOTAL_EMPLOYEES,  employees.size());
 		model.addAttribute("employeeCount",   employees.size());
 		model.addAttribute("employeeGrowth",  "+0%");
 		model.addAttribute("activeProjects",  activeProjects);
@@ -281,9 +367,9 @@ public class AdminController {
 		var waiting = scopedTasks.stream().filter(t -> "waiting-for-review".equalsIgnoreCase(t.getVerificationStatus())).count();
 		var unverified = scopedTasks.size() - verified - rejected - waiting;
 
-		data.put("statusDone", statusDone);
+		data.put(STATUS_DONE, statusDone);
 		data.put("statusInProgress", statusInProgress);
-		data.put("statusPending", statusPending);
+		data.put(STATUS_PENDING_LOWER, statusPending);
 		data.put("statusReview", statusReview);
 		data.put("priorityHigh", priorityHigh);
 		data.put("priorityMedium", priorityMedium);
@@ -301,9 +387,9 @@ public class AdminController {
 	}
 
 	private void addAnalyticsAttributes(Model model, Map<String, Object> data) {
-		model.addAttribute("chartStatusDone", data.get("statusDone"));
+		model.addAttribute("chartStatusDone", data.get(STATUS_DONE));
 		model.addAttribute("chartStatusInProgress", data.get("statusInProgress"));
-		model.addAttribute("chartStatusPending", data.get("statusPending"));
+		model.addAttribute("chartStatusPending", data.get(STATUS_PENDING_LOWER));
 		model.addAttribute("chartStatusReview", data.get("statusReview"));
 		model.addAttribute("chartPriorityHigh", data.get("priorityHigh"));
 		model.addAttribute("chartPriorityMedium", data.get("priorityMedium"));
@@ -450,11 +536,7 @@ public class AdminController {
 	@GetMapping("/add-employee")
 	public String addEmployeePage(HttpServletRequest request, Model model) {
 		injectUser(request, model);
-		var adminUser = (String) request.getAttribute(ATTR_LOGGED_IN_USER);
-		if (adminUser == null) {
-			adminUser = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
-		}
-		var tenant = getTenantSegment(adminUser);
+		var tenant = getTenantSegment(getLoggedInUsername(request));
 		model.addAttribute("domainCategories", domainCategoryRepository.findByTenantSegment(tenant));
 		return "admin-add-employee";
 	}
@@ -465,7 +547,7 @@ public class AdminController {
 
 	@GetMapping("/add-user")
 	public String addUserRedirect() {
-		return "redirect:/admin/employees";
+		return REDIRECT_ADMIN_EMPLOYEES;
 	}
 
 	@PostMapping("/add-user")
@@ -479,45 +561,19 @@ public class AdminController {
 	                      HttpServletRequest request,
 	                      RedirectAttributes ra) {
 
-		var adminUser = (String) request.getAttribute(ATTR_LOGGED_IN_USER);
-		if (adminUser == null) {
-			adminUser = SecurityContextHolder.getContext().getAuthentication().getName();
-		}
+		var adminUser = getLoggedInUsername(request);
 		var tenant = getTenantSegment(adminUser);
 
-		var usernameError = validateUsername(username);
-		if (usernameError != null) {
-			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, usernameError);
+		var validationError = validateUserData(username, email, password, confirmPassword, role, tenant);
+		if (validationError != null) {
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, validationError);
 			return REDIRECT_ADMIN_ADD_EMPLOYEE;
 		}
 
-		var emailError = validateEmail(email, tenant);
-		if (emailError != null) {
-			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, emailError);
+		var limitError = checkEmployeeLimit(adminUser, tenant);
+		if (limitError != null) {
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, limitError);
 			return REDIRECT_ADMIN_ADD_EMPLOYEE;
-		}
-
-		var passwordError = validatePassword(password, confirmPassword);
-		if (passwordError != null) {
-			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, passwordError);
-			return REDIRECT_ADMIN_ADD_EMPLOYEE;
-		}
-
-		if (role == null || role.trim().isBlank() || (!ROLE_HR.equalsIgnoreCase(role) && !ROLE_MANAGER.equalsIgnoreCase(role) && !ROLE_EMPLOYEE.equalsIgnoreCase(role))) {
-			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Please select a valid role (HR, Manager, or Employee).");
-			return REDIRECT_ADMIN_ADD_EMPLOYEE;
-		}
-
-		var currentAdmin = userRepository.findByUsername(adminUser);
-		if (currentAdmin != null) {
-			var employeeCount = userRepository.findByTenantSegment(tenant).stream()
-					.filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole()) && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole()))
-					.count();
-			int limit = currentAdmin.getEmployeeLimit() != null ? currentAdmin.getEmployeeLimit() : 10;
-			if (employeeCount >= limit) {
-				ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Employee limit reached (" + limit + "). You cannot add more employees.");
-				return REDIRECT_ADMIN_ADD_EMPLOYEE;
-			}
 		}
 
 		if (userRepository.findByEmail(email.trim()) != null) {
@@ -540,15 +596,16 @@ public class AdminController {
 		if (domain != null && !domain.trim().isEmpty()) {
 			user.setDomain(domain.trim());
 		}
+		
+		var parsedJoiningDate = LocalDate.now();
 		if (joiningDate != null && !joiningDate.trim().isEmpty()) {
 			try {
-				user.setJoiningDate(java.time.LocalDate.parse(joiningDate.trim()));
+				parsedJoiningDate = LocalDate.parse(joiningDate.trim());
 			} catch (Exception e) {
-				user.setJoiningDate(java.time.LocalDate.now());
+				// use default today
 			}
-		} else {
-			user.setJoiningDate(java.time.LocalDate.now());
 		}
+		user.setJoiningDate(parsedJoiningDate);
 
 		userRepository.save(user);
 
@@ -582,7 +639,7 @@ public class AdminController {
 			return REDIRECT_ADMIN_ADD_EMPLOYEE;
 		}
 
-		var username = (String) request.getAttribute(ATTR_LOGGED_IN_USER);
+		var username = getLoggedInUsername(request);
 		var segment  = getTenantSegment(username);
 
 		var errors = new ArrayList<String>();
@@ -597,7 +654,7 @@ public class AdminController {
 				return REDIRECT_ADMIN_ADD_EMPLOYEE;
 			}
 
-			for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+			for (var rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
 				var row = sheet.getRow(rowIndex);
 				if (row != null) {
 					processUploadRow(row, rowIndex, segment, errors, toSave);
@@ -623,22 +680,10 @@ public class AdminController {
 		}
 
 		// Enforce employee limit for bulk upload
-		var adminUser = (String) request.getAttribute(ATTR_LOGGED_IN_USER);
-		if (adminUser == null) {
-			adminUser = SecurityContextHolder.getContext().getAuthentication().getName();
-		}
-		var currentAdmin = userRepository.findByUsername(adminUser);
-		if (currentAdmin != null) {
-			var tenant = getTenantSegment(adminUser);
-			var existingCount = userRepository.findByTenantSegment(tenant).stream()
-					.filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole()) && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole()))
-					.count();
-			int limit = currentAdmin.getEmployeeLimit() != null ? currentAdmin.getEmployeeLimit() : 10;
-			if (existingCount + toSave.size() > limit) {
-				ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Upload rejected. Adding " + toSave.size()
-						+ " employee(s) would exceed your limit of " + limit + " (current count: " + existingCount + ").");
-				return REDIRECT_ADMIN_ADD_EMPLOYEE;
-			}
+		var limitError = checkBulkUploadLimit(username, segment, toSave.size());
+		if (limitError != null) {
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, limitError);
+			return REDIRECT_ADMIN_ADD_EMPLOYEE;
 		}
 
 		userRepository.saveAll(toSave);
@@ -696,7 +741,7 @@ public class AdminController {
 
 	/** Safely read a cell value as a trimmed String. */
 	private String getAdminCellString(Row row, int col) {
-		Cell cell = row.getCell(col);
+		var cell = row.getCell(col);
 		if (cell == null) return "";
 		if (cell.getCellType() == CellType.STRING)  return cell.getStringCellValue().trim();
 		if (cell.getCellType() == CellType.NUMERIC) return String.valueOf((long) cell.getNumericCellValue()).trim();
@@ -767,8 +812,7 @@ public class AdminController {
 			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "User not found or cannot be edited.");
 			return REDIRECT_ADMIN_EMPLOYEES;
 		}
-		var adminName = SecurityContextHolder.getContext().getAuthentication().getName();
-		var tenant = getTenantSegment(adminName);
+		var tenant = getTenantSegment(getLoggedInUsername(request));
 		model.addAttribute("domainCategories", domainCategoryRepository.findByTenantSegment(tenant));
 		model.addAttribute("employee", emp);
 		return "edit-employee";
@@ -793,35 +837,12 @@ public class AdminController {
 			return REDIRECT_ADMIN_EMPLOYEES;
 		}
 
-		var adminName = SecurityContextHolder.getContext().getAuthentication().getName();
+		var adminName = getLoggedInUsername(request);
 		var tenant = getTenantSegment(adminName);
 
-		var usernameError = validateUsername(username);
-		if (usernameError != null) {
-			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, usernameError);
-			return REDIRECT_ADMIN_EDIT_EMPLOYEE + id;
-		}
-
-		var emailError = validateEmail(email, tenant);
-		if (emailError != null) {
-			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, emailError);
-			return REDIRECT_ADMIN_EDIT_EMPLOYEE + id;
-		}
-
-		if (role == null || role.trim().isBlank() || (ROLE_ADMIN.equalsIgnoreCase(role) || ROLE_SUPER_ADMIN.equalsIgnoreCase(role))) {
-			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You cannot assign that role.");
-			return REDIRECT_ADMIN_EDIT_EMPLOYEE + id;
-		}
-
-		// Check uniqueness
-		var existingUserByUname = userRepository.findByUsername(username.trim());
-		if (existingUserByUname != null && !existingUserByUname.getId().equals(emp.getId())) {
-			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Username is already taken.");
-			return REDIRECT_ADMIN_EDIT_EMPLOYEE + id;
-		}
-		var existingUserByEmail = userRepository.findByEmail(email.trim());
-		if (existingUserByEmail != null && !existingUserByEmail.getId().equals(emp.getId())) {
-			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Email is already taken.");
+		var validationError = validateUpdateEmployee(emp, username, email, role, tenant);
+		if (validationError != null) {
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, validationError);
 			return REDIRECT_ADMIN_EDIT_EMPLOYEE + id;
 		}
 
@@ -842,7 +863,7 @@ public class AdminController {
 		}
 		if (joiningDate != null && !joiningDate.trim().isEmpty()) {
 			try {
-				emp.setJoiningDate(java.time.LocalDate.parse(joiningDate.trim()));
+				emp.setJoiningDate(LocalDate.parse(joiningDate.trim()));
 			} catch (Exception e) {
 				// Keep existing
 			}
@@ -898,16 +919,16 @@ public class AdminController {
 	public String reportsPage(HttpServletRequest request, Model model) {
 		injectUser(request, model);
 
-		String username = (String) request.getAttribute("loggedInUser");
+		String username = (String) request.getAttribute(ATTR_LOGGED_IN_USER);
 		String tenant   = getTenantSegment(username);
 
 		List<User>    allUsers  = userRepository.findByTenantSegment(tenant);
 		List<Project> projects  = projectRepository.findAll();
 		List<Task>    tasks     = taskRepository.findAll();
 
-		long roleAdmin    = allUsers.stream().filter(u -> "ADMIN".equalsIgnoreCase(u.getRole())).count();
-		long roleEmployee = allUsers.stream().filter(u -> "EMPLOYEE".equalsIgnoreCase(u.getRole())).count();
-		long roleManager  = allUsers.stream().filter(u -> "MANAGER".equalsIgnoreCase(u.getRole())).count();
+		long roleAdmin    = allUsers.stream().filter(u -> ROLE_ADMIN.equalsIgnoreCase(u.getRole())).count();
+		long roleEmployee = allUsers.stream().filter(u -> ROLE_EMPLOYEE.equalsIgnoreCase(u.getRole())).count();
+		long roleManager  = allUsers.stream().filter(u -> ROLE_MANAGER.equalsIgnoreCase(u.getRole())).count();
 		long roleHr       = allUsers.stream().filter(u -> "HR".equalsIgnoreCase(u.getRole())).count();
 
 		model.addAttribute("reportUsers",     allUsers);
@@ -920,7 +941,7 @@ public class AdminController {
 		model.addAttribute("roleHr",          roleHr);
 
 		// Manager-sent reports for this tenant
-		User admin = userRepository.findByUsername(username);
+		var admin = userRepository.findByUsername(username);
 		List<Report> allReports;
 		if (admin != null) {
 			allReports = reportRepository.findByRecipientId(String.valueOf(admin.getId()), tenant);
@@ -977,8 +998,8 @@ public class AdminController {
 	public String profilePage(HttpServletRequest request, Model model) {
 		injectUser(request, model);
 
-		String username = (String) request.getAttribute("loggedInUser");
-		User admin = userRepository.findByUsername(username);
+		String username = (String) request.getAttribute(ATTR_LOGGED_IN_USER);
+		var admin = userRepository.findByUsername(username);
 
 		model.addAttribute("adminEmail",         admin != null ? admin.getEmail() : "");
 		model.addAttribute("settingsTotalUsers", userRepository.count());
@@ -995,14 +1016,14 @@ public class AdminController {
 	                            RedirectAttributes ra) {
 
 		String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-		User admin = userRepository.findByUsername(currentUsername);
+		var admin = userRepository.findByUsername(currentUsername);
 
 		if (admin == null) {
-			return "redirect:/admin/profile";
+			return "redirect:/admin/profile?error=auth";
 		}
 
-		profileUpdateService.updateProfile(admin, username, email, password, confirmPassword, ra, response);
-		return "redirect:/admin/profile";
+		var success = profileUpdateService.updateProfile(admin, username, email, password, confirmPassword, ra, response);
+		return success ? "redirect:/admin/profile?success" : "redirect:/admin/profile?error=validation";
 	}
 
 	// =========================================================
@@ -1048,14 +1069,7 @@ public class AdminController {
 		var tenant   = getTenantSegment(username);
 
 		model.addAttribute("meetingForm", new Meeting());
-		model.addAttribute(ATTR_UPCOMING_MEETINGS, getUpcomingMeetingsForUser(tenant, username != null ? username : ""));
-		model.addAttribute(ATTR_PAST_MEETINGS, getPastMeetingsForUser(tenant, username != null ? username : ""));
-		model.addAttribute(ATTR_TENANT_USERS,
-				userRepository.findByTenantSegment(tenant).stream()
-						.filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole())
-								  && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole()))
-						.collect(Collectors.toList()));
-		model.addAttribute(ATTR_ACTIVE_PAGE, PAGE_SCHEDULE_MEETING);
+		populateMeetingModel(model, tenant, username);
 		return TEMPLATE_SCHEDULE_MEETING;
 	}
 
@@ -1079,15 +1093,8 @@ public class AdminController {
 
 		if (result.hasErrors()) {
 			injectUser(request, model);
-			model.addAttribute(ATTR_UPCOMING_MEETINGS, getUpcomingMeetingsForUser(tenant, username != null ? username : ""));
-			model.addAttribute(ATTR_PAST_MEETINGS, getPastMeetingsForUser(tenant, username != null ? username : ""));
-			model.addAttribute(ATTR_TENANT_USERS,
-					userRepository.findByTenantSegment(tenant).stream()
-							.filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole())
-									  && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole()))
-							.collect(Collectors.toList()));
+			populateMeetingModel(model, tenant, username);
 			model.addAttribute(ATTR_ERROR_MESSAGE, "Please fix the errors below.");
-			model.addAttribute(ATTR_ACTIVE_PAGE, PAGE_SCHEDULE_MEETING);
 			return TEMPLATE_SCHEDULE_MEETING;
 		}
 
@@ -1120,14 +1127,7 @@ public class AdminController {
 		}
 
 		model.addAttribute("meetingForm", meeting);
-		model.addAttribute(ATTR_UPCOMING_MEETINGS, getUpcomingMeetingsForUser(tenant, username != null ? username : ""));
-		model.addAttribute(ATTR_PAST_MEETINGS, getPastMeetingsForUser(tenant, username != null ? username : ""));
-		model.addAttribute(ATTR_TENANT_USERS,
-				userRepository.findByTenantSegment(tenant).stream()
-						.filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole())
-								  && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole()))
-						.collect(Collectors.toList()));
-		model.addAttribute(ATTR_ACTIVE_PAGE, PAGE_SCHEDULE_MEETING);
+		populateMeetingModel(model, tenant, username);
 		return TEMPLATE_SCHEDULE_MEETING;
 	}
 
@@ -1152,14 +1152,7 @@ public class AdminController {
 
 		if (result.hasErrors()) {
 			injectUser(request, model);
-			model.addAttribute(ATTR_UPCOMING_MEETINGS, getUpcomingMeetingsForUser(tenant, username != null ? username : ""));
-			model.addAttribute(ATTR_PAST_MEETINGS, getPastMeetingsForUser(tenant, username != null ? username : ""));
-			model.addAttribute(ATTR_TENANT_USERS,
-					userRepository.findByTenantSegment(tenant).stream()
-						.filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole())
-							&& !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole()))
-						.collect(Collectors.toList()));
-			model.addAttribute(ATTR_ACTIVE_PAGE, PAGE_SCHEDULE_MEETING);
+			populateMeetingModel(model, tenant, username);
 			return TEMPLATE_SCHEDULE_MEETING;
 		}
 
@@ -1191,67 +1184,56 @@ public class AdminController {
 
 	@PostMapping("/schedule-meeting/delete/{id}")
 	public String deleteMeeting(@PathVariable Long id, RedirectAttributes ra) {
-		Meeting meeting = meetingRepository.findById(id).orElse(null);
+		var meeting = meetingRepository.findById(id).orElse(null);
 		if (meeting == null) {
-			ra.addFlashAttribute("errorMessage", "Meeting not found.");
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_MEETING_NOT_FOUND);
 		} else {
 			meetingRepository.delete(meeting);
-			ra.addFlashAttribute("successMessage", "Meeting deleted successfully.");
+			ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Meeting deleted successfully.");
 		}
-		return "redirect:/admin/schedule-meeting";
+		return REDIRECT_ADMIN_SCHEDULE_MEETING;
 	}
 
 	@GetMapping("/settings")
 	public String settingsPage(HttpServletRequest request, Model model) {
 		injectUser(request, model);
-		var adminUser = (String) request.getAttribute(ATTR_LOGGED_IN_USER);
-		if (adminUser == null) {
-			adminUser = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
-		}
-		var tenant = getTenantSegment(adminUser);
+		var tenant = getTenantSegment(getLoggedInUsername(request));
 		model.addAttribute("categories", domainCategoryRepository.findByTenantSegment(tenant));
-		model.addAttribute("activePage", "settings");
+		model.addAttribute(ATTR_ACTIVE_PAGE, "settings");
 		return "admin-settings";
 	}
 
 	@PostMapping("/settings/domain-categories")
 	public String addDomainCategory(@RequestParam String name, HttpServletRequest request, RedirectAttributes ra) {
-		var adminUser = (String) request.getAttribute(ATTR_LOGGED_IN_USER);
-		if (adminUser == null) {
-			adminUser = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
-		}
-		var tenant = getTenantSegment(adminUser);
+		var tenant = getTenantSegment(getLoggedInUsername(request));
 		if (name == null || name.trim().isEmpty()) {
 			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Domain category name is required.");
-			return REDIRECT_ADMIN_SETTINGS;
+			return REDIRECT_ADMIN_SETTINGS + "?error=required";
 		}
 		var cleanName = name.trim();
 		if (domainCategoryRepository.existsByNameAndTenantSegment(cleanName, tenant)) {
 			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Domain category already exists.");
-			return REDIRECT_ADMIN_SETTINGS;
+			return REDIRECT_ADMIN_SETTINGS + "?error=exists";
 		}
 		var cat = new com.crm.demo.model.DomainCategory();
 		cat.setName(cleanName);
 		cat.setTenantSegment(tenant);
 		domainCategoryRepository.save(cat);
 		ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Domain category '" + cleanName + "' added successfully.");
-		return REDIRECT_ADMIN_SETTINGS;
+		return REDIRECT_ADMIN_SETTINGS + "?success";
 	}
 
 	@PostMapping("/settings/domain-categories/delete/{id}")
 	public String deleteDomainCategory(@PathVariable Long id, HttpServletRequest request, RedirectAttributes ra) {
-		var adminUser = (String) request.getAttribute(ATTR_LOGGED_IN_USER);
-		if (adminUser == null) {
-			adminUser = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
-		}
-		var tenant = getTenantSegment(adminUser);
+		var tenant = getTenantSegment(getLoggedInUsername(request));
 		var catOpt = domainCategoryRepository.findById(id);
 		if (catOpt.isPresent() && tenant.equals(catOpt.get().getTenantSegment())) {
 			domainCategoryRepository.delete(catOpt.get());
 			ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Domain category deleted successfully.");
+			return REDIRECT_ADMIN_SETTINGS + "?success=delete";
 		} else {
 			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Domain category not found.");
+			return REDIRECT_ADMIN_SETTINGS + "?error=notfound";
 		}
-		return REDIRECT_ADMIN_SETTINGS;
 	}
 }

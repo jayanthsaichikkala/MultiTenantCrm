@@ -5,8 +5,6 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -43,19 +41,24 @@ public class PayslipService {
         var endOfMonth = startOfMonth.plusMonths(1).minusDays(1);
         for (LeaveRequest leave : leaves) {
             if ("Approved".equalsIgnoreCase(leave.getStatus()) && leaveType.equalsIgnoreCase(leave.getType())) {
-                var start = leave.getFromDate();
-                var end = leave.getToDate();
-                if (start != null && end != null) {
-                    // Overlap between [start, end] and [startOfMonth, endOfMonth]
-                    var overlapStart = start.isBefore(startOfMonth) ? startOfMonth : start;
-                    var overlapEnd = end.isAfter(endOfMonth) ? endOfMonth : end;
-                    if (!overlapStart.isAfter(overlapEnd)) {
-                        count += (int) ChronoUnit.DAYS.between(overlapStart, overlapEnd) + 1;
-                    }
-                }
+                count += calculateOverlapDays(leave, startOfMonth, endOfMonth);
             }
         }
         return count;
+    }
+
+    private int calculateOverlapDays(LeaveRequest leave, LocalDate startOfMonth, LocalDate endOfMonth) {
+        var start = leave.getFromDate();
+        var end = leave.getToDate();
+        if (start != null && end != null) {
+            // Overlap between [start, end] and [startOfMonth, endOfMonth]
+            var overlapStart = start.isBefore(startOfMonth) ? startOfMonth : start;
+            var overlapEnd = end.isAfter(endOfMonth) ? endOfMonth : end;
+            if (!overlapStart.isAfter(overlapEnd)) {
+                return (int) ChronoUnit.DAYS.between(overlapStart, overlapEnd) + 1;
+            }
+        }
+        return 0;
     }
 
     public BigDecimal calculateLeaveDeduction(User user, BigDecimal basicSalary, int month, int year) {

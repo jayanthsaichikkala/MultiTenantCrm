@@ -45,21 +45,4 @@ public class Team {
         inverseJoinColumns = @JoinColumn(name = "user_id")
     )
     private List<User> members = new ArrayList<>();
-
-    // ── Getters & Setters ──────────────────────────────────────────────────
-
-    public Long getId()                        { return id; }
-    public void setId(Long id)                 { this.id = id; }
-
-    public String getName()                    { return name; }
-    public void setName(String name)           { this.name = name; }
-
-    public String getTenantSegment()           { return tenantSegment; }
-    public void setTenantSegment(String t)     { this.tenantSegment = t; }
-
-    public User getManager()                   { return manager; }
-    public void setManager(User manager)       { this.manager = manager; }
-
-    public List<User> getMembers()             { return members; }
-    public void setMembers(List<User> members) { this.members = members; }
 }
