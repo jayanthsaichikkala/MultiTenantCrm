@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.apache.poi.ss.usermodel.Cell;
+
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -128,6 +128,12 @@ public class HrController {
     private static final String TIME_FORMAT = "%02d:%02d";
     private static final String PAGE_MEETINGS = "hr-meetings";
     private static final String ATTR_ERROR = "error";
+    private static final String ERROR_AUTH = "?error=auth";
+    private static final String ERROR_ALREADY = "?error=already";
+    private static final String SUCCESS = "?success";
+    private static final String ERROR_NOT_PUNCHED = "?error=notpunched";
+    private static final String ERROR_NOT_FOUND = "?error=notfound";
+    private static final String ERROR_EXISTS = "?error=exists";
 
     // ── Validation Helpers ──────────────────────────────────────────────────
 
@@ -1033,7 +1039,7 @@ public class HrController {
     @PostMapping("/attendance/punch-in")
     public String punchIn(HttpServletRequest request, RedirectAttributes ra) {
         var hr = getCurrentHr();
-        if (hr == null) return REDIRECT_HR_ATTENDANCE + "?error=auth";
+        if (hr == null) return REDIRECT_HR_ATTENDANCE + ERROR_AUTH;
 
         var today  = LocalDate.now();
         var tenant = getTenantSegmentFromUser(hr);
@@ -1046,7 +1052,7 @@ public class HrController {
 
         if (attendanceRepository.findByUserAndDate(hr, today).isPresent()) {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You have already punched in today.");
-            return REDIRECT_HR_ATTENDANCE + "?error=already";
+            return REDIRECT_HR_ATTENDANCE + ERROR_ALREADY;
         }
 
         var now    = LocalTime.now();
@@ -1063,22 +1069,22 @@ public class HrController {
 
         ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
                 "Punched in at " + String.format(TIME_FORMAT, now.getHour(), now.getMinute()) + ".");
-        return REDIRECT_HR_ATTENDANCE + "?success";
+        return REDIRECT_HR_ATTENDANCE + SUCCESS;
     }
 
     @PostMapping("/attendance/punch-out")
     public String punchOut(RedirectAttributes ra) {
         var hr = getCurrentHr();
-        if (hr == null) return REDIRECT_HR_ATTENDANCE + "?error=auth";
+        if (hr == null) return REDIRECT_HR_ATTENDANCE + ERROR_AUTH;
 
         var today = LocalDate.now();
         var att = getAndValidateTodayAttendance(hr, today, ra);
         if (att == null) {
-            return REDIRECT_HR_ATTENDANCE + "?error=notpunched";
+            return REDIRECT_HR_ATTENDANCE + ERROR_NOT_PUNCHED;
         }
         if (att.getCheckOut() != null) {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You have already punched out today.");
-            return REDIRECT_HR_ATTENDANCE + "?error=already";
+            return REDIRECT_HR_ATTENDANCE + ERROR_ALREADY;
         }
         var now = LocalTime.now();
         att.setCheckOut(now);
@@ -1095,22 +1101,22 @@ public class HrController {
         notificationService.notifyAttendanceUpdated(hr, "punch-out");
         ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
                 "Punched out at " + String.format(TIME_FORMAT, now.getHour(), now.getMinute()) + ".");
-        return REDIRECT_HR_ATTENDANCE + "?success";
+        return REDIRECT_HR_ATTENDANCE + SUCCESS;
     }
 
     @PostMapping("/attendance/break-start")
     public String breakStart(RedirectAttributes ra) {
         var hr = getCurrentHr();
-        if (hr == null) return REDIRECT_HR_ATTENDANCE + "?error=auth";
+        if (hr == null) return REDIRECT_HR_ATTENDANCE + ERROR_AUTH;
 
         var today = LocalDate.now();
         var att = getAndValidateTodayAttendance(hr, today, ra);
         if (att == null) {
-            return REDIRECT_HR_ATTENDANCE + "?error=notpunched";
+            return REDIRECT_HR_ATTENDANCE + ERROR_NOT_PUNCHED;
         }
         if (att.getCheckOut() != null) {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You have already punched out.");
-            return REDIRECT_HR_ATTENDANCE + "?error=already";
+            return REDIRECT_HR_ATTENDANCE + ERROR_ALREADY;
         }
         var now = LocalTime.now();
         if (att.getBreakStart() == null) {
@@ -1136,12 +1142,12 @@ public class HrController {
     @PostMapping("/attendance/break-end")
     public String breakEnd(RedirectAttributes ra) {
         var hr = getCurrentHr();
-        if (hr == null) return REDIRECT_HR_ATTENDANCE + "?error=auth";
+        if (hr == null) return REDIRECT_HR_ATTENDANCE + ERROR_AUTH;
 
         var today = LocalDate.now();
         var att = getAndValidateTodayAttendance(hr, today, ra);
         if (att == null) {
-            return REDIRECT_HR_ATTENDANCE + "?error=notpunched";
+            return REDIRECT_HR_ATTENDANCE + ERROR_NOT_PUNCHED;
         }
         var now = LocalTime.now();
         if (att.getBreak2Start() != null && att.getBreak2End() == null) {
@@ -1198,7 +1204,7 @@ public class HrController {
         var leave = leaveRequestRepository.findById(id).orElse(null);
         if (leave == null || !tenant.equals(leave.getTenantSegment())) {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Leave request not found.");
-            return REDIRECT_HR_LEAVES + "?error=notfound";
+            return REDIRECT_HR_LEAVES + ERROR_NOT_FOUND;
         }
 
         if ("approve".equalsIgnoreCase(action)) {
@@ -1230,7 +1236,7 @@ public class HrController {
                     leave.getToDate(),
                     hr != null ? hr.getUsername() : "HR");
         }
-        return REDIRECT_HR_LEAVES + "?success";
+        return REDIRECT_HR_LEAVES + SUCCESS;
     }
 
     @GetMapping("/calendar")
@@ -1299,10 +1305,10 @@ public class HrController {
                                 RedirectAttributes ra) {
         var currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
         var hr = userRepository.findByUsername(currentUsername);
-        if (hr == null) return "redirect:/hr/profile?error=auth";
+        if (hr == null) return "redirect:/hr/profile" + ERROR_AUTH;
 
         var success = profileUpdateService.updateProfile(hr, username, email, password, confirmPassword, ra, response);
-        return success ? "redirect:/hr/profile?success" : "redirect:/hr/profile?error=validation";
+        return success ? "redirect:/hr/profile" + SUCCESS : "redirect:/hr/profile?error=validation";
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1353,7 +1359,7 @@ public class HrController {
         }
         if (teamRepository.existsByNameAndTenantSegment(name.trim(), tenant)) {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "A team named '" + name.trim() + "' already exists.");
-            return REDIRECT_HR_TEAMS + "?error=exists";
+            return REDIRECT_HR_TEAMS + ERROR_EXISTS;
         }
 
         var team = new Team();
@@ -1366,7 +1372,7 @@ public class HrController {
 
         teamRepository.save(team);
         ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Team '" + name.trim() + "' created.");
-        return REDIRECT_HR_TEAMS + "?success";
+        return REDIRECT_HR_TEAMS + SUCCESS;
     }
 
     /** POST /hr/teams/{id}/assign-manager — assign or change the manager. */
@@ -1378,7 +1384,7 @@ public class HrController {
         var tenant = getTenantSegment(request);
         var team = getAndValidateTeam(id, tenant, ra);
         if (team == null) {
-            return REDIRECT_HR_TEAMS + "?error=notfound";
+            return REDIRECT_HR_TEAMS + ERROR_NOT_FOUND;
         }
         userRepository.findById(managerId).ifPresent(manager -> {
             team.setManager(manager);
@@ -1386,7 +1392,7 @@ public class HrController {
         });
         teamRepository.save(team);
         ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Manager assigned to team '" + team.getName() + "'.");
-        return REDIRECT_HR_TEAMS + "?success";
+        return REDIRECT_HR_TEAMS + SUCCESS;
     }
 
     private void processMemberAddition(Long empId, Team team, List<String> skipped, int[] added) {
@@ -1413,7 +1419,7 @@ public class HrController {
         var tenant = getTenantSegment(request);
         var team = getAndValidateTeam(id, tenant, ra);
         if (team == null) {
-            return REDIRECT_HR_TEAMS + "?error=notfound";
+            return REDIRECT_HR_TEAMS + ERROR_NOT_FOUND;
         }
         if (employeeIds == null || employeeIds.isEmpty()) {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Please select at least one employee.");
@@ -1432,7 +1438,7 @@ public class HrController {
             var msg = added[0] + " member(s) added to team '" + team.getName() + "'.";
             if (!skipped.isEmpty()) msg += " Skipped: " + String.join(", ", skipped) + ".";
             ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, msg);
-            return REDIRECT_HR_TEAMS + "?success";
+            return REDIRECT_HR_TEAMS + SUCCESS;
         } else {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE,
                     "No members added. " + (skipped.isEmpty() ? "" : "Skipped: " + String.join(", ", skipped)));
@@ -1449,12 +1455,12 @@ public class HrController {
         var tenant = getTenantSegment(request);
         var team = getAndValidateTeam(id, tenant, ra);
         if (team == null) {
-            return REDIRECT_HR_TEAMS + "?error=notfound";
+            return REDIRECT_HR_TEAMS + ERROR_NOT_FOUND;
         }
         team.getMembers().removeIf(m -> m.getId().equals(employeeId));
         teamRepository.save(team);
         ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Member removed from team '" + team.getName() + "'.");
-        return REDIRECT_HR_TEAMS + "?success";
+        return REDIRECT_HR_TEAMS + SUCCESS;
     }
 
     /** POST /hr/teams/{id}/delete — delete a team. */
@@ -1465,12 +1471,12 @@ public class HrController {
         var tenant = getTenantSegment(request);
         var team = getAndValidateTeam(id, tenant, ra);
         if (team == null) {
-            return REDIRECT_HR_TEAMS + "?error=notfound";
+            return REDIRECT_HR_TEAMS + ERROR_NOT_FOUND;
         }
         var name = team.getName();
         teamRepository.delete(team);
         ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Team '" + name + "' deleted.");
-        return REDIRECT_HR_TEAMS + "?success";
+        return REDIRECT_HR_TEAMS + SUCCESS;
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1739,14 +1745,14 @@ public class HrController {
         var empOpt = userRepository.findById(employeeId);
         if (empOpt.isEmpty()) {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Employee not found.");
-            return REDIRECT_HR_PAYROLL + "?error=notfound";
+            return REDIRECT_HR_PAYROLL + ERROR_NOT_FOUND;
         }
         var emp = empOpt.get();
         // Check if template already exists
         var existing = payrollTemplateRepository.findByEmployeeAndTenantSegment(emp, tenant);
         if (existing.isPresent()) {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Payroll template already exists for this employee. Use Edit.");
-            return REDIRECT_HR_PAYROLL + "?error=exists";
+            return REDIRECT_HR_PAYROLL + ERROR_EXISTS;
         }
         var pt = new PayrollTemplate();
         pt.setEmployee(emp);
@@ -1767,7 +1773,7 @@ public class HrController {
         pt.setUpdatedAt(LocalDateTime.now());
         payrollTemplateRepository.save(pt);
         ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Payroll template created for " + emp.getUsername() + ".");
-        return REDIRECT_HR_PAYROLL + "?success";
+        return REDIRECT_HR_PAYROLL + SUCCESS;
     }
 
     @PostMapping("/payroll/edit/{id}")
@@ -1789,7 +1795,7 @@ public class HrController {
         var tenant = getTenantSegment(request);
         var pt = getAndValidatePayrollTemplate(id, tenant, ra);
         if (pt == null) {
-            return REDIRECT_HR_PAYROLL + "?error=notfound";
+            return REDIRECT_HR_PAYROLL + ERROR_NOT_FOUND;
         }
         pt.setDesignation(designation);
         pt.setDepartment(department);
@@ -1806,7 +1812,7 @@ public class HrController {
         pt.setUpdatedAt(LocalDateTime.now());
         payrollTemplateRepository.save(pt);
         ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Payroll template updated.");
-        return REDIRECT_HR_PAYROLL + "?success";
+        return REDIRECT_HR_PAYROLL + SUCCESS;
     }
 
     @PostMapping("/payroll/delete/{id}")
@@ -1818,9 +1824,9 @@ public class HrController {
         if (pt != null) {
             payrollTemplateRepository.deleteById(id);
             ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Payroll template deleted.");
-            return REDIRECT_HR_PAYROLL + "?success";
+            return REDIRECT_HR_PAYROLL + SUCCESS;
         }
-        return REDIRECT_HR_PAYROLL + "?error=notfound";
+        return REDIRECT_HR_PAYROLL + ERROR_NOT_FOUND;
     }
 
     /** Returns payroll data as JSON for the edit modal. */
@@ -1931,14 +1937,14 @@ public class HrController {
         var cleanName = name.trim();
         if (domainCategoryRepository.existsByNameAndTenantSegment(cleanName, tenant)) {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Domain category already exists.");
-            return REDIRECT_HR_SETTINGS + "?error=exists";
+            return REDIRECT_HR_SETTINGS + ERROR_EXISTS;
         }
         var cat = new com.crm.demo.model.DomainCategory();
         cat.setName(cleanName);
         cat.setTenantSegment(tenant);
         domainCategoryRepository.save(cat);
         ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Domain category '" + cleanName + "' added successfully.");
-        return REDIRECT_HR_SETTINGS + "?success";
+        return REDIRECT_HR_SETTINGS + SUCCESS;
     }
 
     @PostMapping("/settings/domain-categories/delete/{id}")
@@ -1948,10 +1954,10 @@ public class HrController {
         if (catOpt.isPresent() && tenant.equals(catOpt.get().getTenantSegment())) {
             domainCategoryRepository.delete(catOpt.get());
             ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Domain category deleted successfully.");
-            return REDIRECT_HR_SETTINGS + "?success";
+            return REDIRECT_HR_SETTINGS + SUCCESS;
         } else {
             ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Domain category not found.");
-            return REDIRECT_HR_SETTINGS + "?error=notfound";
+            return REDIRECT_HR_SETTINGS + ERROR_NOT_FOUND;
         }
     }
 }

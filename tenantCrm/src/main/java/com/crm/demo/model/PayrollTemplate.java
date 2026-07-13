@@ -20,8 +20,9 @@ import lombok.Data;
  */
 @Entity
 @Data
+@lombok.EqualsAndHashCode(callSuper = true)
 @Table(name = "payroll_template")
-public class PayrollTemplate {
+public class PayrollTemplate extends BaseSalaryStructure {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,43 +36,6 @@ public class PayrollTemplate {
     /** Tenant segment (email-derived) for multi-tenant isolation. */
     @Column(nullable = false)
     private String tenantSegment;
-
-    /** Job title / designation shown on payslip. */
-    private String designation;
-
-    /** Department name. */
-    private String department;
-
-    /** Basic monthly salary. */
-    @Column(precision = 12, scale = 2)
-    private BigDecimal basicSalary = BigDecimal.ZERO;
-
-    /** House Rent Allowance. */
-    @Column(precision = 12, scale = 2)
-    private BigDecimal hra = BigDecimal.ZERO;
-
-    /** Transport / conveyance allowance. */
-    @Column(precision = 12, scale = 2)
-    private BigDecimal transportAllowance = BigDecimal.ZERO;
-
-    /** Any other allowance. */
-    @Column(precision = 12, scale = 2)
-    private BigDecimal otherAllowance = BigDecimal.ZERO;
-
-    /** Tax deduction. */
-    @Column(precision = 12, scale = 2)
-    private BigDecimal taxDeduction = BigDecimal.ZERO;
-
-    /** Provident fund deduction. */
-    @Column(precision = 12, scale = 2)
-    private BigDecimal pfDeduction = BigDecimal.ZERO;
-
-    /** Any other deduction. */
-    @Column(precision = 12, scale = 2)
-    private BigDecimal otherDeduction = BigDecimal.ZERO;
-
-    /** Bank account number (optional). */
-    private String bankAccount;
 
     /** Payment month for which this was last computed (1-12). */
     private Integer paymentMonth;

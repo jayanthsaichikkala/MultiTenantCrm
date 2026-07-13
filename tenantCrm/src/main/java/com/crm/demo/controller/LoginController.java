@@ -28,6 +28,7 @@ public class LoginController {
     private static final String ROLE_HR = "HR";
     private static final String ATTR_ERROR = "error";
     private static final String REDIRECT_PREFIX = "redirect:";
+    private static final String REDIRECT_SLASH = "redirect:/";
     private static final String REDIRECT_LOGIN = "redirect:/login";
 
     @Autowired private UserRepository      userRepository;
@@ -154,37 +155,54 @@ public class LoginController {
     }
 
     private String resolveLegacyRedirect(String role, String path) {
-        var lowerRole = role.toLowerCase();
+        String cleanPath = getCleanPathSuffix(path);
+        if (cleanPath == null) {
+            return REDIRECT_PREFIX + dashboardFor(role);
+        }
         
-        if (path.endsWith("/tasks") && (ROLE_EMPLOYEE.equalsIgnoreCase(role) || ROLE_MANAGER.equalsIgnoreCase(role) || ROLE_HR.equalsIgnoreCase(role) || ROLE_ADMIN.equalsIgnoreCase(role))) {
-            return "redirect:/" + lowerRole + "/tasks";
+        // Handle special exceptions first
+        if ("meetings".equals(cleanPath) && ROLE_ADMIN.equalsIgnoreCase(role)) {
+            return "redirect:/admin/schedule-meeting";
         }
-        if (path.endsWith("/meetings")) {
-            if (ROLE_ADMIN.equalsIgnoreCase(role)) return "redirect:/admin/schedule-meeting";
-            if (ROLE_EMPLOYEE.equalsIgnoreCase(role) || ROLE_MANAGER.equalsIgnoreCase(role) || ROLE_HR.equalsIgnoreCase(role)) {
-                return "redirect:/" + lowerRole + "/meetings";
-            }
-        }
-        if ((path.endsWith("/leaves") || path.endsWith("/leave")) && (ROLE_EMPLOYEE.equalsIgnoreCase(role) || ROLE_MANAGER.equalsIgnoreCase(role) || ROLE_HR.equalsIgnoreCase(role))) {
-            return "redirect:/" + lowerRole + "/leaves";
-        }
-        if (path.endsWith("/teams") || path.endsWith("/team")) {
+        if ("teams".equals(cleanPath)) {
             if (ROLE_MANAGER.equalsIgnoreCase(role)) return "redirect:/manager/team";
             if (ROLE_HR.equalsIgnoreCase(role)) return "redirect:/hr/teams";
+            return REDIRECT_PREFIX + dashboardFor(role);
         }
-        if (path.endsWith("/performance") && (ROLE_EMPLOYEE.equalsIgnoreCase(role) || ROLE_MANAGER.equalsIgnoreCase(role) || ROLE_HR.equalsIgnoreCase(role))) {
-            return "redirect:/" + lowerRole + "/performance";
+        
+        // Standard paths
+        boolean allowed = switch (cleanPath) {
+            case "tasks", "reports", "calendar" -> hasRole(role, ROLE_EMPLOYEE, ROLE_MANAGER, ROLE_HR, ROLE_ADMIN);
+            case "meetings", "leaves", "performance", "attendance" -> hasRole(role, ROLE_EMPLOYEE, ROLE_MANAGER, ROLE_HR);
+            default -> false;
+        };
+        
+        if (allowed) {
+            return REDIRECT_SLASH + role.toLowerCase() + "/" + cleanPath;
         }
-        if (path.endsWith("/reports") && (ROLE_EMPLOYEE.equalsIgnoreCase(role) || ROLE_MANAGER.equalsIgnoreCase(role) || ROLE_HR.equalsIgnoreCase(role) || ROLE_ADMIN.equalsIgnoreCase(role))) {
-            return "redirect:/" + lowerRole + "/reports";
-        }
-        if (path.endsWith("/attendance") && (ROLE_EMPLOYEE.equalsIgnoreCase(role) || ROLE_MANAGER.equalsIgnoreCase(role) || ROLE_HR.equalsIgnoreCase(role))) {
-            return "redirect:/" + lowerRole + "/attendance";
-        }
-        if (path.endsWith("/calendar") && (ROLE_EMPLOYEE.equalsIgnoreCase(role) || ROLE_MANAGER.equalsIgnoreCase(role) || ROLE_HR.equalsIgnoreCase(role) || ROLE_ADMIN.equalsIgnoreCase(role))) {
-            return "redirect:/" + lowerRole + "/calendar";
-        }
+        
         return REDIRECT_PREFIX + dashboardFor(role);
+    }
+
+    private boolean hasRole(String role, String... targetRoles) {
+        if (role == null) return false;
+        for (var r : targetRoles) {
+            if (r.equalsIgnoreCase(role)) return true;
+        }
+        return false;
+    }
+
+    private String getCleanPathSuffix(String path) {
+        if (path == null) return null;
+        if (path.endsWith("/tasks")) return "tasks";
+        if (path.endsWith("/meetings")) return "meetings";
+        if (path.endsWith("/leaves") || path.endsWith("/leave")) return "leaves";
+        if (path.endsWith("/teams") || path.endsWith("/team")) return "teams";
+        if (path.endsWith("/performance")) return "performance";
+        if (path.endsWith("/reports")) return "reports";
+        if (path.endsWith("/attendance")) return "attendance";
+        if (path.endsWith("/calendar")) return "calendar";
+        return null;
     }
 
     // ─── Helper ───────────────────────────────────────────────────────────────────

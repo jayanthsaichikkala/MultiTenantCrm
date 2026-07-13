@@ -34,7 +34,6 @@ import java.util.stream.Collectors;
 
 import com.crm.demo.model.Attendance;
 import com.crm.demo.model.AttendanceDay;
-import com.crm.demo.model.Holiday;
 import com.crm.demo.model.LeaveRequest;
 import com.crm.demo.model.Meeting;
 import com.crm.demo.model.PerformanceReview;
@@ -506,7 +505,7 @@ public class ManagerController {
 		data.put(ATTR_ACTIVE_TEAM, activeCount);
 		data.put(ATTR_INACTIVE_TEAM, inactiveCount);
 		data.put("verified", verified);
-		data.put("rejected", rejected);
+		data.put(STATUS_REJECTED, rejected);
 		data.put("waiting", waiting);
 		data.put("unverified", Math.max(unverified, 0));
 		data.put("totalMyTasks", scopedTasks.size());
@@ -606,11 +605,11 @@ public class ManagerController {
 			List<Task> tasks = taskRepository.findByTenantSegment(tenant);
 			tasks.sort(java.util.Comparator.comparing(Task::getId).reversed());
 			long done    = tasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
-			long pending = tasks.stream().filter(t -> "pending".equalsIgnoreCase(t.getStatus())).count();
-			model.addAttribute("tasks",            tasks);
-			model.addAttribute("totalTasks",       tasks.size());
-			model.addAttribute("doneTasks",        done);
-			model.addAttribute("pendingTaskCount", pending);
+			long pending = tasks.stream().filter(t -> STATUS_PENDING.equalsIgnoreCase(t.getStatus())).count();
+			model.addAttribute(ATTR_TASKS,            tasks);
+			model.addAttribute(ATTR_TOTAL_TASKS,       tasks.size());
+			model.addAttribute(ATTR_DONE_TASKS,        done);
+			model.addAttribute(ATTR_PENDING_TASK_COUNT, pending);
 
 			// Pass team members as "employees" for the assign dropdown
 			List<User> teamMembers = getManagedTeamMembers(manager);
@@ -643,7 +642,7 @@ public class ManagerController {
 		var manager = getCurrentManager();
 		if (manager == null) {
 			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_SESSION_EXPIRED);
-			return REDIRECT_MANAGER_TASKS;
+			return "redirect:/login";
 		}
 
 		var validationError = validateTaskParams(title, description, priority, status, dueDate);
@@ -730,16 +729,16 @@ public class ManagerController {
 	@GetMapping("/api/task/{taskId}/attachments")
 	@ResponseBody
 	public List<Map<String, Object>> listTaskAttachments(@PathVariable Long taskId) {
-		Task task = taskRepository.findById(taskId).orElse(null);
+		var task = taskRepository.findById(taskId).orElse(null);
 		if (task == null) return Collections.emptyList();
 
-		List<Map<String, Object>> result = new ArrayList<>();
+		var result = new ArrayList<Map<String, Object>>();
 		if (task.getAttachments() != null) {
-			for (TaskAttachment att : task.getAttachments()) {
-				Map<String, Object> item = new LinkedHashMap<>();
+			for (var att : task.getAttachments()) {
+				var item = new LinkedHashMap<String, Object>();
 				item.put("id",           att.getId());
 				item.put("filename",     att.getOriginalFilename());
-				item.put("contentType",  att.getContentType() != null ? att.getContentType() : "application/octet-stream");
+				item.put("contentType",  att.getContentType() != null ? att.getContentType() : OCTET_STREAM);
 				item.put("uploadedBy",   att.getUploadedBy() != null ? att.getUploadedBy() : "");
 				item.put("viewUrl",      "/manager/tasks/view/"      + att.getId());
 				item.put("downloadUrl",  "/manager/tasks/download/"  + att.getId());
@@ -796,7 +795,7 @@ public class ManagerController {
 		var manager = getCurrentManager();
 		if (manager == null) {
 			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_SESSION_EXPIRED);
-			return REDIRECT_MANAGER_TASKS;
+			return "redirect:/login";
 		}
 
 		var tenant = getTenantSegment(manager);
@@ -888,7 +887,7 @@ public class ManagerController {
 	// =========================
 	@GetMapping("/leave")
 	public String legacyLeaveRedirect() {
-		return "redirect:/manager/leaves";
+		return REDIRECT_MANAGER_LEAVES;
 	}
 
 	@GetMapping("/leaves")
@@ -900,7 +899,7 @@ public class ManagerController {
 			String tenant = getTenantSegment(manager);
 			List<LeaveRequest> requests = leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(manager);
 			long pending = leaveRequestRepository.countByEmployeeAndStatus(manager, "Pending");
-			long approved = leaveRequestRepository.countByEmployeeAndStatus(manager, "Approved");
+			long approved = leaveRequestRepository.countByEmployeeAndStatus(manager, STATUS_APPROVED);
 			long rejected = leaveRequestRepository.countByEmployeeAndStatus(manager, "Rejected");
 
 			model.addAttribute("leaveRequests", requests);
@@ -960,7 +959,7 @@ public class ManagerController {
 			return REDIRECT_MANAGER_LEAVES;
 		}
 
-		LeaveRequest leave = new LeaveRequest();
+		var leave = new LeaveRequest();
 		leave.setEmployee(manager);
 		leave.setEmployeeName(manager.getUsername());
 		leave.setTenantSegment(getTenantSegment(manager));
@@ -976,15 +975,15 @@ public class ManagerController {
 				leave.setAttachmentContentType(attachment.getContentType() != null ? attachment.getContentType() : "application/octet-stream");
 				leave.setAttachmentData(attachment.getBytes());
 			} catch (IOException e) {
-				ra.addFlashAttribute("errorMessage", "Attachment upload failed: " + e.getMessage());
-				return "redirect:/manager/leaves";
+				ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Attachment upload failed: " + e.getMessage());
+				return REDIRECT_MANAGER_LEAVES;
 			}
 		}
 
 		leaveRequestRepository.save(leave);
 		notificationService.notifyLeaveSubmitted(leave);
-		ra.addFlashAttribute("successMessage", "Leave request submitted successfully.");
-		return "redirect:/manager/leaves";
+		ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Leave request submitted successfully.");
+		return REDIRECT_MANAGER_LEAVES;
 	}
 
 	// =========================
@@ -1059,7 +1058,7 @@ public class ManagerController {
 		var manager = getCurrentManager();
 		if (manager == null) {
 			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_SESSION_EXPIRED);
-			return REDIRECT_MANAGER_REPORTS;
+			return "redirect:/login";
 		}
 
 		var paramError = validateReportParams(title, message, recipientIds);
@@ -1172,9 +1171,9 @@ public class ManagerController {
 	 * A meeting ends at meetingTime + duration minutes. Meetings with no time are always shown.
 	 */
 	private List<Meeting> getPastMeetings(String tenant, String username) {
-		List<Meeting> all = meetingRepository.findAllMeetingsForUserOrHost(tenant, username);
-		LocalDate today = LocalDate.now();
-		LocalTime now   = LocalTime.now();
+		var all = meetingRepository.findAllMeetingsForUserOrHost(tenant, username);
+		var today = LocalDate.now();
+		var now   = LocalTime.now();
 		return all.stream().filter(m -> {
 			if (m.getMeetingDate().isBefore(today)) return true;
 			if (!m.getMeetingDate().equals(today)) return false;
@@ -1187,10 +1186,10 @@ public class ManagerController {
 	/** Returns upcoming meetings (today + future) where the user is a participant OR the host,
 	 *  excluding today's meetings that have already ended. */
 	private List<Meeting> getUpcomingMeetings(String tenant, String username) {
-		List<Meeting> all = meetingRepository
+		var all = meetingRepository
 				.findUpcomingMeetingsForUserOrHost(tenant, username, LocalDate.now());
-		LocalDate today = LocalDate.now();
-		LocalTime now   = LocalTime.now();
+		var today = LocalDate.now();
+		var now   = LocalTime.now();
 		return all.stream().filter(m -> {
 			if (!m.getMeetingDate().equals(today)) return true;
 			if (m.getMeetingTime() == null) return true;
@@ -1207,18 +1206,18 @@ public class ManagerController {
 		if (manager != null) {
 			String tenant   = getTenantSegment(manager);
 			String username = manager.getUsername();
-			model.addAttribute("meetings", getUpcomingMeetings(tenant, username));
-			model.addAttribute("pastMeetings", getPastMeetings(tenant, username));
+			model.addAttribute(ATTR_MEETINGS, getUpcomingMeetings(tenant, username));
+			model.addAttribute(ATTR_PAST_MEETINGS, getPastMeetings(tenant, username));
 			// Team members available as participants
-			model.addAttribute("teamMembers", getManagedTeamMembers(manager));
+			model.addAttribute(ATTR_TEAM_MEMBERS, getManagedTeamMembers(manager));
 		} else {
-			model.addAttribute("meetings", Collections.emptyList());
-			model.addAttribute("teamMembers", Collections.emptyList());
+			model.addAttribute(ATTR_MEETINGS, Collections.emptyList());
+			model.addAttribute(ATTR_TEAM_MEMBERS, Collections.emptyList());
 		}
-		if (!model.containsAttribute("meetingForm")) {
-			model.addAttribute("meetingForm", new Meeting());
+		if (!model.containsAttribute(ATTR_MEETING_FORM)) {
+			model.addAttribute(ATTR_MEETING_FORM, new Meeting());
 		}
-		return "manager-meetings";
+		return PAGE_MEETINGS;
 	}
 
 	/** POST /manager/meetings — create a new meeting */
@@ -1254,7 +1253,7 @@ public class ManagerController {
 		meetingRepository.save(meetingForm);
 		notificationService.notifyMeetingParticipants(meetingForm);
 		ra.addFlashAttribute("successMessage", "Meeting scheduled successfully.");
-		return "redirect:/manager/meetings";
+		return REDIRECT_MANAGER_MEETINGS;
 	}
 
 	/** GET /manager/meetings/edit/{id} — load meeting into form */
@@ -1358,8 +1357,8 @@ public class ManagerController {
 								HttpServletResponse response,
 								RedirectAttributes ra) {
 
-		String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-		User manager = userRepository.findByUsername(currentUsername);
+		var currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+		var manager = userRepository.findByUsername(currentUsername);
 
 		if (manager == null) {
 			return "redirect:/manager/profile?error=auth";
@@ -1514,7 +1513,7 @@ public class ManagerController {
 	@PostMapping("/attendance/punch-in")
 	public String punchIn(RedirectAttributes ra) {
 		var manager = getCurrentManager();
-		if (manager == null) return REDIRECT_MANAGER_ATTENDANCE;
+		if (manager == null) return "redirect:/login";
 
 		var tenant = getTenantSegment(manager);
 		var today  = LocalDate.now();
@@ -1557,7 +1556,7 @@ public class ManagerController {
 	@PostMapping("/attendance/punch-out")
 	public String punchOut(RedirectAttributes ra) {
 		var manager = getCurrentManager();
-		if (manager == null) return REDIRECT_MANAGER_ATTENDANCE;
+		if (manager == null) return "redirect:/login";
 
 		var att = getAndValidateTodayAttendance(manager, "You are on approved leave today. Punch-out is not allowed.", ra);
 		if (att == null) {
@@ -1592,7 +1591,7 @@ public class ManagerController {
 	@PostMapping("/attendance/break-start")
 	public String breakStart(RedirectAttributes ra) {
 		var manager = getCurrentManager();
-		if (manager == null) return REDIRECT_MANAGER_ATTENDANCE;
+		if (manager == null) return "redirect:/login";
 
 		var att = getAndValidateTodayAttendance(manager, "You are on approved leave today. Break actions are not allowed.", ra);
 		if (att == null) {
@@ -1631,7 +1630,7 @@ public class ManagerController {
 	@PostMapping("/attendance/break-end")
 	public String breakEnd(RedirectAttributes ra) {
 		var manager = getCurrentManager();
-		if (manager == null) return REDIRECT_MANAGER_ATTENDANCE;
+		if (manager == null) return "redirect:/login";
 
 		var att = getAndValidateTodayAttendance(manager, "You are on approved leave today. Break actions are not allowed.", ra);
 		if (att == null) {
@@ -1813,7 +1812,7 @@ public class ManagerController {
 
 		if (remarks != null && remarks.length() > 255) {
 			ra.addFlashAttribute("errorMessage", "Remarks cannot exceed 255 characters.");
-			return "redirect:/manager/performance?month=" + reviewMonth;
+			return REDIRECT_MANAGER_PERFORMANCE + reviewMonth;
 		}
 
 		String tenant = getTenantSegment(manager);
@@ -1826,27 +1825,27 @@ public class ManagerController {
 
 		if (emp == null) {
 			ra.addFlashAttribute("errorMessage", "Employee not found in your team.");
-			return "redirect:/manager/performance?month=" + reviewMonth;
+			return REDIRECT_MANAGER_PERFORMANCE + reviewMonth;
 		}
 
 		if (rating < 1 || rating > 5) {
 			ra.addFlashAttribute("errorMessage", "Rating must be between 1 and 5.");
-			return "redirect:/manager/performance?month=" + reviewMonth;
+			return REDIRECT_MANAGER_PERFORMANCE + reviewMonth;
 		}
 
 		Optional<PerformanceReview> existingOpt = performanceReviewRepository
 				.findByEmployeeAndReviewMonthAndTenantSegment(emp, reviewMonth, tenant);
 		if (existingOpt.isPresent()) {
 			ra.addFlashAttribute("errorMessage", "Performance reviews cannot be updated once submitted.");
-			return "redirect:/manager/performance?month=" + reviewMonth;
+			return REDIRECT_MANAGER_PERFORMANCE + reviewMonth;
 		}
 
 		if (isWeeklyLocked(emp)) {
 			ra.addFlashAttribute("errorMessage", "You can only submit a performance review once a week for this employee.");
-			return "redirect:/manager/performance?month=" + reviewMonth;
+			return REDIRECT_MANAGER_PERFORMANCE + reviewMonth;
 		}
 
-		PerformanceReview review = new PerformanceReview();
+		var review = new PerformanceReview();
 		review.setEmployee(emp);
 		review.setReviewedBy(manager.getUsername());
 		review.setTenantSegment(tenant);
@@ -1859,7 +1858,7 @@ public class ManagerController {
 
 		ra.addFlashAttribute("successMessage",
 				"Performance review submitted successfully.");
-		return "redirect:/manager/performance?month=" + reviewMonth;
+		return REDIRECT_MANAGER_PERFORMANCE + reviewMonth;
 	}
 
 	private static class TaskAttachmentInfo {
@@ -1887,7 +1886,7 @@ public class ManagerController {
 	}
 
 	private Attendance getAndValidateTodayAttendance(User user, String actionMsg, RedirectAttributes ra) {
-		LocalDate today = LocalDate.now();
+		var today = LocalDate.now();
 		if (hasApprovedLeave(user, today)) {
 			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, actionMsg);
 			return null;
@@ -1901,7 +1900,7 @@ public class ManagerController {
 	}
 
 	private Meeting getAndValidateMeeting(Long id, String tenant, RedirectAttributes ra) {
-		Meeting meeting = meetingRepository.findById(id).orElse(null);
+		var meeting = meetingRepository.findById(id).orElse(null);
 		if (meeting == null || !tenant.equals(meeting.getTenantSegment())) {
 			if (ra != null) {
 				ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_MEETING_NOT_FOUND);
@@ -1912,7 +1911,7 @@ public class ManagerController {
 	}
 
 	private Task getAndValidateTask(Long id, String tenant, RedirectAttributes ra) {
-		Task task = taskRepository.findById(id).orElse(null);
+		var task = taskRepository.findById(id).orElse(null);
 		if (task == null || !tenant.equals(task.getTenantSegment())) {
 			if (ra != null) {
 				ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Task not found.");
@@ -1947,22 +1946,30 @@ public class ManagerController {
 		var leaves = leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(emp);
 		var leaveDaysCount = 0;
 		for (var lr : leaves) {
-			if (STATUS_APPROVED.equalsIgnoreCase(lr.getStatus()) && lr.getFromDate() != null && lr.getToDate() != null) {
-				var lStart = lr.getFromDate().isBefore(from) ? from : lr.getFromDate();
-				var lEnd   = lr.getToDate().isAfter(to)      ? to   : lr.getToDate();
-				if (!lStart.isAfter(lEnd)) {
-					var c = lStart;
-					while (!c.isAfter(lEnd)) {
-						var dow2 = c.getDayOfWeek();
-						if (dow2 != java.time.DayOfWeek.SATURDAY && dow2 != java.time.DayOfWeek.SUNDAY) {
-							leaveDaysCount++;
-						}
-						c = c.plusDays(1);
-					}
-				}
-			}
+			leaveDaysCount += calculateOverlapLeaveDays(lr, from, to);
 		}
 		return leaveDaysCount;
+	}
+
+	private int calculateOverlapLeaveDays(LeaveRequest lr, LocalDate from, LocalDate to) {
+		if (lr == null || !STATUS_APPROVED.equalsIgnoreCase(lr.getStatus()) || lr.getFromDate() == null || lr.getToDate() == null) {
+			return 0;
+		}
+		var lStart = lr.getFromDate().isBefore(from) ? from : lr.getFromDate();
+		var lEnd   = lr.getToDate().isAfter(to)      ? to   : lr.getToDate();
+		if (lStart.isAfter(lEnd)) {
+			return 0;
+		}
+		var count = 0;
+		var c = lStart;
+		while (!c.isAfter(lEnd)) {
+			var dow2 = c.getDayOfWeek();
+			if (dow2 != java.time.DayOfWeek.SATURDAY && dow2 != java.time.DayOfWeek.SUNDAY) {
+				count++;
+			}
+			c = c.plusDays(1);
+		}
+		return count;
 	}
 
 	private EmployeePerf getSingleEmployeePerformance(User emp, LocalDate from, LocalDate to, int workingDays, String tenant, String ymString) {
@@ -2044,50 +2051,67 @@ public class ManagerController {
 			List<User> targetUsers,
 			String[] groupNameHolder) {
 		if (assignToTeam) {
-			if (assignedToTeamId == null || "all".equalsIgnoreCase(assignedToTeamId)) {
-				if (teamMembers == null || teamMembers.isEmpty()) {
-					return "You do not have any employees in your team to assign tasks to.";
-				}
-				targetUsers.addAll(teamMembers);
-				groupNameHolder[0] = "entire team";
-			} else {
-				try {
-					var teamId = Long.parseLong(assignedToTeamId);
-					var managedTeams = getManagedTeams(manager);
-					var targetTeam = managedTeams.stream()
-							.filter(t -> t.getId().equals(teamId))
-							.findFirst()
-							.orElse(null);
-
-					if (targetTeam == null) {
-						return "Selected team is not managed by you.";
-					}
-
-					var members = targetTeam.getMembers();
-					if (members == null || members.isEmpty()) {
-						return "Selected team '" + targetTeam.getName() + "' does not have any members.";
-					}
-					targetUsers.addAll(members);
-					groupNameHolder[0] = "team " + targetTeam.getName();
-				} catch (NumberFormatException e) {
-					return "Invalid team ID selected.";
-				}
-			}
+			return resolveTargetUsersForTeam(assignedToTeamId, manager, teamMembers, targetUsers, groupNameHolder);
 		} else {
-			if (assignedToIds == null || assignedToIds.isEmpty()) {
-				return "Please select at least one employee to assign the task.";
-			}
-			for (var empId : assignedToIds) {
-				var assignedUser = teamMembers.stream()
-						.filter(u -> u.getId().equals(empId))
-						.findFirst()
-						.orElse(null);
+			return resolveTargetUsersForIndividual(assignedToIds, teamMembers, targetUsers);
+		}
+	}
 
-				if (assignedUser == null) {
-					return "One or more selected employees are not in your team.";
-				}
-				targetUsers.add(assignedUser);
+	private String resolveTargetUsersForTeam(
+			String assignedToTeamId,
+			User manager,
+			List<User> teamMembers,
+			List<User> targetUsers,
+			String[] groupNameHolder) {
+		if (assignedToTeamId == null || "all".equalsIgnoreCase(assignedToTeamId)) {
+			if (teamMembers == null || teamMembers.isEmpty()) {
+				return "You do not have any employees in your team to assign tasks to.";
 			}
+			targetUsers.addAll(teamMembers);
+			groupNameHolder[0] = "entire team";
+			return null;
+		}
+		try {
+			var teamId = Long.parseLong(assignedToTeamId);
+			var managedTeams = getManagedTeams(manager);
+			var targetTeam = managedTeams.stream()
+					.filter(t -> t.getId().equals(teamId))
+					.findFirst()
+					.orElse(null);
+
+			if (targetTeam == null) {
+				return "Selected team is not managed by you.";
+			}
+
+			var members = targetTeam.getMembers();
+			if (members == null || members.isEmpty()) {
+				return "Selected team '" + targetTeam.getName() + "' does not have any members.";
+			}
+			targetUsers.addAll(members);
+			groupNameHolder[0] = "team " + targetTeam.getName();
+			return null;
+		} catch (NumberFormatException e) {
+			return "Invalid team ID selected.";
+		}
+	}
+
+	private String resolveTargetUsersForIndividual(
+			List<Long> assignedToIds,
+			List<User> teamMembers,
+			List<User> targetUsers) {
+		if (assignedToIds == null || assignedToIds.isEmpty()) {
+			return "Please select at least one employee to assign the task.";
+		}
+		for (var empId : assignedToIds) {
+			var assignedUser = teamMembers.stream()
+					.filter(u -> u.getId().equals(empId))
+					.findFirst()
+					.orElse(null);
+
+			if (assignedUser == null) {
+				return "One or more selected employees are not in your team.";
+			}
+			targetUsers.add(assignedUser);
 		}
 		return null;
 	}
@@ -2127,11 +2151,11 @@ public class ManagerController {
 
 	private String processReportAttachments(Report report, MultipartFile[] attachments) {
 		if (attachments != null) {
-			for (MultipartFile file : attachments) {
+			for (var file : attachments) {
 				if (file == null || file.isEmpty()) continue;
 				try {
-					String ct = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
-					ReportAttachment ra2 = new ReportAttachment(report, file.getOriginalFilename(), file.getBytes(), ct);
+					var ct = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
+					var ra2 = new ReportAttachment(report, file.getOriginalFilename(), file.getBytes(), ct);
 					reportAttachmentRepository.save(ra2);
 				} catch (IOException e) {
 					return "File upload failed: " + e.getMessage();
@@ -2143,27 +2167,33 @@ public class ManagerController {
 
 	private Set<LocalDate> getApprovedLeaveDates(User user, LocalDate from, LocalDate to) {
 		Set<LocalDate> approvedLeaveDates = new LinkedHashSet<>();
-		if (user != null) {
-			for (LeaveRequest leave : leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(user)) {
-				if ("Approved".equalsIgnoreCase(leave.getStatus()) && leave.getFromDate() != null && leave.getToDate() != null) {
-					LocalDate cursor = leave.getFromDate();
-					while (!cursor.isAfter(leave.getToDate())) {
-						if (!cursor.isBefore(from) && !cursor.isAfter(to)) {
-							approvedLeaveDates.add(cursor);
-						}
-						cursor = cursor.plusDays(1);
-					}
-				}
-			}
+		if (user == null) {
+			return approvedLeaveDates;
+		}
+		for (LeaveRequest leave : leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(user)) {
+			addApprovedLeaveDates(leave, from, to, approvedLeaveDates);
 		}
 		return approvedLeaveDates;
+	}
+
+	private void addApprovedLeaveDates(LeaveRequest leave, LocalDate from, LocalDate to, Set<LocalDate> approvedLeaveDates) {
+		if (leave == null || !STATUS_APPROVED.equalsIgnoreCase(leave.getStatus()) || leave.getFromDate() == null || leave.getToDate() == null) {
+			return;
+		}
+		LocalDate cursor = leave.getFromDate();
+		while (!cursor.isAfter(leave.getToDate())) {
+			if (!cursor.isBefore(from) && !cursor.isAfter(to)) {
+				approvedLeaveDates.add(cursor);
+			}
+			cursor = cursor.plusDays(1);
+		}
 	}
 
 	private AttendanceDay buildAttendanceDayForDate(LocalDate cursor, Map<LocalDate, String> holidays, Map<LocalDate, Attendance> byDate, Set<LocalDate> approvedLeaveDates, LocalDate today) {
 		if (holidays.containsKey(cursor)) {
 			return new AttendanceDay(cursor, holidays.get(cursor), true);
 		}
-		DayOfWeek dow = cursor.getDayOfWeek();
+		var dow = cursor.getDayOfWeek();
 		if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
 			return new AttendanceDay(cursor, "weekend");
 		}
@@ -2174,7 +2204,7 @@ public class ManagerController {
 			return new AttendanceDay(cursor, "leave");
 		}
 		if (!cursor.isAfter(today)) {
-			return new AttendanceDay(cursor, "absent");
+			return new AttendanceDay(cursor, STATUS_ABSENT);
 		}
 		return null;
 	}
