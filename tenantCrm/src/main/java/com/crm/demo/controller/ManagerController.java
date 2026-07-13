@@ -83,6 +83,7 @@ public class ManagerController extends BaseController {
 	private static final String REDIRECT_MANAGER_MEETINGS = "redirect:/manager/meetings";
 	private static final String REDIRECT_MANAGER_ATTENDANCE = "redirect:/manager/attendance";
 	private static final String REDIRECT_LOGIN = "redirect:/login";
+	private static final String PARAM_ERROR = "?error";
 	private static final String STATUS_PENDING = "pending";
 	private static final String STATUS_APPROVED = "Approved";
 	private static final String STATUS_APPROVED_LOWER = "approved";
@@ -928,13 +929,13 @@ public class ManagerController extends BaseController {
 		var manager = getCurrentManager();
 		if (manager == null) {
 			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_SESSION_EXPIRED);
-			return REDIRECT_MANAGER_LEAVES + "?error";
+			return REDIRECT_MANAGER_LEAVES + PARAM_ERROR;
 		}
 
 		var validationError = validateLeaveParams(type, reason, fromDate, toDate);
 		if (validationError != null) {
 			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, validationError);
-			return REDIRECT_MANAGER_LEAVES + "?error";
+			return REDIRECT_MANAGER_LEAVES + PARAM_ERROR;
 		}
 
 		LocalDate from;
@@ -944,12 +945,12 @@ public class ManagerController extends BaseController {
 			to = LocalDate.parse(toDate);
 		} catch (java.time.format.DateTimeParseException e) {
 			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Invalid date value.");
-			return REDIRECT_MANAGER_LEAVES + "?error";
+			return REDIRECT_MANAGER_LEAVES + PARAM_ERROR;
 		}
 
 		if (to.isBefore(from)) {
 			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "To date cannot be before from date.");
-			return REDIRECT_MANAGER_LEAVES + "?error";
+			return REDIRECT_MANAGER_LEAVES + PARAM_ERROR;
 		}
 
 		var leave = new LeaveRequest();
@@ -969,7 +970,7 @@ public class ManagerController extends BaseController {
 				leave.setAttachmentData(attachment.getBytes());
 			} catch (IOException e) {
 				ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Attachment upload failed: " + e.getMessage());
-				return REDIRECT_MANAGER_LEAVES + "?error";
+				return REDIRECT_MANAGER_LEAVES + PARAM_ERROR;
 			}
 		}
 
@@ -1766,17 +1767,17 @@ public class ManagerController extends BaseController {
 
 		User manager = getCurrentManager();
 		if (manager == null) {
-			ra.addFlashAttribute("errorMessage", "Session expired.");
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, MSG_SESSION_EXPIRED);
 			return "redirect:/manager/performance";
 		}
 
 		if (reviewMonth == null || reviewMonth.trim().isBlank() || !reviewMonth.trim().matches("^\\d{4}-\\d{2}$")) {
-			ra.addFlashAttribute("errorMessage", "Invalid review month format.");
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Invalid review month format.");
 			return "redirect:/manager/performance";
 		}
 
 		if (remarks != null && remarks.length() > 255) {
-			ra.addFlashAttribute("errorMessage", "Remarks cannot exceed 255 characters.");
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Remarks cannot exceed 255 characters.");
 			return REDIRECT_MANAGER_PERFORMANCE + reviewMonth;
 		}
 
@@ -1789,24 +1790,24 @@ public class ManagerController extends BaseController {
 				.findFirst().orElse(null);
 
 		if (emp == null) {
-			ra.addFlashAttribute("errorMessage", "Employee not found in your team.");
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Employee not found in your team.");
 			return REDIRECT_MANAGER_PERFORMANCE + reviewMonth;
 		}
 
 		if (rating < 1 || rating > 5) {
-			ra.addFlashAttribute("errorMessage", "Rating must be between 1 and 5.");
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Rating must be between 1 and 5.");
 			return REDIRECT_MANAGER_PERFORMANCE + reviewMonth;
 		}
 
 		Optional<PerformanceReview> existingOpt = performanceReviewRepository
 				.findByEmployeeAndReviewMonthAndTenantSegment(emp, reviewMonth, tenant);
 		if (existingOpt.isPresent()) {
-			ra.addFlashAttribute("errorMessage", "Performance reviews cannot be updated once submitted.");
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Performance reviews cannot be updated once submitted.");
 			return REDIRECT_MANAGER_PERFORMANCE + reviewMonth;
 		}
 
 		if (isWeeklyLocked(emp)) {
-			ra.addFlashAttribute("errorMessage", "You can only submit a performance review once a week for this employee.");
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "You can only submit a performance review once a week for this employee.");
 			return REDIRECT_MANAGER_PERFORMANCE + reviewMonth;
 		}
 
@@ -1821,7 +1822,7 @@ public class ManagerController extends BaseController {
 		performanceReviewRepository.save(review);
 		notificationService.notifyPerformanceReview(emp, manager.getUsername(), reviewMonth, rating);
 
-		ra.addFlashAttribute("successMessage",
+		ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE,
 				"Performance review submitted successfully.");
 		return REDIRECT_MANAGER_PERFORMANCE + reviewMonth;
 	}
@@ -2119,7 +2120,7 @@ public class ManagerController extends BaseController {
 			for (var file : attachments) {
 				if (file == null || file.isEmpty()) continue;
 				try {
-					var ct = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
+					var ct = file.getContentType() != null ? file.getContentType() : OCTET_STREAM;
 					var ra2 = new ReportAttachment(report, file.getOriginalFilename(), file.getBytes(), ct);
 					reportAttachmentRepository.save(ra2);
 				} catch (IOException e) {
@@ -2186,7 +2187,7 @@ public class ManagerController extends BaseController {
 		List<User> teamMembers = getManagedTeamMembers(manager);
 		List<PayrollTemplate> payrolls = payrollTemplateRepository.findByEmployeesAndTenant(teamMembers, tenant);
 		model.addAttribute("payrolls", payrolls);
-		model.addAttribute("teamMembers", teamMembers);
+		model.addAttribute(ATTR_TEAM_MEMBERS, teamMembers);
 
 		java.util.Optional<PayrollTemplate> myPayrollOpt = payrollTemplateRepository.findByEmployeeAndTenantSegment(manager, tenant);
 		if (myPayrollOpt.isPresent()) {
