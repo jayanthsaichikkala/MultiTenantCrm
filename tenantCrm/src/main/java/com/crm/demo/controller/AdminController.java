@@ -29,14 +29,13 @@ import com.crm.demo.model.Task;
 import com.crm.demo.model.User;
 import com.crm.demo.model.Attendance;
 import com.crm.demo.model.AttendanceDay;
-import com.crm.demo.model.Holiday;
+
 import com.crm.demo.repository.MeetingRepository;
 import com.crm.demo.repository.ProjectRepository;
 import com.crm.demo.repository.ReportAttachmentRepository;
 import com.crm.demo.repository.ReportRepository;
 import com.crm.demo.repository.TaskRepository;
-import com.crm.demo.repository.UserRepository;
-import com.crm.demo.repository.HolidayRepository;
+
 import com.crm.demo.repository.AttendanceRepository;
 import com.crm.demo.repository.TeamRepository;
 import com.crm.demo.service.NotificationService;

@@ -33,15 +33,14 @@ import com.crm.demo.model.Task;
 import com.crm.demo.model.TaskAttachment;
 import com.crm.demo.model.User;
 import com.crm.demo.repository.AttendanceRepository;
-import com.crm.demo.repository.HolidayRepository;
-import com.crm.demo.repository.LeaveRequestRepository;
+
 import com.crm.demo.repository.MeetingRepository;
 import com.crm.demo.repository.ReportAttachmentRepository;
 import com.crm.demo.repository.ReportRepository;
 import com.crm.demo.repository.TaskRepository;
 import com.crm.demo.repository.TaskAttachmentRepository;
 import com.crm.demo.repository.TeamRepository;
-import com.crm.demo.repository.UserRepository;
+
 import com.crm.demo.repository.PayrollTemplateRepository;
 import com.crm.demo.repository.PayslipRepository;
 import com.crm.demo.service.PayslipService;
