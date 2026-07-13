@@ -66,21 +66,18 @@ import jakarta.validation.Valid;
 
 @Controller
 @RequestMapping("/hr")
-public class HrController {
+public class HrController extends BaseController {
 
-    @Autowired private AttendanceService     attendanceService;
-    @Autowired private UserRepository        userRepository;
     @Autowired private TeamRepository        teamRepository;
     @Autowired private AttendanceRepository  attendanceRepository;
-    @Autowired private HolidayRepository     holidayRepository;
     @Autowired private MeetingRepository     meetingRepository;
-    @Autowired private LeaveRequestRepository leaveRequestRepository;
     @Autowired private PerformanceReviewRepository performanceReviewRepository;
     @Autowired private PasswordResetTokenRepository passwordResetTokenRepository;
     @Autowired private TaskRepository         taskRepository;
     @Autowired private com.crm.demo.repository.ReportRepository reportRepository;
     @Autowired private com.crm.demo.repository.ReportAttachmentRepository reportAttachmentRepository;
     @Autowired private BCryptPasswordEncoder passwordEncoder;
+    @Autowired private AttendanceService     attendanceService;
     @Autowired private ProfileUpdateService  profileUpdateService;
     @Autowired private NotificationService   notificationService;
 
@@ -271,8 +268,7 @@ public class HrController {
 
     /** Resolve the currently logged-in HR user via SecurityContextHolder. */
     private User getCurrentHr() {
-        var username = SecurityContextHolder.getContext().getAuthentication().getName();
-        return userRepository.findByUsername(username);
+        return getCurrentUser();
     }
 
     /** Extract tenant segment from the logged-in HR user's email. */
@@ -280,19 +276,11 @@ public class HrController {
         var username = (String) request.getAttribute(ATTR_LOGGED_IN_USER);
         if (username == null) return "";
         var hr = userRepository.findByUsername(username);
-        if (hr == null || hr.getEmail() == null) return "";
-        var email = hr.getEmail();
-        var local = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
-        var dot = local.lastIndexOf('.');
-        return dot >= 0 ? local.substring(dot + 1) : local;
+        return super.getTenantSegment(hr);
     }
 
     private String getTenantSegmentFromUser(User user) {
-        if (user == null || user.getEmail() == null) return "";
-        var email = user.getEmail();
-        var local = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
-        var dot = local.lastIndexOf('.');
-        return dot >= 0 ? local.substring(dot + 1) : local;
+        return super.getTenantSegment(user);
     }
 
     /**
@@ -327,15 +315,6 @@ public class HrController {
         return days;
     }
 
-    /** Build holiday map (date → name) for a tenant within a date range. */
-    private Map<LocalDate, String> fetchHolidays(String tenant, LocalDate from, LocalDate to) {
-        var map = new LinkedHashMap<LocalDate, String>();
-        if (tenant == null || tenant.isBlank()) return map;
-        var list = holidayRepository.findByTenantAndDateRange(
-                tenant, from.toString(), to.toString());
-        for (var h : list) map.put(LocalDate.parse(h.getDate()), h.getName());
-        return map;
-    }
 
     /** Returns true for roles that HR should manage (not ADMIN / SUPER_ADMIN). */
     private boolean isNonAdminRole(String role) {

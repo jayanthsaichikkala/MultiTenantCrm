@@ -70,7 +70,7 @@ import jakarta.validation.Valid;
 
 @Controller
 @RequestMapping("/manager")
-public class ManagerController {
+public class ManagerController extends BaseController {
 
 	private static final String ROLE_ADMIN = "ADMIN";
 	private static final String ROLE_EMPLOYEE = "EMPLOYEE";
@@ -121,9 +121,6 @@ public class ManagerController {
 	private AttendanceService attendanceService;
 
 	@Autowired
-	private UserRepository userRepository;
-
-	@Autowired
 	private ProjectRepository projectRepository;
 
 	@Autowired
@@ -133,16 +130,10 @@ public class ManagerController {
 	private AttendanceRepository attendanceRepository;
 
 	@Autowired
-	private HolidayRepository holidayRepository;
-
-	@Autowired
 	private TeamRepository teamRepository;
 
 	@Autowired
 	private MeetingRepository meetingRepository;
-
-	@Autowired
-	private LeaveRequestRepository leaveRequestRepository;
 
 	@Autowired
 	private TaskAttachmentRepository taskAttachmentRepository;
@@ -1376,26 +1367,7 @@ public class ManagerController {
 
 	/** Helper: resolve current manager + tenant segment */
 	private User getCurrentManager() {
-		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-		return userRepository.findByUsername(username);
-	}
-
-	private String getTenantSegment(User manager) {
-		if (manager == null || manager.getEmail() == null) return "";
-		String email = manager.getEmail();
-		try {
-			return email.split("\\.")[1].split("@")[0];
-		} catch (Exception e) {
-			return "";
-		}
-	}
-
-	private boolean hasApprovedLeave(User user, LocalDate date) {
-		if (user == null || date == null) return false;
-		return leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(user).stream()
-				.anyMatch(leave -> STATUS_APPROVED.equalsIgnoreCase(leave.getStatus())
-						&& !date.isBefore(leave.getFromDate())
-						&& !date.isAfter(leave.getToDate()));
+		return getCurrentUser();
 	}
 
 	/**
@@ -1425,15 +1397,6 @@ public class ManagerController {
 		return days;
 	}
 
-	/** Build holiday map (date → name) for a tenant within a date range. */
-	private Map<LocalDate, String> fetchHolidays(String tenant, LocalDate from, LocalDate to) {
-		var map = new LinkedHashMap<LocalDate, String>();
-		if (tenant == null || tenant.isBlank()) return map;
-		var list = holidayRepository.findByTenantAndDateRange(
-				tenant, from.toString(), to.toString());
-		for (var h : list) map.put(LocalDate.parse(h.getDate()), h.getName());
-		return map;
-	}
 
 	@GetMapping("/attendance")
 	public String attendancePage(

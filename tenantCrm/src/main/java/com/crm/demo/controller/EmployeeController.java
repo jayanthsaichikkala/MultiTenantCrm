@@ -59,7 +59,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @Controller
 @RequestMapping("/employee")
-public class EmployeeController {
+public class EmployeeController extends BaseController {
 
     private static final String STATUS_APPROVED = "Approved";
     private static final String STATUS_PENDING_UPPER = "Pending";
@@ -94,14 +94,10 @@ public class EmployeeController {
     @Value("${app.upload.dir:uploads/tasks}")
     private String uploadDir;
 
-    @Autowired private UserRepository        userRepository;
-    @Autowired private AttendanceRepository  attendanceRepository;
-    @Autowired private HolidayRepository     holidayRepository;
     @Autowired private TeamRepository        teamRepository;
     @Autowired private MeetingRepository     meetingRepository;
     @Autowired private TaskRepository        taskRepository;
     @Autowired private TaskAttachmentRepository taskAttachmentRepository;
-    @Autowired private LeaveRequestRepository leaveRequestRepository;
     @Autowired private ReportRepository      reportRepository;
     @Autowired private ReportAttachmentRepository reportAttachmentRepository;
     @Autowired private ProfileUpdateService  profileUpdateService;
@@ -111,6 +107,7 @@ public class EmployeeController {
     @Autowired private PayslipRepository payslipRepository;
     @Autowired private PayslipService payslipService;
 
+    @Autowired private AttendanceRepository  attendanceRepository;
     // ── helpers ───────────────────────────────────────────────────────────
 
     private void injectUser(Model model) {
@@ -137,23 +134,6 @@ public class EmployeeController {
         return opt.get();
     }
 
-    private String getTenantSegment(User user) {
-        if (user == null || user.getEmail() == null) return "";
-        try {
-            var email = user.getEmail();
-            var local = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
-            var dot = local.lastIndexOf('.');
-            return dot >= 0 ? local.substring(dot + 1) : local;
-        } catch (Exception e) { return ""; }
-    }
-
-    private boolean hasApprovedLeave(User user, LocalDate date) {
-        if (user == null || date == null) return false;
-        return leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(user).stream()
-                .anyMatch(leave -> STATUS_APPROVED.equalsIgnoreCase(leave.getStatus())
-                        && !date.isBefore(leave.getFromDate())
-                        && !date.isAfter(leave.getToDate()));
-    }
 
     /**
      * Build a merged day list for the given date range.
@@ -241,21 +221,6 @@ public class EmployeeController {
         return days;
     }
 
-    /** Build holiday map (date → name) for a tenant within a date range. */
-    private Map<LocalDate, String> fetchHolidays(String tenant, LocalDate from, LocalDate to) {
-        var map = new LinkedHashMap<LocalDate, String>();
-        if (tenant == null || tenant.isBlank() || from == null || to == null) return map;
-        var list = holidayRepository.findByTenantAndDateRange(
-                tenant, from.toString(), to.toString());
-        if (list != null) {
-            for (var h : list) {
-                if (h != null && h.getDate() != null) {
-                    map.put(LocalDate.parse(h.getDate()), h.getName());
-                }
-            }
-        }
-        return map;
-    }
 
     private void injectStats(Model model) {
         model.addAttribute("activeProjectsCount", 0);

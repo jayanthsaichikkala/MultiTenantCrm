@@ -50,7 +50,7 @@ import jakarta.validation.Valid;
 
 @Controller
 @RequestMapping("/admin")
-public class AdminController {
+public class AdminController extends BaseController {
 
 	private static final String ATTR_LOGGED_IN_USER = "loggedInUser";
 	private static final String ROLE_ADMIN = "ADMIN";
@@ -92,8 +92,7 @@ public class AdminController {
 	@Autowired
 	private TaskRepository taskRepository;
 
-	@Autowired
-	private UserRepository userRepository;
+
 
 	@Autowired
 	private ReportRepository reportRepository;
@@ -110,8 +109,7 @@ public class AdminController {
 	@Autowired
 	private NotificationService notificationService;
 
-	@Autowired
-	private HolidayRepository holidayRepository;
+
 
 	@Autowired
 	private AttendanceRepository attendanceRepository;
@@ -259,15 +257,7 @@ public class AdminController {
 	private String getTenantSegment(String username) {
 		if (username == null) return "";
 		var user = userRepository.findByUsername(username);
-		if (user == null || user.getEmail() == null) return "";
-		var email = user.getEmail();
-		try {
-			var local = email.contains("@") ? email.substring(0, email.indexOf('@')) : email;
-			int dot = local.lastIndexOf('.');
-			return dot >= 0 ? local.substring(dot + 1) : local;
-		} catch (Exception e) {
-			return "";
-		}
+		return super.getTenantSegment(user);
 	}
 
 	// =========================================================
@@ -519,14 +509,6 @@ public class AdminController {
 		return days;
 	}
 
-	private Map<LocalDate, String> fetchHolidays(String tenant, LocalDate from, LocalDate to) {
-		Map<LocalDate, String> map = new LinkedHashMap<>();
-		if (tenant == null || tenant.isBlank()) return map;
-		List<Holiday> list = holidayRepository.findByTenantAndDateRange(
-				tenant, from.toString(), to.toString());
-		for (Holiday h : list) map.put(LocalDate.parse(h.getDate()), h.getName());
-		return map;
-	}
 
 	// =========================================================
 	// EMPLOYEES — ADD FORM PAGE
