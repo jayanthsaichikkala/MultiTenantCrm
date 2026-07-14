@@ -66,13 +66,26 @@ class CrmApplicationTests {
     @Mock
     private ReportAttachmentRepository reportAttachmentRepository;
 
+    // ── Dedicated exception for reflection errors ─────────────────────────────
+    static class ReflectionInvocationException extends RuntimeException {
+        ReflectionInvocationException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     /** Invoke a private method on ManagerController via reflection. */
-    private Object invokePrivate(ManagerController ctrl, String name, Class<?>[] types, Object... args) throws Exception {
-        Method m = ManagerController.class.getDeclaredMethod(name, types);
-        m.setAccessible(true);
-        return m.invoke(ctrl, args);
+    private Object invokePrivate(ManagerController ctrl, String name, Class<?>[] types, Object... args) {
+        try {
+            Method m = ManagerController.class.getDeclaredMethod(name, types);
+            java.security.AccessController.doPrivileged(
+                (java.security.PrivilegedAction<Void>) () -> { m.setAccessible(true); return null; }
+            );
+            return m.invoke(ctrl, args);
+        } catch (ReflectiveOperationException e) {
+            throw new ReflectionInvocationException("Failed to invoke " + name, e);
+        }
     }
 
     static Stream<String> contentTypeVariants() {
