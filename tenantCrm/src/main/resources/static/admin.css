@@ -443,11 +443,6 @@ tbody tr:hover { background:#f7fbfd; }
     cursor: pointer;
     transition: background 0.2s ease, transform 0.2s ease;
 }
-.toggle-btn {
-    background: #dcecf5;
-    color: #17455e;
-}
-.toggle-btn:hover { background: #c5dce7; transform: translateY(-1px); }
 .delete-btn {
     background: #fdecec;
     color: #d11a2a;
@@ -495,6 +490,8 @@ tbody tr:hover { background:#f7fbfd; }
 }
 
 .toggle-btn {
+    background: #dcecf5;
+    color: #17455e;
     position: relative;
     width: 40px;
     height: 22px;
@@ -505,6 +502,7 @@ tbody tr:hover { background:#f7fbfd; }
     flex-shrink: 0;
     transition: background .3s ease;
 }
+.toggle-btn:hover { background: #c5dce7; transform: translateY(-1px); }
 
 .toggle-btn.active   { background: #17455e; }
 .toggle-btn.inactive { background: #d1d5db; }

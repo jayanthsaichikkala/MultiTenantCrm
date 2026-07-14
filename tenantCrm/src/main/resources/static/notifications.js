@@ -18,6 +18,22 @@
     var reconnectTimeout = null;
     var isInitialized = false;
 
+    // Dynamically calculate the application context base path relative to this script
+    var basePath = '/';
+    (function() {
+        var scripts = document.getElementsByTagName('script');
+        for (var i = 0; i < scripts.length; i++) {
+            var src = scripts[i].getAttribute('src') || '';
+            if (src.indexOf('notifications.js') !== -1) {
+                var idx = src.indexOf('/notifications.js');
+                if (idx !== -1) {
+                    basePath = src.substring(0, idx) + '/';
+                }
+                break;
+            }
+        }
+    })();
+
     function isAppPage() {
         var path = window.location.pathname;
         return path !== '/login'
@@ -166,7 +182,7 @@
 
     function fetchNotifications(cb) {
         if (typeof window.crmFetch !== 'function') return;
-        window.crmFetch('/api/notifications', { method: 'GET', contentType: null })
+        window.crmFetch(basePath + 'api/notifications', { method: 'GET', contentType: null })
             .then(function (r) {
                 if (!r.ok) throw new Error('HTTP ' + r.status);
                 return r.json();
@@ -206,7 +222,7 @@
     }
 
     function markRead(id, cb) {
-        window.crmFetch('/api/notifications/' + id + '/read', { method: 'POST', body: '{}' })
+        window.crmFetch(basePath + 'api/notifications/' + id + '/read', { method: 'POST', body: '{}' })
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (data) {
                 if (data) unreadCount = data.unreadCount || 0;
@@ -223,7 +239,7 @@
 
     function markAllRead(e) {
         e.stopPropagation();
-        window.crmFetch('/api/notifications/read-all', { method: 'POST', body: '{}' })
+        window.crmFetch(basePath + 'api/notifications/read-all', { method: 'POST', body: '{}' })
             .then(function () {
                 unreadCount = 0;
                 notifications = notifications.map(function (n) { n.read = true; return n; });
@@ -234,7 +250,7 @@
     }
 
     function deleteNotification(id) {
-        window.crmFetch('/api/notifications/' + id, { method: 'DELETE', contentType: null })
+        window.crmFetch(basePath + 'api/notifications/' + id, { method: 'DELETE', contentType: null })
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (data) {
                 if (!data) return;
@@ -304,7 +320,7 @@
         e.stopPropagation();
         if (!notifications.length) return;
         showConfirmPopup('Are you sure you want to delete all notifications? This cannot be undone.', function () {
-            window.crmFetch('/api/notifications/clear-all', { method: 'DELETE', contentType: null })
+            window.crmFetch(basePath + 'api/notifications/clear-all', { method: 'DELETE', contentType: null })
                 .then(function (r) { return r.ok ? r.json() : null; })
                 .then(function () {
                     notifications = [];
@@ -381,8 +397,11 @@
     }
 
     function loadLibrariesAndConnect(userId) {
-        var sockJsUrl = '/sockjs.min.js';
-        var stompUrl = '/stomp.min.js';
+        var localSockJsUrl = basePath + 'sockjs.min.js';
+        var localStompUrl = basePath + 'stomp.min.js';
+
+        var cdnSockJsUrl = 'https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js';
+        var cdnStompUrl = 'https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js';
 
         var sockLoaded = false;
         var stompLoaded = false;
@@ -415,9 +434,18 @@
         }
 
         if (!sockLoaded) {
-            loadScript(sockJsUrl, function (err) {
+            loadScript(localSockJsUrl, function (err) {
                 if (err) {
-                    handleLoadError();
+                    console.warn('Failed to load local SockJS. Trying CDN...');
+                    loadScript(cdnSockJsUrl, function (cdnErr) {
+                        if (cdnErr) {
+                            console.error('Failed to load SockJS from both local and CDN.');
+                            handleLoadError();
+                        } else {
+                            sockLoaded = true;
+                            checkAndConnect();
+                        }
+                    });
                     return;
                 }
                 sockLoaded = true;
@@ -425,9 +453,18 @@
             });
         }
         if (!stompLoaded) {
-            loadScript(stompUrl, function (err) {
+            loadScript(localStompUrl, function (err) {
                 if (err) {
-                    handleLoadError();
+                    console.warn('Failed to load local STOMP. Trying CDN...');
+                    loadScript(cdnStompUrl, function (cdnErr) {
+                        if (cdnErr) {
+                            console.error('Failed to load STOMP from both local and CDN.');
+                            handleLoadError();
+                        } else {
+                            stompLoaded = true;
+                            checkAndConnect();
+                        }
+                    });
                     return;
                 }
                 stompLoaded = true;
@@ -440,7 +477,7 @@
         if (wsConnected) return;
 
         try {
-            var socket = new SockJS('/ws', null, {
+            var socket = new SockJS(basePath + 'ws', null, {
                 transports: ['websocket', 'xhr-streaming', 'xhr-polling']
             });
             stompClient = Stomp.over(socket);
@@ -1211,7 +1248,7 @@
         });
 
         // Fetch user profile and connect WebSocket in parallel
-        window.crmFetch('/api/notifications/me', { method: 'GET', contentType: null })
+        window.crmFetch(basePath + 'api/notifications/me', { method: 'GET', contentType: null })
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (user) {
                 if (user && user.id) {

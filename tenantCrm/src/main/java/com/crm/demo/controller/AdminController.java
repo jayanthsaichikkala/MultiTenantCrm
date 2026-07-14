@@ -25,6 +25,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.crm.demo.model.Meeting;
 import com.crm.demo.model.Project;
 import com.crm.demo.model.Report;
+import com.crm.demo.model.ReportAttachment;
 import com.crm.demo.model.Task;
 import com.crm.demo.model.User;
 import com.crm.demo.model.Attendance;
@@ -937,9 +938,9 @@ public class AdminController extends BaseController {
 	@GetMapping("/reports/view/{attachmentId}")
 	public org.springframework.http.ResponseEntity<byte[]> viewReportAttachment(
 			@PathVariable Long attachmentId) {
-		var att = reportAttachmentRepository.findById(attachmentId).orElse(null);
+		ReportAttachment att = reportAttachmentRepository.findById(attachmentId).orElse(null);
 		if (att == null) return org.springframework.http.ResponseEntity.notFound().build();
-		var ct = att.getContentType() != null ? att.getContentType() : "application/octet-stream";
+		String ct = att.getContentType() != null ? att.getContentType() : "application/octet-stream";
 		return org.springframework.http.ResponseEntity.ok()
 				.header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
 						"inline; filename=\"" + att.getOriginalFilename() + "\"")
@@ -950,9 +951,9 @@ public class AdminController extends BaseController {
 	@GetMapping("/reports/download/{attachmentId}")
 	public org.springframework.http.ResponseEntity<byte[]> downloadReportAttachment(
 			@PathVariable Long attachmentId) {
-		var att = reportAttachmentRepository.findById(attachmentId).orElse(null);
+		ReportAttachment att = reportAttachmentRepository.findById(attachmentId).orElse(null);
 		if (att == null) return org.springframework.http.ResponseEntity.notFound().build();
-		var ct = att.getContentType() != null ? att.getContentType() : "application/octet-stream";
+		String ct = att.getContentType() != null ? att.getContentType() : "application/octet-stream";
 		return org.springframework.http.ResponseEntity.ok()
 				.header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
 						"attachment; filename=\"" + att.getOriginalFilename() + "\"")

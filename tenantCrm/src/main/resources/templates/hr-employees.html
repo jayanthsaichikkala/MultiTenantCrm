@@ -391,7 +391,7 @@
 			/* Row 2: action row — Add Employee + user-badge, side by side, full width */
 			.topbar-right {
 				flex-direction: row !important;
-				flex-wrap: nowrap !important;
+				flex-wrap: wrap !important;
 				align-items: center !important;
 				gap: 10px !important;
 				width: 100% !important;
@@ -404,11 +404,6 @@
 				flex-basis: 100%;   /* … then wrap to its own line    */
 				width: 100% !important;
 				margin: 0 !important;
-			}
-
-			/* Make the search-box row wrap so the search sits below */
-			.topbar-right {
-				flex-wrap: wrap !important;
 			}
 
 			.topbar-right .search-box input {
@@ -625,7 +620,7 @@
 				</div>
 
 				<div class="table-wrap">
-					<table id="empTable">
+					<table summary="Hr Employees Table" id="empTable">
 						<thead>
 							<tr>
 								<th>#</th>
@@ -986,7 +981,7 @@
 				+ '</div>'
 				+ '</div>'
 				+ '<div style="overflow-x:auto;">'
-				+ '<table class="emp-att-table">'
+				+ '<table summary="Hr Employees Table" class="emp-att-table">'
 				+ '<thead><tr><th>Date</th><th>Check In</th><th>Check Out</th><th>Worked</th><th>Break</th><th>Day Type</th><th>Status</th></tr></thead>'
 				+ '<tbody>' + (rows || '<tr><td colspan="7" style="text-align:center;padding:24px;color:#9ca3af;">No records found.</td></tr>') + '</tbody>'
 				+ '</table>'

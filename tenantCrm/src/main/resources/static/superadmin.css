@@ -1728,7 +1728,6 @@ tbody tr:hover {
 	}
 
 	.topbar-right .notif-btn {
-		display: flex !important;
 		width: 38px !important;
 		height: 38px !important;
 		border-radius: 50% !important;

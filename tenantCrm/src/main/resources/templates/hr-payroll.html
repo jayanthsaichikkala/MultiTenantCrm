@@ -200,7 +200,7 @@
 
 				<!-- Payroll Table -->
 				<div th:if="${!#lists.isEmpty(payrolls)}" class="table-wrap">
-					<table id="payrollTable">
+					<table summary="Hr Payroll Table" id="payrollTable">
 						<thead>
 							<tr>
 								<th>Employee</th>
@@ -277,7 +277,7 @@
 
 				<!-- Payslips Table -->
 				<div th:if="${!#lists.isEmpty(payslips)}" class="table-wrap">
-					<table>
+					<table summary="Hr Payroll Table">
 						<thead>
 							<tr>
 								<th>Employee/Manager</th>

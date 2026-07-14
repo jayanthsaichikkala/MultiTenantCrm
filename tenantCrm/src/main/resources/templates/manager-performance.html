@@ -8,18 +8,6 @@
 	<link rel="stylesheet" th:href="@{/notifications.css}">
 	<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 	<style>
-		/* ── Grade badge ── */
-		.grade-badge {
-			display:inline-flex; align-items:center; justify-content:center;
-			width:40px; height:40px; border-radius:12px;
-			font-size:15px; font-weight:800; flex-shrink:0;
-		}
-		.grade-A-plus { background:#dff5ea; color:#15803d; }
-		.grade-A      { background:#dcfce7; color:#166534; }
-		.grade-B      { background:#dbeafe; color:#1d4ed8; }
-		.grade-C      { background:#fef9c3; color:#a16207; }
-		.grade-D      { background:#fee2e2; color:#b91c1c; }
-
 		/* ── Score ring ── */
 		.score-ring {
 			position:relative; width:64px; height:64px; flex-shrink:0;
@@ -335,7 +323,7 @@
 				</div>
 			</div>
 			<div class="table-wrap">
-				<table id="perfTable">
+				<table summary="Manager Performance Table" id="perfTable">
 					<thead>
 						<tr>
 							<th>#</th>

@@ -662,9 +662,10 @@ public class ManagerController extends BaseController {
 		}
 
 		var attachmentInfos = new ArrayList<TaskAttachmentInfo>();
-		var uploadError = processAttachments(attachments, attachmentInfos);
-		if (uploadError != null) {
-			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, uploadError);
+		try {
+			processAttachments(attachments, attachmentInfos);
+		} catch (RuntimeException e) {
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, e.getMessage());
 			return REDIRECT_MANAGER_TASKS;
 		}
 
@@ -1104,9 +1105,10 @@ public class ManagerController extends BaseController {
 		reportRepository.save(report);
 
 		// Save attachments
-		var attachError = processReportAttachments(report, attachments);
-		if (attachError != null) {
-			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, attachError);
+		try {
+			processReportAttachments(report, attachments);
+		} catch (RuntimeException e) {
+			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, e.getMessage());
 			return REDIRECT_MANAGER_REPORTS;
 		}
 
@@ -2078,7 +2080,7 @@ public class ManagerController extends BaseController {
 		return null;
 	}
 
-	private String processAttachments(MultipartFile[] attachments, List<TaskAttachmentInfo> attachmentInfos) {
+	private void processAttachments(MultipartFile[] attachments, List<TaskAttachmentInfo> attachmentInfos) {
 		if (attachments != null) {
 			for (var file : attachments) {
 				if (file == null || file.isEmpty()) continue;
@@ -2088,11 +2090,10 @@ public class ManagerController extends BaseController {
 					if (contentType == null) contentType = OCTET_STREAM;
 					attachmentInfos.add(new TaskAttachmentInfo(file.getOriginalFilename(), fileData, contentType));
 				} catch (IOException e) {
-					return "File upload failed: " + e.getMessage();
+					throw new RuntimeException("File upload failed: " + e.getMessage(), e);
 				}
 			}
 		}
-		return null;
 	}
 
 	private String validateReportParams(String title, String message, List<Long> recipientIds) {
@@ -2111,7 +2112,7 @@ public class ManagerController extends BaseController {
 		return null;
 	}
 
-	private String processReportAttachments(Report report, MultipartFile[] attachments) {
+	private void processReportAttachments(Report report, MultipartFile[] attachments) {
 		if (attachments != null) {
 			for (var file : attachments) {
 				if (file == null || file.isEmpty()) continue;
@@ -2120,11 +2121,10 @@ public class ManagerController extends BaseController {
 					var ra2 = new ReportAttachment(report, file.getOriginalFilename(), file.getBytes(), ct);
 					reportAttachmentRepository.save(ra2);
 				} catch (IOException e) {
-					return "File upload failed: " + e.getMessage();
+					throw new RuntimeException("File upload failed: " + e.getMessage(), e);
 				}
 			}
 		}
-		return null;
 	}
 
 	private Set<LocalDate> getApprovedLeaveDates(User user, LocalDate from, LocalDate to) {
