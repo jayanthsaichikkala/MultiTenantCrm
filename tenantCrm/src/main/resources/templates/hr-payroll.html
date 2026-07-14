@@ -201,7 +201,7 @@
 				<!-- Payroll Table -->
 				<div th:if="${!#lists.isEmpty(payrolls)}" class="table-wrap">
 					<table id="payrollTable">
-    <caption style="position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden;">Hr Payroll Table</caption>
+    <caption class="sr-only">Hr Payroll Table</caption>
 						<thead>
 							<tr>
 								<th>Employee</th>
@@ -279,7 +279,7 @@
 				<!-- Payslips Table -->
 				<div th:if="${!#lists.isEmpty(payslips)}" class="table-wrap">
 					<table>
-    <caption style="position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden;">Hr Payroll Table</caption>
+    <caption class="sr-only">Hr Payroll Table</caption>
 						<thead>
 							<tr>
 								<th>Employee/Manager</th>
