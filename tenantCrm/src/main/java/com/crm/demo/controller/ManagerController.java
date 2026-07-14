@@ -142,7 +142,7 @@ public class ManagerController extends BaseController {
 	private ReportRepository reportRepository;
 
 	@Autowired
-	private ReportAttachmentRepository reportAttachmentRepository;
+	ReportAttachmentRepository reportAttachmentRepository;
 
 	@Autowired
 	private PerformanceReviewRepository performanceReviewRepository;
@@ -1825,7 +1825,7 @@ public class ManagerController extends BaseController {
 		return REDIRECT_MANAGER_PERFORMANCE + reviewMonth;
 	}
 
-	private static class TaskAttachmentInfo {
+	static class TaskAttachmentInfo {
 		private final String filename;
 		private final byte[] fileData;
 		private final String contentType;
@@ -2080,7 +2080,7 @@ public class ManagerController extends BaseController {
 		return null;
 	}
 
-	private void processAttachments(MultipartFile[] attachments, List<TaskAttachmentInfo> attachmentInfos) {
+	void processAttachments(MultipartFile[] attachments, List<TaskAttachmentInfo> attachmentInfos) {
 		if (attachments != null) {
 			for (var file : attachments) {
 				if (file == null || file.isEmpty()) continue;
@@ -2112,7 +2112,7 @@ public class ManagerController extends BaseController {
 		return null;
 	}
 
-	private void processReportAttachments(Report report, MultipartFile[] attachments) {
+	void processReportAttachments(Report report, MultipartFile[] attachments) {
 		if (attachments != null) {
 			for (var file : attachments) {
 				if (file == null || file.isEmpty()) continue;
