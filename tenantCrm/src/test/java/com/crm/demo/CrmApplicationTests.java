@@ -64,6 +64,23 @@ class CrmApplicationTests {
     }
 
     @Test
+    void testAdminControllerViewReportAttachmentNullContentType() {
+        ReportAttachment attachment = new ReportAttachment();
+        attachment.setOriginalFilename("test.pdf");
+        attachment.setContentType(null);
+        attachment.setFileData(new byte[]{1, 2, 3});
+
+        when(reportAttachmentRepository.findById(1L)).thenReturn(Optional.of(attachment));
+
+        ResponseEntity<byte[]> response = adminController.viewReportAttachment(1L);
+        assertNotNull(response);
+        assertEquals(200, response.getStatusCode().value());
+        assertArrayEquals(new byte[]{1, 2, 3}, response.getBody());
+        assertEquals("inline; filename=\"test.pdf\"", response.getHeaders().getFirst("Content-Disposition"));
+        assertEquals("application/octet-stream", response.getHeaders().getFirst("Content-Type"));
+    }
+
+    @Test
     void testAdminControllerDownloadReportAttachment() {
         ReportAttachment attachment = new ReportAttachment();
         attachment.setOriginalFilename("test.pdf");
@@ -78,6 +95,23 @@ class CrmApplicationTests {
         assertArrayEquals(new byte[]{1, 2, 3}, response.getBody());
         assertEquals("attachment; filename=\"test.pdf\"", response.getHeaders().getFirst("Content-Disposition"));
         assertEquals("application/octet-stream", response.getHeaders().getFirst("Content-Type"));
+    }
+
+    @Test
+    void testAdminControllerDownloadReportAttachmentNonNullContentType() {
+        ReportAttachment attachment = new ReportAttachment();
+        attachment.setOriginalFilename("test.pdf");
+        attachment.setContentType("application/pdf");
+        attachment.setFileData(new byte[]{1, 2, 3});
+
+        when(reportAttachmentRepository.findById(1L)).thenReturn(Optional.of(attachment));
+
+        ResponseEntity<byte[]> response = adminController.downloadReportAttachment(1L);
+        assertNotNull(response);
+        assertEquals(200, response.getStatusCode().value());
+        assertArrayEquals(new byte[]{1, 2, 3}, response.getBody());
+        assertEquals("attachment; filename=\"test.pdf\"", response.getHeaders().getFirst("Content-Disposition"));
+        assertEquals("application/pdf", response.getHeaders().getFirst("Content-Type"));
     }
 
     @Test
