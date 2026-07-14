@@ -1,3 +1,5 @@
+'use strict';
+
 const CrmAnalytics = {
     getNumber(value) {
         const number = Number(value);
@@ -79,8 +81,6 @@ const CrmAnalytics = {
         return new Chart(el, options);
     }
 };
-
-'use strict';
 
 {
     const cfg = window.dashboardAnalytics || {};
