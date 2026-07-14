@@ -620,7 +620,8 @@
 				</div>
 
 				<div class="table-wrap">
-					<table summary="Hr Employees Table" id="empTable">
+					<table id="empTable">
+    <caption style="position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden;">Hr Employees Table</caption>
 						<thead>
 							<tr>
 								<th>#</th>
@@ -981,7 +982,8 @@
 				+ '</div>'
 				+ '</div>'
 				+ '<div style="overflow-x:auto;">'
-				+ '<table summary="Hr Employees Table" class="emp-att-table">'
+				+ '<table class="emp-att-table">
+    <caption style="position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden;">Hr Employees Table</caption>'
 				+ '<thead><tr><th>Date</th><th>Check In</th><th>Check Out</th><th>Worked</th><th>Break</th><th>Day Type</th><th>Status</th></tr></thead>'
 				+ '<tbody>' + (rows || '<tr><td colspan="7" style="text-align:center;padding:24px;color:#9ca3af;">No records found.</td></tr>') + '</tbody>'
 				+ '</table>'

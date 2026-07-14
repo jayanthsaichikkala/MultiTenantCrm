@@ -2090,7 +2090,7 @@ public class ManagerController extends BaseController {
 					if (contentType == null) contentType = OCTET_STREAM;
 					attachmentInfos.add(new TaskAttachmentInfo(file.getOriginalFilename(), fileData, contentType));
 				} catch (IOException e) {
-					throw new RuntimeException("File upload failed: " + e.getMessage(), e);
+					throw new FileUploadException("File upload failed: " + e.getMessage(), e);
 				}
 			}
 		}
@@ -2121,7 +2121,7 @@ public class ManagerController extends BaseController {
 					var ra2 = new ReportAttachment(report, file.getOriginalFilename(), file.getBytes(), ct);
 					reportAttachmentRepository.save(ra2);
 				} catch (IOException e) {
-					throw new RuntimeException("File upload failed: " + e.getMessage(), e);
+					throw new FileUploadException("File upload failed: " + e.getMessage(), e);
 				}
 			}
 		}
@@ -2218,5 +2218,11 @@ public class ManagerController extends BaseController {
 
 		model.addAttribute("activePage", "payroll");
 		return "manager-payroll";
+	}
+
+	public static class FileUploadException extends RuntimeException {
+		public FileUploadException(String message, Throwable cause) {
+			super(message, cause);
+		}
 	}
 }

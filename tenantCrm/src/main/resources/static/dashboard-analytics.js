@@ -80,9 +80,9 @@ const CrmAnalytics = {
     }
 };
 
-(function () {
-    'use strict';
+'use strict';
 
+{
     const cfg = window.dashboardAnalytics || {};
     const charts = window.dashboardCharts || {};
     window.dashboardCharts = charts;
@@ -90,167 +90,167 @@ const CrmAnalytics = {
     const PRIMARY = '#17455e';
     let data = cfg.initialData || {};
 
-    if (!window.Chart) return;
+    if (window.Chart) {
+        Chart.defaults.font.family = "'Poppins', sans-serif";
+        Chart.defaults.font.size = 12;
+        Chart.defaults.color = '#6b7280';
+        Chart.defaults.plugins.legend.labels.usePointStyle = true;
+        Chart.defaults.plugins.legend.labels.pointStyleWidth = 10;
+        Chart.defaults.plugins.legend.labels.padding = 18;
+        Chart.defaults.plugins.tooltip.padding = 10;
+        Chart.defaults.plugins.tooltip.cornerRadius = 10;
+        Chart.defaults.plugins.tooltip.titleFont = { weight: '700' };
 
-    Chart.defaults.font.family = "'Poppins', sans-serif";
-    Chart.defaults.font.size = 12;
-    Chart.defaults.color = '#6b7280';
-    Chart.defaults.plugins.legend.labels.usePointStyle = true;
-    Chart.defaults.plugins.legend.labels.pointStyleWidth = 10;
-    Chart.defaults.plugins.legend.labels.padding = 18;
-    Chart.defaults.plugins.tooltip.padding = 10;
-    Chart.defaults.plugins.tooltip.cornerRadius = 10;
-    Chart.defaults.plugins.tooltip.titleFont = { weight: '700' };
+        const render = (next) => {
+            data = Object.assign({}, data, next || {});
+            CrmAnalytics.updateChips(data);
+            CrmAnalytics.updateStats(data, cfg);
 
-    function render(next) {
-        data = Object.assign({}, data, next || {});
-        CrmAnalytics.updateChips(data);
-        CrmAnalytics.updateStats(data, cfg);
+            CrmAnalytics.replaceDataset(charts.status,
+                ['Done', 'In Progress', 'Pending', 'Waiting Review'],
+                [CrmAnalytics.getNumber(data.statusDone), CrmAnalytics.getNumber(data.statusInProgress), CrmAnalytics.getNumber(data.statusPending), CrmAnalytics.getNumber(data.statusReview)]);
 
-        CrmAnalytics.replaceDataset(charts.status,
-            ['Done', 'In Progress', 'Pending', 'Waiting Review'],
-            [CrmAnalytics.getNumber(data.statusDone), CrmAnalytics.getNumber(data.statusInProgress), CrmAnalytics.getNumber(data.statusPending), CrmAnalytics.getNumber(data.statusReview)]);
+            CrmAnalytics.replaceDataset(charts.priority,
+                ['High', 'Medium', 'Low'],
+                [CrmAnalytics.getNumber(data.priorityHigh), CrmAnalytics.getNumber(data.priorityMedium), CrmAnalytics.getNumber(data.priorityLow)]);
 
-        CrmAnalytics.replaceDataset(charts.priority,
-            ['High', 'Medium', 'Low'],
-            [CrmAnalytics.getNumber(data.priorityHigh), CrmAnalytics.getNumber(data.priorityMedium), CrmAnalytics.getNumber(data.priorityLow)]);
+            const memberLabels = CrmAnalytics.ensureArray(data.memberLabels);
+            const memberCounts = CrmAnalytics.ensureArray(data.memberTaskCounts);
+            CrmAnalytics.replaceDataset(charts.member,
+                memberLabels.length ? memberLabels : ['No Data'],
+                memberCounts.length ? memberCounts : [0]);
 
-        const memberLabels = CrmAnalytics.ensureArray(data.memberLabels);
-        const memberCounts = CrmAnalytics.ensureArray(data.memberTaskCounts);
-        CrmAnalytics.replaceDataset(charts.member,
-            memberLabels.length ? memberLabels : ['No Data'],
-            memberCounts.length ? memberCounts : [0]);
+            CrmAnalytics.replaceDataset(charts.team,
+                cfg.peopleChartLabels || ['Active', 'Inactive'],
+                [CrmAnalytics.getNumber(data.activeTeam), CrmAnalytics.getNumber(data.inactiveTeam)]);
 
-        CrmAnalytics.replaceDataset(charts.team,
-            cfg.peopleChartLabels || ['Active', 'Inactive'],
-            [CrmAnalytics.getNumber(data.activeTeam), CrmAnalytics.getNumber(data.inactiveTeam)]);
+            CrmAnalytics.replaceDataset(charts.verification,
+                ['Approved', 'Rejected', 'Waiting Review', 'Open'],
+                [CrmAnalytics.getNumber(data.verified), CrmAnalytics.getNumber(data.rejected), CrmAnalytics.getNumber(data.waiting), CrmAnalytics.getNumber(data.unverified)]);
+        };
 
-        CrmAnalytics.replaceDataset(charts.verification,
-            ['Approved', 'Rejected', 'Waiting Review', 'Open'],
-            [CrmAnalytics.getNumber(data.verified), CrmAnalytics.getNumber(data.rejected), CrmAnalytics.getNumber(data.waiting), CrmAnalytics.getNumber(data.unverified)]);
-    }
-
-    charts.status = CrmAnalytics.createChart('taskStatusChart', {
-        type: 'doughnut',
-        data: {
-            labels: ['Done', 'In Progress', 'Pending', 'Waiting Review'],
-            datasets: [{
-                data: [0, 0, 0, 0],
-                backgroundColor: ['rgba(27,122,70,.85)', 'rgba(37,99,235,.85)', 'rgba(192,86,33,.85)', 'rgba(107,70,193,.85)'],
-                borderColor: '#fff',
-                borderWidth: 3,
-                hoverOffset: 10
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '60%',
-            layout: { padding: { top: 20, bottom: 10, left: 10, right: 10 } },
-            plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: CrmAnalytics.pctLabel } } }
-        }
-    });
-
-    charts.priority = CrmAnalytics.createChart('taskPriorityChart', {
-        type: 'pie',
-        data: {
-            labels: ['High', 'Medium', 'Low'],
-            datasets: [{
-                data: [0, 0, 0],
-                backgroundColor: ['rgba(209,26,42,.85)', 'rgba(192,86,33,.80)', 'rgba(27,122,70,.80)'],
-                borderColor: '#fff',
-                borderWidth: 3,
-                hoverOffset: 10
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            layout: { padding: { top: 20, bottom: 10, left: 10, right: 10 } },
-            plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: CrmAnalytics.pctLabel } } }
-        }
-    });
-
-    charts.member = CrmAnalytics.createChart('memberTaskChart', {
-        type: 'bar',
-        data: {
-            labels: ['No Data'],
-            datasets: [{
-                label: cfg.memberDatasetLabel || 'Tasks',
-                data: [0],
-                backgroundColor: 'rgba(23,69,94,.18)',
-                borderColor: PRIMARY,
-                borderWidth: 2,
-                borderRadius: 8,
-                borderSkipped: false
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 }, grid: { color: '#f0f6f9' } },
-                x: { grid: { display: false } }
+        charts.status = CrmAnalytics.createChart('taskStatusChart', {
+            type: 'doughnut',
+            data: {
+                labels: ['Done', 'In Progress', 'Pending', 'Waiting Review'],
+                datasets: [{
+                    data: [0, 0, 0, 0],
+                    backgroundColor: ['rgba(27,122,70,.85)', 'rgba(37,99,235,.85)', 'rgba(192,86,33,.85)', 'rgba(107,70,193,.85)'],
+                    borderColor: '#fff',
+                    borderWidth: 3,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '60%',
+                layout: { padding: { top: 20, bottom: 10, left: 10, right: 10 } },
+                plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: CrmAnalytics.pctLabel } } }
             }
-        }
-    });
+        });
 
-    charts.team = CrmAnalytics.createChart('teamStatusChart', {
-        type: 'pie',
-        data: {
-            labels: cfg.peopleChartLabels || ['Active', 'Inactive'],
-            datasets: [{
-                data: [0, 0],
-                backgroundColor: ['rgba(27,122,70,.85)', 'rgba(209,26,42,.80)'],
-                borderColor: '#fff',
-                borderWidth: 3,
-                hoverOffset: 10
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            layout: { padding: { top: 20, bottom: 10, left: 10, right: 10 } },
-            plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: CrmAnalytics.pctLabel } } }
-        }
-    });
+        charts.priority = CrmAnalytics.createChart('taskPriorityChart', {
+            type: 'pie',
+            data: {
+                labels: ['High', 'Medium', 'Low'],
+                datasets: [{
+                    data: [0, 0, 0],
+                    backgroundColor: ['rgba(209,26,42,.85)', 'rgba(192,86,33,.80)', 'rgba(27,122,70,.80)'],
+                    borderColor: '#fff',
+                    borderWidth: 3,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: { top: 20, bottom: 10, left: 10, right: 10 } },
+                plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: CrmAnalytics.pctLabel } } }
+            }
+        });
 
-    charts.verification = CrmAnalytics.createChart('verificationChart', {
-        type: 'doughnut',
-        data: {
-            labels: ['Approved', 'Rejected', 'Waiting Review', 'Open'],
-            datasets: [{
-                data: [0, 0, 0, 0],
-                backgroundColor: ['rgba(27,122,70,.85)', 'rgba(209,26,42,.80)', 'rgba(192,86,33,.80)', 'rgba(37,99,235,.75)'],
-                borderColor: '#fff',
-                borderWidth: 3,
-                hoverOffset: 10
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '60%',
-            layout: { padding: { top: 20, bottom: 10, left: 10, right: 10 } },
-            plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: CrmAnalytics.pctLabel } } }
-        }
-    });
+        charts.member = CrmAnalytics.createChart('memberTaskChart', {
+            type: 'bar',
+            data: {
+                labels: ['No Data'],
+                datasets: [{
+                    label: cfg.memberDatasetLabel || 'Tasks',
+                    data: [0],
+                    backgroundColor: 'rgba(23,69,94,.18)',
+                    borderColor: PRIMARY,
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 }, grid: { color: '#f0f6f9' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
 
-    render(data);
+        charts.team = CrmAnalytics.createChart('teamStatusChart', {
+            type: 'pie',
+            data: {
+                labels: cfg.peopleChartLabels || ['Active', 'Inactive'],
+                datasets: [{
+                    data: [0, 0],
+                    backgroundColor: ['rgba(27,122,70,.85)', 'rgba(209,26,42,.80)'],
+                    borderColor: '#fff',
+                    borderWidth: 3,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: { top: 20, bottom: 10, left: 10, right: 10 } },
+                plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: CrmAnalytics.pctLabel } } }
+            }
+        });
 
-    function fetchLatest() {
-        if (!cfg.endpoint) return;
-        fetch(cfg.endpoint, { headers: { Accept: 'application/json' }, cache: 'no-store' })
-            .then((response) => {
-                if (!response.ok) throw new Error('Analytics refresh failed');
-                return response.json();
-            })
-            .then(render)
-            .catch(() => {});
+        charts.verification = CrmAnalytics.createChart('verificationChart', {
+            type: 'doughnut',
+            data: {
+                labels: ['Approved', 'Rejected', 'Waiting Review', 'Open'],
+                datasets: [{
+                    data: [0, 0, 0, 0],
+                    backgroundColor: ['rgba(27,122,70,.85)', 'rgba(209,26,42,.80)', 'rgba(192,86,33,.80)', 'rgba(37,99,235,.75)'],
+                    borderColor: '#fff',
+                    borderWidth: 3,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '60%',
+                layout: { padding: { top: 20, bottom: 10, left: 10, right: 10 } },
+                plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: CrmAnalytics.pctLabel } } }
+            }
+        });
+
+        render(data);
+
+        const fetchLatest = () => {
+            if (!cfg.endpoint) return;
+            fetch(cfg.endpoint, { headers: { Accept: 'application/json' }, cache: 'no-store' })
+                .then((response) => {
+                    if (!response.ok) throw new Error('Analytics refresh failed');
+                    return response.json();
+                })
+                .then(render)
+                .catch(() => {});
+        };
+
+        fetchLatest();
+        window.setInterval(fetchLatest, pollMs);
+        window.refreshDashboardAnalytics = render;
     }
-
-    fetchLatest();
-    window.setInterval(fetchLatest, pollMs);
-    window.refreshDashboardAnalytics = render;
-})();
+}

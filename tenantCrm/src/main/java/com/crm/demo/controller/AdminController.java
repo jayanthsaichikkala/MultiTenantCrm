@@ -938,27 +938,27 @@ public class AdminController extends BaseController {
 	@GetMapping("/reports/view/{attachmentId}")
 	public org.springframework.http.ResponseEntity<byte[]> viewReportAttachment(
 			@PathVariable Long attachmentId) {
-		ReportAttachment att = reportAttachmentRepository.findById(attachmentId).orElse(null);
-		if (att == null) return org.springframework.http.ResponseEntity.notFound().build();
-		String ct = att.getContentType() != null ? att.getContentType() : "application/octet-stream";
-		return org.springframework.http.ResponseEntity.ok()
-				.header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
-						"inline; filename=\"" + att.getOriginalFilename() + "\"")
-				.header(org.springframework.http.HttpHeaders.CONTENT_TYPE, ct)
-				.body(att.getFileData());
+		return reportAttachmentRepository.findById(attachmentId)
+				.map(att -> org.springframework.http.ResponseEntity.ok()
+						.header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+								"inline; filename=\"" + att.getOriginalFilename() + "\"")
+						.header(org.springframework.http.HttpHeaders.CONTENT_TYPE,
+								att.getContentType() != null ? att.getContentType() : "application/octet-stream")
+						.body(att.getFileData()))
+				.orElseGet(() -> org.springframework.http.ResponseEntity.notFound().build());
 	}
 
 	@GetMapping("/reports/download/{attachmentId}")
 	public org.springframework.http.ResponseEntity<byte[]> downloadReportAttachment(
 			@PathVariable Long attachmentId) {
-		ReportAttachment att = reportAttachmentRepository.findById(attachmentId).orElse(null);
-		if (att == null) return org.springframework.http.ResponseEntity.notFound().build();
-		String ct = att.getContentType() != null ? att.getContentType() : "application/octet-stream";
-		return org.springframework.http.ResponseEntity.ok()
-				.header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
-						"attachment; filename=\"" + att.getOriginalFilename() + "\"")
-				.header(org.springframework.http.HttpHeaders.CONTENT_TYPE, ct)
-				.body(att.getFileData());
+		return reportAttachmentRepository.findById(attachmentId)
+				.map(att -> org.springframework.http.ResponseEntity.ok()
+						.header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+								"attachment; filename=\"" + att.getOriginalFilename() + "\"")
+						.header(org.springframework.http.HttpHeaders.CONTENT_TYPE,
+								att.getContentType() != null ? att.getContentType() : "application/octet-stream")
+						.body(att.getFileData()))
+				.orElseGet(() -> org.springframework.http.ResponseEntity.notFound().build());
 	}
 
 	// =========================================================
