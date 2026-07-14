@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,17 +39,6 @@ class CrmApplicationTests {
     private static final String CONTENT_DISPOSITION = "Content-Disposition";
     private static final String CONTENT_TYPE = "Content-Type";
 
-    // ── Method name constants ─────────────────────────────────────────────────
-    private static final String M_VALIDATE_TASK_PARAMS   = "validateTaskParams";
-    private static final String M_VALIDATE_LEAVE_PARAMS  = "validateLeaveParams";
-    private static final String M_VALIDATE_TASK_DATES    = "validateTaskDates";
-    private static final String M_VALIDATE_REPORT_PARAMS = "validateReportParams";
-    private static final String M_GET_TENANT_SEGMENT     = "getTenantSegmentFromEmail";
-    private static final String M_CALC_WORKING_DAYS      = "calculateWorkingDays";
-    private static final String M_BUILD_ANALYTICS        = "buildDashboardAnalytics";
-    private static final String M_DETERMINE_GRADE        = "determineGrade";
-    private static final String M_CALC_OVERLAP_LEAVE     = "calculateOverlapLeaveDays";
-
     // ── Value constants ───────────────────────────────────────────────────────
     private static final String TASK_TITLE   = "Title";
     private static final String STATUS_PENDING_VAL = "pending";
@@ -66,25 +54,7 @@ class CrmApplicationTests {
     @Mock
     private ReportAttachmentRepository reportAttachmentRepository;
 
-    // ── Dedicated exception for reflection errors ─────────────────────────────
-    static class ReflectionInvocationException extends RuntimeException {
-        ReflectionInvocationException(String message, Throwable cause) {
-            super(message, cause);
-        }
-    }
-
     // ── Helpers ───────────────────────────────────────────────────────────────
-
-    /** Invoke a private method on ManagerController via reflection. */
-    private Object invokePrivate(ManagerController ctrl, String name, Class<?>[] types, Object... args) {
-        try {
-            Method m = ManagerController.class.getDeclaredMethod(name, types);
-            m.setAccessible(true);
-            return m.invoke(ctrl, args);
-        } catch (ReflectiveOperationException e) {
-            throw new ReflectionInvocationException("Failed to invoke " + name, e);
-        }
-    }
 
     static Stream<String> contentTypeVariants() {
         return Stream.of(APP_PDF, null);
@@ -262,342 +232,246 @@ class CrmApplicationTests {
     // ── ManagerController.validateTaskParams ──────────────────────────────────
 
     @Test
-    void testValidateTaskParamsValid() throws Exception {
+    void testValidateTaskParamsValid() {
         ManagerController ctrl = new ManagerController();
         String future = LocalDate.now().plusDays(1).toString();
-        Object result = invokePrivate(ctrl, M_VALIDATE_TASK_PARAMS,
-                new Class[]{String.class, String.class, String.class, String.class, String.class},
-                TASK_TITLE, "desc", "High", STATUS_PENDING_VAL, future);
-        assertNull(result);
+        assertNull(ctrl.validateTaskParams(TASK_TITLE, "desc", "High", STATUS_PENDING_VAL, future));
     }
 
     @Test
-    void testValidateTaskParamsBlankTitle() throws Exception {
+    void testValidateTaskParamsBlankTitle() {
         ManagerController ctrl = new ManagerController();
         String future = LocalDate.now().plusDays(1).toString();
-        Object result = invokePrivate(ctrl, M_VALIDATE_TASK_PARAMS,
-                new Class[]{String.class, String.class, String.class, String.class, String.class},
-                "  ", "desc", "High", STATUS_PENDING_VAL, future);
-        assertEquals("Task title is required.", result);
+        assertEquals("Task title is required.", ctrl.validateTaskParams("  ", "desc", "High", STATUS_PENDING_VAL, future));
     }
 
     @Test
-    void testValidateTaskParamsNullTitle() throws Exception {
+    void testValidateTaskParamsNullTitle() {
         ManagerController ctrl = new ManagerController();
         String future = LocalDate.now().plusDays(1).toString();
-        Object result = invokePrivate(ctrl, M_VALIDATE_TASK_PARAMS,
-                new Class[]{String.class, String.class, String.class, String.class, String.class},
-                null, "desc", "High", STATUS_PENDING_VAL, future);
-        assertEquals("Task title is required.", result);
+        assertEquals("Task title is required.", ctrl.validateTaskParams(null, "desc", "High", STATUS_PENDING_VAL, future));
     }
 
     @Test
-    void testValidateTaskParamsLongTitle() throws Exception {
+    void testValidateTaskParamsLongTitle() {
         ManagerController ctrl = new ManagerController();
         String future = LocalDate.now().plusDays(1).toString();
-        String longTitle = "a".repeat(256);
-        Object result = invokePrivate(ctrl, M_VALIDATE_TASK_PARAMS,
-                new Class[]{String.class, String.class, String.class, String.class, String.class},
-                longTitle, null, "High", STATUS_PENDING_VAL, future);
-        assertEquals("Task title cannot exceed 255 characters.", result);
+        assertEquals("Task title cannot exceed 255 characters.", ctrl.validateTaskParams("a".repeat(256), null, "High", STATUS_PENDING_VAL, future));
     }
 
     @Test
-    void testValidateTaskParamsLongDescription() throws Exception {
+    void testValidateTaskParamsLongDescription() {
         ManagerController ctrl = new ManagerController();
         String future = LocalDate.now().plusDays(1).toString();
-        String longDesc = "d".repeat(256);
-        Object result = invokePrivate(ctrl, M_VALIDATE_TASK_PARAMS,
-                new Class[]{String.class, String.class, String.class, String.class, String.class},
-                TASK_TITLE, longDesc, "High", STATUS_PENDING_VAL, future);
-        assertEquals("Description cannot exceed 255 characters.", result);
+        assertEquals("Description cannot exceed 255 characters.", ctrl.validateTaskParams(TASK_TITLE, "d".repeat(256), "High", STATUS_PENDING_VAL, future));
     }
 
     @Test
-    void testValidateTaskParamsInvalidPriority() throws Exception {
+    void testValidateTaskParamsInvalidPriority() {
         ManagerController ctrl = new ManagerController();
         String future = LocalDate.now().plusDays(1).toString();
-        Object result = invokePrivate(ctrl, M_VALIDATE_TASK_PARAMS,
-                new Class[]{String.class, String.class, String.class, String.class, String.class},
-                TASK_TITLE, null, "Critical", STATUS_PENDING_VAL, future);
-        assertEquals("Invalid priority selected.", result);
+        assertEquals("Invalid priority selected.", ctrl.validateTaskParams(TASK_TITLE, null, "Critical", STATUS_PENDING_VAL, future));
     }
 
     @Test
-    void testValidateTaskParamsInvalidStatus() throws Exception {
+    void testValidateTaskParamsInvalidStatus() {
         ManagerController ctrl = new ManagerController();
         String future = LocalDate.now().plusDays(1).toString();
-        Object result = invokePrivate(ctrl, M_VALIDATE_TASK_PARAMS,
-                new Class[]{String.class, String.class, String.class, String.class, String.class},
-                TASK_TITLE, null, "High", "invalid-status", future);
-        assertEquals("Invalid status selected.", result);
+        assertEquals("Invalid status selected.", ctrl.validateTaskParams(TASK_TITLE, null, "High", "invalid-status", future));
     }
 
     @Test
-    void testValidateTaskParamsBlankDueDate() throws Exception {
+    void testValidateTaskParamsBlankDueDate() {
         ManagerController ctrl = new ManagerController();
-        Object result = invokePrivate(ctrl, M_VALIDATE_TASK_PARAMS,
-                new Class[]{String.class, String.class, String.class, String.class, String.class},
-                TASK_TITLE, null, "High", STATUS_PENDING_VAL, "");
-        assertEquals("Please select a valid due date.", result);
+        assertEquals("Please select a valid due date.", ctrl.validateTaskParams(TASK_TITLE, null, "High", STATUS_PENDING_VAL, ""));
     }
 
     // ── ManagerController.validateLeaveParams ─────────────────────────────────
 
     @Test
-    void testValidateLeaveParamsValid() throws Exception {
+    void testValidateLeaveParamsValid() {
         ManagerController ctrl = new ManagerController();
-        Object result = invokePrivate(ctrl, M_VALIDATE_LEAVE_PARAMS,
+        assertNull(ctrl.validateLeaveParams("sick", "flu", LEAVE_FROM, LEAVE_TO));
+    }
                 new Class[]{String.class, String.class, String.class, String.class},
                 "sick", "flu", LEAVE_FROM, LEAVE_TO);
         assertNull(result);
     }
 
     @Test
-    void testValidateLeaveParamsBlankType() throws Exception {
+    void testValidateLeaveParamsBlankType() {
         ManagerController ctrl = new ManagerController();
-        Object result = invokePrivate(ctrl, M_VALIDATE_LEAVE_PARAMS,
-                new Class[]{String.class, String.class, String.class, String.class},
-                "", LEAVE_REASON, LEAVE_FROM, LEAVE_TO);
-        assertEquals("Leave type is required.", result);
+        assertEquals("Leave type is required.", ctrl.validateLeaveParams("", LEAVE_REASON, LEAVE_FROM, LEAVE_TO));
     }
 
     @Test
-    void testValidateLeaveParamsBlankReason() throws Exception {
+    void testValidateLeaveParamsBlankReason() {
         ManagerController ctrl = new ManagerController();
-        Object result = invokePrivate(ctrl, M_VALIDATE_LEAVE_PARAMS,
-                new Class[]{String.class, String.class, String.class, String.class},
-                "sick", "  ", LEAVE_FROM, LEAVE_TO);
-        assertEquals("Leave reason is required.", result);
+        assertEquals("Leave reason is required.", ctrl.validateLeaveParams("sick", "  ", LEAVE_FROM, LEAVE_TO));
     }
 
     @Test
-    void testValidateLeaveParamsLongReason() throws Exception {
+    void testValidateLeaveParamsLongReason() {
         ManagerController ctrl = new ManagerController();
-        Object result = invokePrivate(ctrl, M_VALIDATE_LEAVE_PARAMS,
-                new Class[]{String.class, String.class, String.class, String.class},
-                "sick", "r".repeat(256), LEAVE_FROM, LEAVE_TO);
-        assertEquals("Reason cannot exceed 255 characters.", result);
+        assertEquals("Reason cannot exceed 255 characters.", ctrl.validateLeaveParams("sick", "r".repeat(256), LEAVE_FROM, LEAVE_TO));
     }
 
     @Test
-    void testValidateLeaveParamsInvalidFromDate() throws Exception {
+    void testValidateLeaveParamsInvalidFromDate() {
         ManagerController ctrl = new ManagerController();
-        Object result = invokePrivate(ctrl, M_VALIDATE_LEAVE_PARAMS,
-                new Class[]{String.class, String.class, String.class, String.class},
-                "sick", LEAVE_REASON, "not-a-date", LEAVE_TO);
-        assertEquals("Invalid start date format.", result);
+        assertEquals("Invalid start date format.", ctrl.validateLeaveParams("sick", LEAVE_REASON, "not-a-date", LEAVE_TO));
     }
 
     @Test
-    void testValidateLeaveParamsInvalidToDate() throws Exception {
+    void testValidateLeaveParamsInvalidToDate() {
         ManagerController ctrl = new ManagerController();
-        Object result = invokePrivate(ctrl, M_VALIDATE_LEAVE_PARAMS,
-                new Class[]{String.class, String.class, String.class, String.class},
-                "sick", LEAVE_REASON, LEAVE_FROM, "bad");
-        assertEquals("Invalid end date format.", result);
+        assertEquals("Invalid end date format.", ctrl.validateLeaveParams("sick", LEAVE_REASON, LEAVE_FROM, "bad"));
     }
 
     // ── ManagerController.validateTaskDates ───────────────────────────────────
 
     @Test
-    void testValidateTaskDatesValid() throws Exception {
+    void testValidateTaskDatesValid() {
         ManagerController ctrl = new ManagerController();
         String future = LocalDate.now().plusDays(5).toString();
         LocalDate[] parsed = new LocalDate[2];
-        Object result = invokePrivate(ctrl, M_VALIDATE_TASK_DATES,
-                new Class[]{String.class, String.class, LocalDate[].class},
-                null, future, parsed);
-        assertNull(result);
+        assertNull(ctrl.validateTaskDates(null, future, parsed));
         assertEquals(LocalDate.parse(future), parsed[1]);
     }
 
     @Test
-    void testValidateTaskDatesPastDueDate() throws Exception {
+    void testValidateTaskDatesPastDueDate() {
         ManagerController ctrl = new ManagerController();
         String past = LocalDate.now().minusDays(1).toString();
         LocalDate[] parsed = new LocalDate[2];
-        Object result = invokePrivate(ctrl, M_VALIDATE_TASK_DATES,
-                new Class[]{String.class, String.class, LocalDate[].class},
-                null, past, parsed);
-        assertEquals("Due date cannot be in the past.", result);
+        assertEquals("Due date cannot be in the past.", ctrl.validateTaskDates(null, past, parsed));
     }
 
     @Test
-    void testValidateTaskDatesInvalidDueDate() throws Exception {
+    void testValidateTaskDatesInvalidDueDate() {
         ManagerController ctrl = new ManagerController();
         LocalDate[] parsed = new LocalDate[2];
-        Object result = invokePrivate(ctrl, M_VALIDATE_TASK_DATES,
-                new Class[]{String.class, String.class, LocalDate[].class},
-                null, "not-a-date", parsed);
-        assertEquals("Invalid due date value.", result);
+        assertEquals("Invalid due date value.", ctrl.validateTaskDates(null, "not-a-date", parsed));
     }
 
     @Test
-    void testValidateTaskDatesStartAfterDue() throws Exception {
+    void testValidateTaskDatesStartAfterDue() {
         ManagerController ctrl = new ManagerController();
         String due   = LocalDate.now().plusDays(2).toString();
         String start = LocalDate.now().plusDays(5).toString();
         LocalDate[] parsed = new LocalDate[2];
-        Object result = invokePrivate(ctrl, M_VALIDATE_TASK_DATES,
-                new Class[]{String.class, String.class, LocalDate[].class},
-                start, due, parsed);
-        assertEquals("Start date cannot be after due date.", result);
+        assertEquals("Start date cannot be after due date.", ctrl.validateTaskDates(start, due, parsed));
     }
 
     @Test
-    void testValidateTaskDatesValidWithStart() throws Exception {
+    void testValidateTaskDatesValidWithStart() {
         ManagerController ctrl = new ManagerController();
         String start = LocalDate.now().plusDays(1).toString();
         String due   = LocalDate.now().plusDays(5).toString();
         LocalDate[] parsed = new LocalDate[2];
-        Object result = invokePrivate(ctrl, M_VALIDATE_TASK_DATES,
-                new Class[]{String.class, String.class, LocalDate[].class},
-                start, due, parsed);
-        assertNull(result);
+        assertNull(ctrl.validateTaskDates(start, due, parsed));
     }
 
     // ── ManagerController.getTenantSegmentFromEmail ───────────────────────────
 
     @Test
-    void testGetTenantSegmentFromEmailNormal() throws Exception {
+    void testGetTenantSegmentFromEmailNormal() {
         ManagerController ctrl = new ManagerController();
-        Object result = invokePrivate(ctrl, M_GET_TENANT_SEGMENT,
-                new Class[]{String.class}, "mgr.tcs@crm.com");
-        assertEquals("tcs", result);
+        assertEquals("tcs", ctrl.getTenantSegmentFromEmail("mgr.tcs@crm.com"));
     }
 
     @Test
-    void testGetTenantSegmentFromEmailNoDot() throws Exception {
+    void testGetTenantSegmentFromEmailNoDot() {
         ManagerController ctrl = new ManagerController();
-        Object result = invokePrivate(ctrl, M_GET_TENANT_SEGMENT,
-                new Class[]{String.class}, "admin@crm.com");
-        assertEquals("admin", result);
+        assertEquals("admin", ctrl.getTenantSegmentFromEmail("admin@crm.com"));
     }
 
     @Test
-    void testGetTenantSegmentFromEmailNull() throws Exception {
+    void testGetTenantSegmentFromEmailNull() {
         ManagerController ctrl = new ManagerController();
-        Object result = invokePrivate(ctrl, M_GET_TENANT_SEGMENT,
-                new Class[]{String.class}, (Object) null);
-        assertEquals("", result);
+        assertEquals("", ctrl.getTenantSegmentFromEmail(null));
     }
 
     @Test
-    void testGetTenantSegmentFromEmailNoAt() throws Exception {
+    void testGetTenantSegmentFromEmailNoAt() {
         ManagerController ctrl = new ManagerController();
-        Object result = invokePrivate(ctrl, M_GET_TENANT_SEGMENT,
-                new Class[]{String.class}, "notanemail");
-        assertEquals("", result);
+        assertEquals("", ctrl.getTenantSegmentFromEmail("notanemail"));
     }
 
     // ── ManagerController.calculateWorkingDays ────────────────────────────────
 
     @Test
-    void testCalculateWorkingDaysWeekdays() throws Exception {
+    void testCalculateWorkingDaysWeekdays() {
         ManagerController ctrl = new ManagerController();
         // Monday to Friday = 5 working days
-        LocalDate mon = LocalDate.of(2025, 1, 6);
-        LocalDate fri = LocalDate.of(2025, 1, 10);
-        Object result = invokePrivate(ctrl, M_CALC_WORKING_DAYS,
-                new Class[]{LocalDate.class, LocalDate.class}, mon, fri);
-        assertEquals(5, result);
+        assertEquals(5, ctrl.calculateWorkingDays(LocalDate.of(2025, 1, 6), LocalDate.of(2025, 1, 10)));
     }
 
     @Test
-    void testCalculateWorkingDaysWeekend() throws Exception {
+    void testCalculateWorkingDaysWeekend() {
         ManagerController ctrl = new ManagerController();
         // Saturday only - returns min 1
         LocalDate sat = LocalDate.of(2025, 1, 11);
-        Object result = invokePrivate(ctrl, M_CALC_WORKING_DAYS,
-                new Class[]{LocalDate.class, LocalDate.class}, sat, sat);
-        assertEquals(1, result);
+        assertEquals(1, ctrl.calculateWorkingDays(sat, sat));
     }
 
     @Test
-    void testCalculateWorkingDaysSingleWeekday() throws Exception {
+    void testCalculateWorkingDaysSingleWeekday() {
         ManagerController ctrl = new ManagerController();
         LocalDate mon = LocalDate.of(2025, 1, 6);
-        Object result = invokePrivate(ctrl, M_CALC_WORKING_DAYS,
-                new Class[]{LocalDate.class, LocalDate.class}, mon, mon);
-        assertEquals(1, result);
+        assertEquals(1, ctrl.calculateWorkingDays(mon, mon));
     }
 
     // ── ManagerController.validateReportParams ────────────────────────────────
 
     @Test
-    void testValidateReportParamsValid() throws Exception {
+    void testValidateReportParamsValid() {
         ManagerController ctrl = new ManagerController();
-        Object result = invokePrivate(ctrl, M_VALIDATE_REPORT_PARAMS,
-                new Class[]{String.class, String.class, List.class},
-                "Q1 Report", "Summary", Arrays.asList(1L, 2L));
-        assertNull(result);
+        assertNull(ctrl.validateReportParams("Q1 Report", "Summary", Arrays.asList(1L, 2L)));
     }
 
     @Test
-    void testValidateReportParamsBlankTitle() throws Exception {
+    void testValidateReportParamsBlankTitle() {
         ManagerController ctrl = new ManagerController();
-        Object result = invokePrivate(ctrl, M_VALIDATE_REPORT_PARAMS,
-                new Class[]{String.class, String.class, List.class},
-                "", "msg", Arrays.asList(1L));
-        assertEquals("Report title is required.", result);
+        assertEquals("Report title is required.", ctrl.validateReportParams("", "msg", Arrays.asList(1L)));
     }
 
     @Test
-    void testValidateReportParamsNullTitle() throws Exception {
+    void testValidateReportParamsNullTitle() {
         ManagerController ctrl = new ManagerController();
-        Object result = invokePrivate(ctrl, M_VALIDATE_REPORT_PARAMS,
-                new Class[]{String.class, String.class, List.class},
-                null, "msg", Arrays.asList(1L));
-        assertEquals("Report title is required.", result);
+        assertEquals("Report title is required.", ctrl.validateReportParams(null, "msg", Arrays.asList(1L)));
     }
 
     @Test
-    void testValidateReportParamsLongTitle() throws Exception {
+    void testValidateReportParamsLongTitle() {
         ManagerController ctrl = new ManagerController();
-        Object result = invokePrivate(ctrl, M_VALIDATE_REPORT_PARAMS,
-                new Class[]{String.class, String.class, List.class},
-                "t".repeat(201), "msg", Arrays.asList(1L));
-        assertEquals("Report title cannot exceed 200 characters.", result);
+        assertEquals("Report title cannot exceed 200 characters.", ctrl.validateReportParams("t".repeat(201), "msg", Arrays.asList(1L)));
     }
 
     @Test
-    void testValidateReportParamsLongMessage() throws Exception {
+    void testValidateReportParamsLongMessage() {
         ManagerController ctrl = new ManagerController();
-        Object result = invokePrivate(ctrl, M_VALIDATE_REPORT_PARAMS,
-                new Class[]{String.class, String.class, List.class},
-                TASK_TITLE, "m".repeat(256), Arrays.asList(1L));
-        assertEquals("Message cannot exceed 255 characters.", result);
+        assertEquals("Message cannot exceed 255 characters.", ctrl.validateReportParams(TASK_TITLE, "m".repeat(256), Arrays.asList(1L)));
     }
 
     @Test
-    void testValidateReportParamsNoRecipients() throws Exception {
+    void testValidateReportParamsNoRecipients() {
         ManagerController ctrl = new ManagerController();
-        Object result = invokePrivate(ctrl, M_VALIDATE_REPORT_PARAMS,
-                new Class[]{String.class, String.class, List.class},
-                TASK_TITLE, "msg", Collections.emptyList());
-        assertEquals("Please select at least one recipient.", result);
+        assertEquals("Please select at least one recipient.", ctrl.validateReportParams(TASK_TITLE, "msg", Collections.emptyList()));
     }
 
     @Test
-    void testValidateReportParamsNullRecipients() throws Exception {
+    void testValidateReportParamsNullRecipients() {
         ManagerController ctrl = new ManagerController();
-        Object result = invokePrivate(ctrl, M_VALIDATE_REPORT_PARAMS,
-                new Class[]{String.class, String.class, List.class},
-                TASK_TITLE, "msg", null);
-        assertEquals("Please select at least one recipient.", result);
+        assertEquals("Please select at least one recipient.", ctrl.validateReportParams(TASK_TITLE, "msg", null));
     }
 
     // ── ManagerController.buildDashboardAnalytics ─────────────────────────────
 
     @Test
-    void testBuildDashboardAnalyticsEmpty() throws Exception {
+    void testBuildDashboardAnalyticsEmpty() {
         ManagerController ctrl = new ManagerController();
-        @SuppressWarnings("unchecked")
-        java.util.Map<String, Object> result = (java.util.Map<String, Object>) invokePrivate(
-                ctrl, M_BUILD_ANALYTICS,
-                new Class[]{List.class, List.class},
-                Collections.emptyList(), Collections.emptyList());
+        java.util.Map<String, Object> result = ctrl.buildDashboardAnalytics(Collections.emptyList(), Collections.emptyList());
 
         assertNotNull(result);
         assertEquals(0L, result.get(KEY_STATUS_DONE));
@@ -611,7 +485,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testBuildDashboardAnalyticsWithTasks() throws Exception {
+    void testBuildDashboardAnalyticsWithTasks() {
         ManagerController ctrl = new ManagerController();
 
         Task doneTask = new Task();
@@ -629,10 +503,7 @@ class CrmApplicationTests {
         alice.setUsername("alice");
         alice.setStatus("active");
 
-        @SuppressWarnings("unchecked")
-        java.util.Map<String, Object> result = (java.util.Map<String, Object>) invokePrivate(
-                ctrl, M_BUILD_ANALYTICS,
-                new Class[]{List.class, List.class},
+        java.util.Map<String, Object> result = ctrl.buildDashboardAnalytics(
                 Arrays.asList(doneTask, pendingTask), Arrays.asList(alice));
 
         assertEquals(1L, result.get(KEY_STATUS_DONE));
@@ -645,13 +516,9 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testBuildDashboardAnalyticsNullInputs() throws Exception {
+    void testBuildDashboardAnalyticsNullInputs() {
         ManagerController ctrl = new ManagerController();
-        @SuppressWarnings("unchecked")
-        java.util.Map<String, Object> result = (java.util.Map<String, Object>) invokePrivate(
-                ctrl, M_BUILD_ANALYTICS,
-                new Class[]{List.class, List.class},
-                null, null);
+        java.util.Map<String, Object> result = ctrl.buildDashboardAnalytics(null, null);
         assertNotNull(result);
         assertEquals(0L, result.get(KEY_STATUS_DONE));
     }
@@ -659,113 +526,95 @@ class CrmApplicationTests {
     // ── ManagerController.determineGrade ──────────────────────────────────────
 
     @Test
-    void testDetermineGradeAPlus() throws Exception {
+    void testDetermineGradeAPlus() {
         ManagerController ctrl = new ManagerController();
-        assertEquals("A+", invokePrivate(ctrl, M_DETERMINE_GRADE, new Class[]{int.class}, 90));
-        assertEquals("A+", invokePrivate(ctrl, M_DETERMINE_GRADE, new Class[]{int.class}, 100));
+        assertEquals("A+", ctrl.determineGrade(90));
+        assertEquals("A+", ctrl.determineGrade(100));
     }
 
     @Test
-    void testDetermineGradeA() throws Exception {
+    void testDetermineGradeA() {
         ManagerController ctrl = new ManagerController();
-        assertEquals("A", invokePrivate(ctrl, M_DETERMINE_GRADE, new Class[]{int.class}, 75));
-        assertEquals("A", invokePrivate(ctrl, M_DETERMINE_GRADE, new Class[]{int.class}, 89));
+        assertEquals("A", ctrl.determineGrade(75));
+        assertEquals("A", ctrl.determineGrade(89));
     }
 
     @Test
-    void testDetermineGradeB() throws Exception {
+    void testDetermineGradeB() {
         ManagerController ctrl = new ManagerController();
-        assertEquals("B", invokePrivate(ctrl, M_DETERMINE_GRADE, new Class[]{int.class}, 60));
-        assertEquals("B", invokePrivate(ctrl, M_DETERMINE_GRADE, new Class[]{int.class}, 74));
+        assertEquals("B", ctrl.determineGrade(60));
+        assertEquals("B", ctrl.determineGrade(74));
     }
 
     @Test
-    void testDetermineGradeC() throws Exception {
+    void testDetermineGradeC() {
         ManagerController ctrl = new ManagerController();
-        assertEquals("C", invokePrivate(ctrl, M_DETERMINE_GRADE, new Class[]{int.class}, 45));
-        assertEquals("C", invokePrivate(ctrl, M_DETERMINE_GRADE, new Class[]{int.class}, 59));
+        assertEquals("C", ctrl.determineGrade(45));
+        assertEquals("C", ctrl.determineGrade(59));
     }
 
     @Test
-    void testDetermineGradeD() throws Exception {
+    void testDetermineGradeD() {
         ManagerController ctrl = new ManagerController();
-        assertEquals("D", invokePrivate(ctrl, M_DETERMINE_GRADE, new Class[]{int.class}, 0));
-        assertEquals("D", invokePrivate(ctrl, M_DETERMINE_GRADE, new Class[]{int.class}, 44));
+        assertEquals("D", ctrl.determineGrade(0));
+        assertEquals("D", ctrl.determineGrade(44));
     }
 
     // ── ManagerController.calculateOverlapLeaveDays ───────────────────────────
 
     @Test
-    void testCalculateOverlapLeaveDaysNull() throws Exception {
+    void testCalculateOverlapLeaveDaysNull() {
         ManagerController ctrl = new ManagerController();
-        Object result = invokePrivate(ctrl, M_CALC_OVERLAP_LEAVE,
-                new Class[]{LeaveRequest.class, LocalDate.class, LocalDate.class},
-                null, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31));
-        assertEquals(0, result);
+        assertEquals(0, ctrl.calculateOverlapLeaveDays(null, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31)));
     }
 
     @Test
-    void testCalculateOverlapLeaveDaysNotApproved() throws Exception {
+    void testCalculateOverlapLeaveDaysNotApproved() {
         ManagerController ctrl = new ManagerController();
         LeaveRequest lr = new LeaveRequest();
         lr.setStatus("Pending");
         lr.setFromDate(LocalDate.of(2025, 1, 6));
         lr.setToDate(LocalDate.of(2025, 1, 10));
-        Object result = invokePrivate(ctrl, M_CALC_OVERLAP_LEAVE,
-                new Class[]{LeaveRequest.class, LocalDate.class, LocalDate.class},
-                lr, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31));
-        assertEquals(0, result);
+        assertEquals(0, ctrl.calculateOverlapLeaveDays(lr, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31)));
     }
 
     @Test
-    void testCalculateOverlapLeaveDaysApprovedFullOverlap() throws Exception {
+    void testCalculateOverlapLeaveDaysApprovedFullOverlap() {
         ManagerController ctrl = new ManagerController();
         LeaveRequest lr = new LeaveRequest();
         lr.setStatus(STATUS_APPROVED_VAL);
         lr.setFromDate(LocalDate.of(2025, 1, 6));  // Monday
         lr.setToDate(LocalDate.of(2025, 1, 10));   // Friday = 5 weekdays
-        Object result = invokePrivate(ctrl, M_CALC_OVERLAP_LEAVE,
-                new Class[]{LeaveRequest.class, LocalDate.class, LocalDate.class},
-                lr, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31));
-        assertEquals(5, result);
+        assertEquals(5, ctrl.calculateOverlapLeaveDays(lr, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31)));
     }
 
     @Test
-    void testCalculateOverlapLeaveDaysApprovedPartialOverlap() throws Exception {
+    void testCalculateOverlapLeaveDaysApprovedPartialOverlap() {
         ManagerController ctrl = new ManagerController();
         LeaveRequest lr = new LeaveRequest();
         lr.setStatus(STATUS_APPROVED_VAL);
         lr.setFromDate(LocalDate.of(2025, 1, 1));
         lr.setToDate(LocalDate.of(2025, 1, 10));
-        Object result = invokePrivate(ctrl, M_CALC_OVERLAP_LEAVE,
-                new Class[]{LeaveRequest.class, LocalDate.class, LocalDate.class},
-                lr, LocalDate.of(2025, 1, 6), LocalDate.of(2025, 1, 10));
-        assertEquals(5, result);
+        assertEquals(5, ctrl.calculateOverlapLeaveDays(lr, LocalDate.of(2025, 1, 6), LocalDate.of(2025, 1, 10)));
     }
 
     @Test
-    void testCalculateOverlapLeaveDaysNoOverlap() throws Exception {
+    void testCalculateOverlapLeaveDaysNoOverlap() {
         ManagerController ctrl = new ManagerController();
         LeaveRequest lr = new LeaveRequest();
         lr.setStatus(STATUS_APPROVED_VAL);
         lr.setFromDate(LocalDate.of(2025, 2, 1));
         lr.setToDate(LocalDate.of(2025, 2, 5));
-        Object result = invokePrivate(ctrl, M_CALC_OVERLAP_LEAVE,
-                new Class[]{LeaveRequest.class, LocalDate.class, LocalDate.class},
-                lr, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31));
-        assertEquals(0, result);
+        assertEquals(0, ctrl.calculateOverlapLeaveDays(lr, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31)));
     }
 
     @Test
-    void testCalculateOverlapLeaveDaysNullDates() throws Exception {
+    void testCalculateOverlapLeaveDaysNullDates() {
         ManagerController ctrl = new ManagerController();
         LeaveRequest lr = new LeaveRequest();
         lr.setStatus(STATUS_APPROVED_VAL);
         lr.setFromDate(null);
         lr.setToDate(null);
-        Object result = invokePrivate(ctrl, M_CALC_OVERLAP_LEAVE,
-                new Class[]{LeaveRequest.class, LocalDate.class, LocalDate.class},
-                lr, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31));
-        assertEquals(0, result);
+        assertEquals(0, ctrl.calculateOverlapLeaveDays(lr, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31)));
     }
 }

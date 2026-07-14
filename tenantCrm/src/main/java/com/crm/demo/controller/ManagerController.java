@@ -242,7 +242,7 @@ public class ManagerController extends BaseController {
 		model.addAttribute("pendingTaskList",   Collections.emptyList());
 	}
 
-	private String validateTaskParams(String title, String description, String priority, String status, String dueDate) {
+	String validateTaskParams(String title, String description, String priority, String status, String dueDate) {
 		if (title == null || title.trim().isBlank()) {
 			return "Task title is required.";
 		}
@@ -264,7 +264,7 @@ public class ManagerController extends BaseController {
 		return null;
 	}
 
-	private String validateLeaveParams(String type, String reason, String fromDate, String toDate) {
+	String validateLeaveParams(String type, String reason, String fromDate, String toDate) {
 		if (type == null || type.isBlank()) {
 			return "Leave type is required.";
 		}
@@ -455,7 +455,7 @@ public class ManagerController extends BaseController {
 		return buildDashboardAnalytics(myTasks, teamMembers);
 	}
 
-	private Map<String, Object> buildDashboardAnalytics(List<Task> tasks, List<User> people) {
+	Map<String, Object> buildDashboardAnalytics(List<Task> tasks, List<User> people) {
 		var data = new LinkedHashMap<String, Object>();
 		var scopedTasks = tasks != null ? tasks : Collections.<Task>emptyList();
 		var scopedPeople = people != null ? people : Collections.<User>emptyList();
@@ -504,7 +504,7 @@ public class ManagerController extends BaseController {
 		return data;
 	}
 
-	private String getTenantSegmentFromEmail(String email) {
+	String getTenantSegmentFromEmail(String email) {
 		if (email == null || !email.contains("@")) return "";
 		var local = email.substring(0, email.indexOf('@'));
 		var dot = local.lastIndexOf('.');
@@ -1885,7 +1885,7 @@ public class ManagerController extends BaseController {
 		return task;
 	}
 
-	private String determineGrade(int score) {
+	String determineGrade(int score) {
 		if (score >= 90) return "A+";
 		if (score >= 75) return "A";
 		if (score >= 60) return "B";
@@ -1893,7 +1893,7 @@ public class ManagerController extends BaseController {
 		return "D";
 	}
 
-	private int calculateWorkingDays(LocalDate from, LocalDate to) {
+	int calculateWorkingDays(LocalDate from, LocalDate to) {
 		var workingDays = 0;
 		var d = from;
 		while (!d.isAfter(to)) {
@@ -1915,7 +1915,7 @@ public class ManagerController extends BaseController {
 		return leaveDaysCount;
 	}
 
-	private int calculateOverlapLeaveDays(LeaveRequest lr, LocalDate from, LocalDate to) {
+	int calculateOverlapLeaveDays(LeaveRequest lr, LocalDate from, LocalDate to) {
 		if (lr == null || !STATUS_APPROVED.equalsIgnoreCase(lr.getStatus()) || lr.getFromDate() == null || lr.getToDate() == null) {
 			return 0;
 		}
@@ -1981,7 +1981,7 @@ public class ManagerController extends BaseController {
 		return p;
 	}
 
-	private String validateTaskDates(String startDate, String dueDate, LocalDate[] parsedDates) {
+	String validateTaskDates(String startDate, String dueDate, LocalDate[] parsedDates) {
 		try {
 			parsedDates[1] = LocalDate.parse(dueDate.trim());
 		} catch (java.time.format.DateTimeParseException e) {
@@ -2096,7 +2096,7 @@ public class ManagerController extends BaseController {
 		}
 	}
 
-	private String validateReportParams(String title, String message, List<Long> recipientIds) {
+	String validateReportParams(String title, String message, List<Long> recipientIds) {
 		if (title == null || title.isBlank()) {
 			return "Report title is required.";
 		}
