@@ -293,10 +293,6 @@ class CrmApplicationTests {
         ManagerController ctrl = new ManagerController();
         assertNull(ctrl.validateLeaveParams("sick", "flu", LEAVE_FROM, LEAVE_TO));
     }
-                new Class[]{String.class, String.class, String.class, String.class},
-                "sick", "flu", LEAVE_FROM, LEAVE_TO);
-        assertNull(result);
-    }
 
     @Test
     void testValidateLeaveParamsBlankType() {
