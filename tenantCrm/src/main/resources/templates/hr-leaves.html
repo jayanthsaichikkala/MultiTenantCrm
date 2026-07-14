@@ -4,7 +4,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>HR â€” Leave Requests</title>
+	<title>HR &mdash; Leave Requests</title>
 	<link rel="stylesheet" th:href="@{/hr.css}">
 	<link rel="stylesheet" th:href="@{/notifications.css}">
 	<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -613,15 +613,15 @@
 				</button>
 			</div>
 			<div class="lf-modal-body">
-				<div class="lf-detail-row"><span>Employee</span><span id="mdName">â€”</span></div>
-				<div class="lf-detail-row"><span>Leave Type</span><span id="mdType">â€”</span></div>
-				<div class="lf-detail-row"><span>From Date</span><span id="mdFrom">â€”</span></div>
-				<div class="lf-detail-row"><span>To Date</span><span id="mdTo">â€”</span></div>
-				<div class="lf-detail-row"><span>Duration</span><span id="mdDuration">â€”</span></div>
-				<div class="lf-detail-row"><span>Status</span><span id="mdStatus">â€”</span></div>
+				<div class="lf-detail-row"><span>Employee</span><span id="mdName">&mdash;</span></div>
+				<div class="lf-detail-row"><span>Leave Type</span><span id="mdType">&mdash;</span></div>
+				<div class="lf-detail-row"><span>From Date</span><span id="mdFrom">&mdash;</span></div>
+				<div class="lf-detail-row"><span>To Date</span><span id="mdTo">&mdash;</span></div>
+				<div class="lf-detail-row"><span>Duration</span><span id="mdDuration">&mdash;</span></div>
+				<div class="lf-detail-row"><span>Status</span><span id="mdStatus">&mdash;</span></div>
 				<div class="lf-detail-row" style="flex-direction:column; gap:8px;">
 					<span>Reason</span>
-					<div class="lf-reason-box" id="mdReason">â€”</div>
+					<div class="lf-reason-box" id="mdReason">&mdash;</div>
 				</div>
 				<div class="lf-detail-row" id="mdAttachmentRow" style="display:none; flex-direction:column; gap:8px;">
 					<span>Attachment</span>
@@ -641,7 +641,7 @@
 				</div>
 				<div class="lf-detail-row" style="flex-direction:column; gap:8px;" id="mdRejectionRow">
 					<span>Rejection Note</span>
-					<div class="lf-reason-box" id="mdRejectionNote">â€”</div>
+					<div class="lf-reason-box" id="mdRejectionNote">&mdash;</div>
 				</div>
 				<div class="lf-detail-row" style="flex-direction:column; gap:8px;" id="mdRejectMessageRow">
 					<span>Return message (optional)</span>
@@ -666,7 +666,7 @@
 	</div>
 
 	<script>
-		/* â”€â”€ Sidebar â”€â”€ */
+		/* ── Sidebar ── */
 		var hamburger = document.getElementById('hamburgerBtn'),
 			sidebar = document.getElementById('sidebar'),
 			overlay = document.getElementById('sidebarOverlay');
@@ -675,15 +675,15 @@
 		if (hamburger) hamburger.addEventListener('click', openSidebar);
 		if (overlay) overlay.addEventListener('click', closeSidebar);
 
-		/* â”€â”€ Init Lucide â”€â”€ */
+		/* ── Init Lucide ── */
 		lucide.createIcons();
 
-		/* â”€â”€ Status badge class helper â”€â”€ */
+		/* ── Status badge class helper ── */
 		function badgeClass(status) {
 			return status === 'Approved' ? 'badge-approved' : status === 'Rejected' ? 'badge-rejected' : 'badge-pending';
 		}
 
-		/* â”€â”€ Update stat counters â”€â”€ */
+		/* ── Update stat counters ── */
 		function updateStats() {
 			var items = document.querySelectorAll('#lhList .leave-item');
 			var pending = 0, approved = 0;
@@ -696,7 +696,7 @@
 			document.getElementById('statApproved').textContent = approved;
 		}
 
-		/* â”€â”€ Change status (approve / reject) â”€â”€ */
+		/* ── Change status (approve / reject) ── */
 		function changeStatus(btn, newStatus) {
 			var item = btn.closest('.leave-item');
 			var badge = item.querySelector('.leave-status-badge');
@@ -708,14 +708,14 @@
 			lucide.createIcons();
 		}
 
-		/* â”€â”€ Format date â”€â”€ */
+		/* ── Format date ── */
 		function fmtDate(str) {
-			if (!str) return 'â€”';
+			if (!str) return '\u2014';
 			var d = new Date(str);
 			return isNaN(d) ? str : d.toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'});
 		}
 		function daysBetween(f, t) {
-			if (!f || !t) return 'â€”';
+			if (!f || !t) return '\u2014';
 			var d = Math.round((new Date(t) - new Date(f)) / 864e5) + 1;
 			return d + ' day' + (d > 1 ? 's' : '');
 		}
