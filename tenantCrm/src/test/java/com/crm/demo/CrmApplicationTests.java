@@ -124,6 +124,15 @@ class CrmApplicationTests {
     }
 
     @Test
+    void testAdminControllerDownloadReportAttachmentNotFound() {
+        when(reportAttachmentRepository.findById(99L)).thenReturn(Optional.empty());
+
+        ResponseEntity<byte[]> response = adminController.downloadReportAttachment(99L);
+        assertNotNull(response);
+        assertEquals(404, response.getStatusCode().value());
+    }
+
+    @Test
     void testManagerControllerProcessAttachmentsSuccess() throws Exception {
         ManagerController managerController = new ManagerController();
 
@@ -132,6 +141,30 @@ class CrmApplicationTests {
         when(file.getOriginalFilename()).thenReturn("test.txt");
         when(file.getBytes()).thenReturn(new byte[]{4, 5});
         when(file.getContentType()).thenReturn("text/plain");
+
+        MultipartFile[] attachments = new MultipartFile[]{file};
+        List<Object> attachmentInfos = new ArrayList<>();
+
+        Method method = ManagerController.class.getDeclaredMethod(
+            "processAttachments", 
+            MultipartFile[].class, 
+            List.class
+        );
+        method.setAccessible(true);
+        method.invoke(managerController, attachments, attachmentInfos);
+
+        assertEquals(1, attachmentInfos.size());
+    }
+
+    @Test
+    void testManagerControllerProcessAttachmentsNullContentType() throws Exception {
+        ManagerController managerController = new ManagerController();
+
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getOriginalFilename()).thenReturn("test.txt");
+        when(file.getBytes()).thenReturn(new byte[]{4, 5});
+        when(file.getContentType()).thenReturn(null);
 
         MultipartFile[] attachments = new MultipartFile[]{file};
         List<Object> attachmentInfos = new ArrayList<>();
@@ -213,6 +246,34 @@ class CrmApplicationTests {
         when(file.getOriginalFilename()).thenReturn("report.pdf");
         when(file.getBytes()).thenReturn(new byte[]{9, 9});
         when(file.getContentType()).thenReturn("application/pdf");
+
+        MultipartFile[] attachments = new MultipartFile[]{file};
+
+        Method method = ManagerController.class.getDeclaredMethod(
+            "processReportAttachments", 
+            Report.class,
+            MultipartFile[].class
+        );
+        method.setAccessible(true);
+        method.invoke(managerController, report, attachments);
+
+        verify(reportAttachmentRepository, times(1)).save(any(ReportAttachment.class));
+    }
+
+    @Test
+    void testManagerControllerProcessReportAttachmentsNullContentType() throws Exception {
+        ManagerController managerController = new ManagerController();
+
+        java.lang.reflect.Field repoField = ManagerController.class.getDeclaredField("reportAttachmentRepository");
+        repoField.setAccessible(true);
+        repoField.set(managerController, reportAttachmentRepository);
+
+        Report report = new Report();
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getOriginalFilename()).thenReturn("report.pdf");
+        when(file.getBytes()).thenReturn(new byte[]{9, 9});
+        when(file.getContentType()).thenReturn(null);
 
         MultipartFile[] attachments = new MultipartFile[]{file};
 
