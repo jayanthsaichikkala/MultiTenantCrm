@@ -7,44 +7,17 @@
 	<link rel="stylesheet" th:href="@{/admin.css}">
 	<link rel="stylesheet" th:href="@{/notifications.css}">
 	<script src="https://unpkg.com/lucide@1.24.0/dist/umd/lucide.min.js" integrity="sha384-mooE85Luwgx+AyykX7e90VcN8/QCFTSIwPuHLmvcsLVoA0en7lKYb9XlOzn5G2co" crossorigin="anonymous"></script>
-	<style>
-		.topbar-subtitle {
-			font-size: 13px;
-			color: #6b7280;
-			margin-top: 2px;
-		}
-		.breadcrumb {
-			display: flex;
-			align-items: center;
-			gap: 5px;
-			font-size: 12px;
-			color: #6b7280;
-			margin-top: 8px;
-			font-weight: 500;
-		}
-		.breadcrumb a {
-			color: #17455e;
-			text-decoration: none;
-			font-weight: 600;
-			display: inline-flex;
-			align-items: center;
-			gap: 4px;
-		}
-		.breadcrumb span {
-			color: #aabbc4;
-		}
-		.settings-grid {
-			display: grid;
-			grid-template-columns: 1fr 1fr;
-			gap: 24px;
-			align-items: start;
-		}
-		@media (max-width: 768px) {
-			.settings-grid {
-				grid-template-columns: 1fr;
-			}
-		}
-	</style>
+<style>
+.settings-grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 24px;
+align-items: start;
+}
+@media (max-width: 768px) {
+.settings-grid { grid-template-columns: 1fr; }
+}
+</style>
 </head>
 <body>
 	<div class="mobile-topbar">

@@ -7,21 +7,6 @@
 	<link rel="stylesheet" th:href="@{/notifications.css}">
     <script src="https://unpkg.com/lucide@1.24.0/dist/umd/lucide.min.js" integrity="sha384-mooE85Luwgx+AyykX7e90VcN8/QCFTSIwPuHLmvcsLVoA0en7lKYb9XlOzn5G2co" crossorigin="anonymous"></script>
     <style>
-        /* ── Toggle switch ── */
-        .table-status-cell { display:flex; align-items:center; gap:10px; }
-        .toggle-btn {
-            position:relative; width:40px; height:22px; border-radius:30px;
-            border:none; cursor:pointer; padding:0; flex-shrink:0; transition:background .3s;
-        }
-        .toggle-btn.active   { background:#17455e; }
-        .toggle-btn.inactive { background:#d1d5db; }
-        .toggle-knob {
-            position:absolute; top:3px; left:3px; width:16px; height:16px;
-            border-radius:50%; background:#fff; box-shadow:0 2px 5px rgba(0,0,0,.2);
-            transition:transform .3s; display:block;
-        }
-        .toggle-btn.active   .toggle-knob { transform:translateX(18px); }
-        .toggle-btn.inactive .toggle-knob { transform:translateX(0); }
 
 		/* ── Employee Detail Modal ── */
 		.emp-modal-overlay {

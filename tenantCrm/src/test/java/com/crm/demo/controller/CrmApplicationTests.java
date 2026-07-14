@@ -7,9 +7,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -36,6 +39,14 @@ class CrmApplicationTests {
     @Mock
     private ReportAttachmentRepository reportAttachmentRepository;
 
+    // ── Parameterized test sources ────────────────────────────────────────────
+
+    static Stream<String> contentTypeVariants() {
+        return Stream.of(APP_PDF, null);
+    }
+
+    // ── Tests ─────────────────────────────────────────────────────────────────
+
     @Test
     void testDomainCategory() {
         DomainCategory category = new DomainCategory();
@@ -48,11 +59,12 @@ class CrmApplicationTests {
         assertEquals("tenant1", category.getTenantSegment());
     }
 
-    @Test
-    void testAdminControllerViewReportAttachment() {
+    @ParameterizedTest
+    @MethodSource("contentTypeVariants")
+    void testAdminControllerViewReportAttachment(String contentType) {
         ReportAttachment attachment = new ReportAttachment();
         attachment.setOriginalFilename(TEST_PDF);
-        attachment.setContentType(APP_PDF);
+        attachment.setContentType(contentType);
         attachment.setFileData(new byte[]{1, 2, 3});
 
         when(reportAttachmentRepository.findById(1L)).thenReturn(Optional.of(attachment));
@@ -62,31 +74,16 @@ class CrmApplicationTests {
         assertEquals(200, response.getStatusCode().value());
         assertArrayEquals(new byte[]{1, 2, 3}, response.getBody());
         assertEquals("inline; filename=\"" + TEST_PDF + "\"", response.getHeaders().getFirst(CONTENT_DISPOSITION));
-        assertEquals(APP_PDF, response.getHeaders().getFirst(CONTENT_TYPE));
+        String expectedType = contentType != null ? contentType : "application/octet-stream";
+        assertEquals(expectedType, response.getHeaders().getFirst(CONTENT_TYPE));
     }
 
-    @Test
-    void testAdminControllerViewReportAttachmentNullContentType() {
+    @ParameterizedTest
+    @MethodSource("contentTypeVariants")
+    void testAdminControllerDownloadReportAttachment(String contentType) {
         ReportAttachment attachment = new ReportAttachment();
         attachment.setOriginalFilename(TEST_PDF);
-        attachment.setContentType(null);
-        attachment.setFileData(new byte[]{1, 2, 3});
-
-        when(reportAttachmentRepository.findById(1L)).thenReturn(Optional.of(attachment));
-
-        ResponseEntity<byte[]> response = adminController.viewReportAttachment(1L);
-        assertNotNull(response);
-        assertEquals(200, response.getStatusCode().value());
-        assertArrayEquals(new byte[]{1, 2, 3}, response.getBody());
-        assertEquals("inline; filename=\"" + TEST_PDF + "\"", response.getHeaders().getFirst(CONTENT_DISPOSITION));
-        assertEquals("application/octet-stream", response.getHeaders().getFirst(CONTENT_TYPE));
-    }
-
-    @Test
-    void testAdminControllerDownloadReportAttachment() {
-        ReportAttachment attachment = new ReportAttachment();
-        attachment.setOriginalFilename(TEST_PDF);
-        attachment.setContentType(null);
+        attachment.setContentType(contentType);
         attachment.setFileData(new byte[]{1, 2, 3});
 
         when(reportAttachmentRepository.findById(1L)).thenReturn(Optional.of(attachment));
@@ -96,24 +93,8 @@ class CrmApplicationTests {
         assertEquals(200, response.getStatusCode().value());
         assertArrayEquals(new byte[]{1, 2, 3}, response.getBody());
         assertEquals("attachment; filename=\"" + TEST_PDF + "\"", response.getHeaders().getFirst(CONTENT_DISPOSITION));
-        assertEquals("application/octet-stream", response.getHeaders().getFirst(CONTENT_TYPE));
-    }
-
-    @Test
-    void testAdminControllerDownloadReportAttachmentNonNullContentType() {
-        ReportAttachment attachment = new ReportAttachment();
-        attachment.setOriginalFilename(TEST_PDF);
-        attachment.setContentType(APP_PDF);
-        attachment.setFileData(new byte[]{1, 2, 3});
-
-        when(reportAttachmentRepository.findById(1L)).thenReturn(Optional.of(attachment));
-
-        ResponseEntity<byte[]> response = adminController.downloadReportAttachment(1L);
-        assertNotNull(response);
-        assertEquals(200, response.getStatusCode().value());
-        assertArrayEquals(new byte[]{1, 2, 3}, response.getBody());
-        assertEquals("attachment; filename=\"" + TEST_PDF + "\"", response.getHeaders().getFirst(CONTENT_DISPOSITION));
-        assertEquals(APP_PDF, response.getHeaders().getFirst(CONTENT_TYPE));
+        String expectedType = contentType != null ? contentType : "application/octet-stream";
+        assertEquals(expectedType, response.getHeaders().getFirst(CONTENT_TYPE));
     }
 
     @Test
@@ -134,33 +115,16 @@ class CrmApplicationTests {
         assertEquals(404, response.getStatusCode().value());
     }
 
-    @Test
-    void testManagerControllerProcessAttachmentsSuccess() throws Exception {
+    @ParameterizedTest
+    @MethodSource("contentTypeVariants")
+    void testManagerControllerProcessAttachments(String contentType) throws Exception {
         ManagerController managerController = new ManagerController();
 
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
         when(file.getOriginalFilename()).thenReturn("test.txt");
         when(file.getBytes()).thenReturn(new byte[]{4, 5});
-        when(file.getContentType()).thenReturn("text/plain");
-
-        MultipartFile[] attachments = new MultipartFile[]{file};
-        List<ManagerController.TaskAttachmentInfo> attachmentInfos = new ArrayList<>();
-
-        managerController.processAttachments(attachments, attachmentInfos);
-
-        assertEquals(1, attachmentInfos.size());
-    }
-
-    @Test
-    void testManagerControllerProcessAttachmentsNullContentType() throws Exception {
-        ManagerController managerController = new ManagerController();
-
-        MultipartFile file = mock(MultipartFile.class);
-        when(file.isEmpty()).thenReturn(false);
-        when(file.getOriginalFilename()).thenReturn("test.txt");
-        when(file.getBytes()).thenReturn(new byte[]{4, 5});
-        when(file.getContentType()).thenReturn(null);
+        when(file.getContentType()).thenReturn(contentType);
 
         MultipartFile[] attachments = new MultipartFile[]{file};
         List<ManagerController.TaskAttachmentInfo> attachmentInfos = new ArrayList<>();
@@ -206,8 +170,9 @@ class CrmApplicationTests {
         }
     }
 
-    @Test
-    void testManagerControllerProcessReportAttachmentsSuccess() throws Exception {
+    @ParameterizedTest
+    @MethodSource("contentTypeVariants")
+    void testManagerControllerProcessReportAttachments(String contentType) throws Exception {
         ManagerController managerController = new ManagerController();
         managerController.reportAttachmentRepository = reportAttachmentRepository;
 
@@ -216,26 +181,7 @@ class CrmApplicationTests {
         when(file.isEmpty()).thenReturn(false);
         when(file.getOriginalFilename()).thenReturn("report.pdf");
         when(file.getBytes()).thenReturn(new byte[]{9, 9});
-        when(file.getContentType()).thenReturn(APP_PDF);
-
-        MultipartFile[] attachments = new MultipartFile[]{file};
-
-        managerController.processReportAttachments(report, attachments);
-
-        verify(reportAttachmentRepository, times(1)).save(any(ReportAttachment.class));
-    }
-
-    @Test
-    void testManagerControllerProcessReportAttachmentsNullContentType() throws Exception {
-        ManagerController managerController = new ManagerController();
-        managerController.reportAttachmentRepository = reportAttachmentRepository;
-
-        Report report = new Report();
-        MultipartFile file = mock(MultipartFile.class);
-        when(file.isEmpty()).thenReturn(false);
-        when(file.getOriginalFilename()).thenReturn("report.pdf");
-        when(file.getBytes()).thenReturn(new byte[]{9, 9});
-        when(file.getContentType()).thenReturn(null);
+        when(file.getContentType()).thenReturn(contentType);
 
         MultipartFile[] attachments = new MultipartFile[]{file};
 

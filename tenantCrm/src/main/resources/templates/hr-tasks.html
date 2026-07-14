@@ -9,25 +9,6 @@
 	<link rel="stylesheet" th:href="@{/notifications.css}">
 	<script src="https://unpkg.com/lucide@1.24.0/dist/umd/lucide.min.js" integrity="sha384-mooE85Luwgx+AyykX7e90VcN8/QCFTSIwPuHLmvcsLVoA0en7lKYb9XlOzn5G2co" crossorigin="anonymous"></script>
 	<style>
-		.filter-select {
-			height: 38px; padding: 0 32px 0 12px; border: 1.5px solid #e2e8f0;
-			border-radius: 10px; font-size: 13px; font-family: inherit; color: #334155;
-			background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 10px center;
-			appearance: none; cursor: pointer; outline: none;
-		}
-		.filter-select:focus { border-color: #17455e; }
-		.page-btn {
-			transition: background .15s, border-color .15s;
-		}
-		.page-btn:hover { background: #f8fafc; }
-		.page-btn:disabled { opacity: .4; cursor: default; }
-
-		.task-filters {
-			display: flex;
-			align-items: center;
-			gap: 10px;
-		}
-
 		/* ── Tasks responsive ── */
 		@media (max-width: 768px) {
 			/* Card header: stack filters below title */
