@@ -79,9 +79,7 @@ class CrmApplicationTests {
     private Object invokePrivate(ManagerController ctrl, String name, Class<?>[] types, Object... args) {
         try {
             Method m = ManagerController.class.getDeclaredMethod(name, types);
-            java.security.AccessController.doPrivileged(
-                (java.security.PrivilegedAction<Void>) () -> { m.setAccessible(true); return null; }
-            );
+            m.setAccessible(true);
             return m.invoke(ctrl, args);
         } catch (ReflectiveOperationException e) {
             throw new ReflectionInvocationException("Failed to invoke " + name, e);
@@ -264,7 +262,7 @@ class CrmApplicationTests {
     // ── ManagerController.validateTaskParams ──────────────────────────────────
 
     @Test
-    void testValidateTaskParams_valid() throws Exception {
+    void testValidateTaskParamsValid() throws Exception {
         ManagerController ctrl = new ManagerController();
         String future = LocalDate.now().plusDays(1).toString();
         Object result = invokePrivate(ctrl, M_VALIDATE_TASK_PARAMS,
@@ -274,7 +272,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateTaskParams_blankTitle() throws Exception {
+    void testValidateTaskParamsBlankTitle() throws Exception {
         ManagerController ctrl = new ManagerController();
         String future = LocalDate.now().plusDays(1).toString();
         Object result = invokePrivate(ctrl, M_VALIDATE_TASK_PARAMS,
@@ -284,7 +282,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateTaskParams_nullTitle() throws Exception {
+    void testValidateTaskParamsNullTitle() throws Exception {
         ManagerController ctrl = new ManagerController();
         String future = LocalDate.now().plusDays(1).toString();
         Object result = invokePrivate(ctrl, M_VALIDATE_TASK_PARAMS,
@@ -294,7 +292,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateTaskParams_longTitle() throws Exception {
+    void testValidateTaskParamsLongTitle() throws Exception {
         ManagerController ctrl = new ManagerController();
         String future = LocalDate.now().plusDays(1).toString();
         String longTitle = "a".repeat(256);
@@ -305,7 +303,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateTaskParams_longDescription() throws Exception {
+    void testValidateTaskParamsLongDescription() throws Exception {
         ManagerController ctrl = new ManagerController();
         String future = LocalDate.now().plusDays(1).toString();
         String longDesc = "d".repeat(256);
@@ -316,7 +314,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateTaskParams_invalidPriority() throws Exception {
+    void testValidateTaskParamsInvalidPriority() throws Exception {
         ManagerController ctrl = new ManagerController();
         String future = LocalDate.now().plusDays(1).toString();
         Object result = invokePrivate(ctrl, M_VALIDATE_TASK_PARAMS,
@@ -326,7 +324,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateTaskParams_invalidStatus() throws Exception {
+    void testValidateTaskParamsInvalidStatus() throws Exception {
         ManagerController ctrl = new ManagerController();
         String future = LocalDate.now().plusDays(1).toString();
         Object result = invokePrivate(ctrl, M_VALIDATE_TASK_PARAMS,
@@ -336,7 +334,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateTaskParams_blankDueDate() throws Exception {
+    void testValidateTaskParamsBlankDueDate() throws Exception {
         ManagerController ctrl = new ManagerController();
         Object result = invokePrivate(ctrl, M_VALIDATE_TASK_PARAMS,
                 new Class[]{String.class, String.class, String.class, String.class, String.class},
@@ -347,7 +345,7 @@ class CrmApplicationTests {
     // ── ManagerController.validateLeaveParams ─────────────────────────────────
 
     @Test
-    void testValidateLeaveParams_valid() throws Exception {
+    void testValidateLeaveParamsValid() throws Exception {
         ManagerController ctrl = new ManagerController();
         Object result = invokePrivate(ctrl, M_VALIDATE_LEAVE_PARAMS,
                 new Class[]{String.class, String.class, String.class, String.class},
@@ -356,7 +354,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateLeaveParams_blankType() throws Exception {
+    void testValidateLeaveParamsBlankType() throws Exception {
         ManagerController ctrl = new ManagerController();
         Object result = invokePrivate(ctrl, M_VALIDATE_LEAVE_PARAMS,
                 new Class[]{String.class, String.class, String.class, String.class},
@@ -365,7 +363,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateLeaveParams_blankReason() throws Exception {
+    void testValidateLeaveParamsBlankReason() throws Exception {
         ManagerController ctrl = new ManagerController();
         Object result = invokePrivate(ctrl, M_VALIDATE_LEAVE_PARAMS,
                 new Class[]{String.class, String.class, String.class, String.class},
@@ -374,7 +372,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateLeaveParams_longReason() throws Exception {
+    void testValidateLeaveParamsLongReason() throws Exception {
         ManagerController ctrl = new ManagerController();
         Object result = invokePrivate(ctrl, M_VALIDATE_LEAVE_PARAMS,
                 new Class[]{String.class, String.class, String.class, String.class},
@@ -383,7 +381,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateLeaveParams_invalidFromDate() throws Exception {
+    void testValidateLeaveParamsInvalidFromDate() throws Exception {
         ManagerController ctrl = new ManagerController();
         Object result = invokePrivate(ctrl, M_VALIDATE_LEAVE_PARAMS,
                 new Class[]{String.class, String.class, String.class, String.class},
@@ -392,7 +390,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateLeaveParams_invalidToDate() throws Exception {
+    void testValidateLeaveParamsInvalidToDate() throws Exception {
         ManagerController ctrl = new ManagerController();
         Object result = invokePrivate(ctrl, M_VALIDATE_LEAVE_PARAMS,
                 new Class[]{String.class, String.class, String.class, String.class},
@@ -403,7 +401,7 @@ class CrmApplicationTests {
     // ── ManagerController.validateTaskDates ───────────────────────────────────
 
     @Test
-    void testValidateTaskDates_valid() throws Exception {
+    void testValidateTaskDatesValid() throws Exception {
         ManagerController ctrl = new ManagerController();
         String future = LocalDate.now().plusDays(5).toString();
         LocalDate[] parsed = new LocalDate[2];
@@ -415,7 +413,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateTaskDates_pastDueDate() throws Exception {
+    void testValidateTaskDatesPastDueDate() throws Exception {
         ManagerController ctrl = new ManagerController();
         String past = LocalDate.now().minusDays(1).toString();
         LocalDate[] parsed = new LocalDate[2];
@@ -426,7 +424,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateTaskDates_invalidDueDate() throws Exception {
+    void testValidateTaskDatesInvalidDueDate() throws Exception {
         ManagerController ctrl = new ManagerController();
         LocalDate[] parsed = new LocalDate[2];
         Object result = invokePrivate(ctrl, M_VALIDATE_TASK_DATES,
@@ -436,7 +434,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateTaskDates_startAfterDue() throws Exception {
+    void testValidateTaskDatesStartAfterDue() throws Exception {
         ManagerController ctrl = new ManagerController();
         String due   = LocalDate.now().plusDays(2).toString();
         String start = LocalDate.now().plusDays(5).toString();
@@ -448,7 +446,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateTaskDates_validWithStart() throws Exception {
+    void testValidateTaskDatesValidWithStart() throws Exception {
         ManagerController ctrl = new ManagerController();
         String start = LocalDate.now().plusDays(1).toString();
         String due   = LocalDate.now().plusDays(5).toString();
@@ -462,7 +460,7 @@ class CrmApplicationTests {
     // ── ManagerController.getTenantSegmentFromEmail ───────────────────────────
 
     @Test
-    void testGetTenantSegmentFromEmail_normal() throws Exception {
+    void testGetTenantSegmentFromEmailNormal() throws Exception {
         ManagerController ctrl = new ManagerController();
         Object result = invokePrivate(ctrl, M_GET_TENANT_SEGMENT,
                 new Class[]{String.class}, "mgr.tcs@crm.com");
@@ -470,7 +468,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testGetTenantSegmentFromEmail_noDot() throws Exception {
+    void testGetTenantSegmentFromEmailNoDot() throws Exception {
         ManagerController ctrl = new ManagerController();
         Object result = invokePrivate(ctrl, M_GET_TENANT_SEGMENT,
                 new Class[]{String.class}, "admin@crm.com");
@@ -478,7 +476,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testGetTenantSegmentFromEmail_null() throws Exception {
+    void testGetTenantSegmentFromEmailNull() throws Exception {
         ManagerController ctrl = new ManagerController();
         Object result = invokePrivate(ctrl, M_GET_TENANT_SEGMENT,
                 new Class[]{String.class}, (Object) null);
@@ -486,7 +484,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testGetTenantSegmentFromEmail_noAt() throws Exception {
+    void testGetTenantSegmentFromEmailNoAt() throws Exception {
         ManagerController ctrl = new ManagerController();
         Object result = invokePrivate(ctrl, M_GET_TENANT_SEGMENT,
                 new Class[]{String.class}, "notanemail");
@@ -496,7 +494,7 @@ class CrmApplicationTests {
     // ── ManagerController.calculateWorkingDays ────────────────────────────────
 
     @Test
-    void testCalculateWorkingDays_weekdays() throws Exception {
+    void testCalculateWorkingDaysWeekdays() throws Exception {
         ManagerController ctrl = new ManagerController();
         // Monday to Friday = 5 working days
         LocalDate mon = LocalDate.of(2025, 1, 6);
@@ -507,7 +505,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testCalculateWorkingDays_weekend() throws Exception {
+    void testCalculateWorkingDaysWeekend() throws Exception {
         ManagerController ctrl = new ManagerController();
         // Saturday only - returns min 1
         LocalDate sat = LocalDate.of(2025, 1, 11);
@@ -517,7 +515,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testCalculateWorkingDays_singleWeekday() throws Exception {
+    void testCalculateWorkingDaysSingleWeekday() throws Exception {
         ManagerController ctrl = new ManagerController();
         LocalDate mon = LocalDate.of(2025, 1, 6);
         Object result = invokePrivate(ctrl, M_CALC_WORKING_DAYS,
@@ -528,7 +526,7 @@ class CrmApplicationTests {
     // ── ManagerController.validateReportParams ────────────────────────────────
 
     @Test
-    void testValidateReportParams_valid() throws Exception {
+    void testValidateReportParamsValid() throws Exception {
         ManagerController ctrl = new ManagerController();
         Object result = invokePrivate(ctrl, M_VALIDATE_REPORT_PARAMS,
                 new Class[]{String.class, String.class, List.class},
@@ -537,7 +535,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateReportParams_blankTitle() throws Exception {
+    void testValidateReportParamsBlankTitle() throws Exception {
         ManagerController ctrl = new ManagerController();
         Object result = invokePrivate(ctrl, M_VALIDATE_REPORT_PARAMS,
                 new Class[]{String.class, String.class, List.class},
@@ -546,7 +544,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateReportParams_nullTitle() throws Exception {
+    void testValidateReportParamsNullTitle() throws Exception {
         ManagerController ctrl = new ManagerController();
         Object result = invokePrivate(ctrl, M_VALIDATE_REPORT_PARAMS,
                 new Class[]{String.class, String.class, List.class},
@@ -555,7 +553,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateReportParams_longTitle() throws Exception {
+    void testValidateReportParamsLongTitle() throws Exception {
         ManagerController ctrl = new ManagerController();
         Object result = invokePrivate(ctrl, M_VALIDATE_REPORT_PARAMS,
                 new Class[]{String.class, String.class, List.class},
@@ -564,7 +562,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateReportParams_longMessage() throws Exception {
+    void testValidateReportParamsLongMessage() throws Exception {
         ManagerController ctrl = new ManagerController();
         Object result = invokePrivate(ctrl, M_VALIDATE_REPORT_PARAMS,
                 new Class[]{String.class, String.class, List.class},
@@ -573,7 +571,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateReportParams_noRecipients() throws Exception {
+    void testValidateReportParamsNoRecipients() throws Exception {
         ManagerController ctrl = new ManagerController();
         Object result = invokePrivate(ctrl, M_VALIDATE_REPORT_PARAMS,
                 new Class[]{String.class, String.class, List.class},
@@ -582,7 +580,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testValidateReportParams_nullRecipients() throws Exception {
+    void testValidateReportParamsNullRecipients() throws Exception {
         ManagerController ctrl = new ManagerController();
         Object result = invokePrivate(ctrl, M_VALIDATE_REPORT_PARAMS,
                 new Class[]{String.class, String.class, List.class},
@@ -593,7 +591,7 @@ class CrmApplicationTests {
     // ── ManagerController.buildDashboardAnalytics ─────────────────────────────
 
     @Test
-    void testBuildDashboardAnalytics_empty() throws Exception {
+    void testBuildDashboardAnalyticsEmpty() throws Exception {
         ManagerController ctrl = new ManagerController();
         @SuppressWarnings("unchecked")
         java.util.Map<String, Object> result = (java.util.Map<String, Object>) invokePrivate(
@@ -613,7 +611,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testBuildDashboardAnalytics_withTasks() throws Exception {
+    void testBuildDashboardAnalyticsWithTasks() throws Exception {
         ManagerController ctrl = new ManagerController();
 
         Task doneTask = new Task();
@@ -647,7 +645,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testBuildDashboardAnalytics_nullInputs() throws Exception {
+    void testBuildDashboardAnalyticsNullInputs() throws Exception {
         ManagerController ctrl = new ManagerController();
         @SuppressWarnings("unchecked")
         java.util.Map<String, Object> result = (java.util.Map<String, Object>) invokePrivate(
@@ -661,35 +659,35 @@ class CrmApplicationTests {
     // ── ManagerController.determineGrade ──────────────────────────────────────
 
     @Test
-    void testDetermineGrade_APlus() throws Exception {
+    void testDetermineGradeAPlus() throws Exception {
         ManagerController ctrl = new ManagerController();
         assertEquals("A+", invokePrivate(ctrl, M_DETERMINE_GRADE, new Class[]{int.class}, 90));
         assertEquals("A+", invokePrivate(ctrl, M_DETERMINE_GRADE, new Class[]{int.class}, 100));
     }
 
     @Test
-    void testDetermineGrade_A() throws Exception {
+    void testDetermineGradeA() throws Exception {
         ManagerController ctrl = new ManagerController();
         assertEquals("A", invokePrivate(ctrl, M_DETERMINE_GRADE, new Class[]{int.class}, 75));
         assertEquals("A", invokePrivate(ctrl, M_DETERMINE_GRADE, new Class[]{int.class}, 89));
     }
 
     @Test
-    void testDetermineGrade_B() throws Exception {
+    void testDetermineGradeB() throws Exception {
         ManagerController ctrl = new ManagerController();
         assertEquals("B", invokePrivate(ctrl, M_DETERMINE_GRADE, new Class[]{int.class}, 60));
         assertEquals("B", invokePrivate(ctrl, M_DETERMINE_GRADE, new Class[]{int.class}, 74));
     }
 
     @Test
-    void testDetermineGrade_C() throws Exception {
+    void testDetermineGradeC() throws Exception {
         ManagerController ctrl = new ManagerController();
         assertEquals("C", invokePrivate(ctrl, M_DETERMINE_GRADE, new Class[]{int.class}, 45));
         assertEquals("C", invokePrivate(ctrl, M_DETERMINE_GRADE, new Class[]{int.class}, 59));
     }
 
     @Test
-    void testDetermineGrade_D() throws Exception {
+    void testDetermineGradeD() throws Exception {
         ManagerController ctrl = new ManagerController();
         assertEquals("D", invokePrivate(ctrl, M_DETERMINE_GRADE, new Class[]{int.class}, 0));
         assertEquals("D", invokePrivate(ctrl, M_DETERMINE_GRADE, new Class[]{int.class}, 44));
@@ -698,7 +696,7 @@ class CrmApplicationTests {
     // ── ManagerController.calculateOverlapLeaveDays ───────────────────────────
 
     @Test
-    void testCalculateOverlapLeaveDays_null() throws Exception {
+    void testCalculateOverlapLeaveDaysNull() throws Exception {
         ManagerController ctrl = new ManagerController();
         Object result = invokePrivate(ctrl, M_CALC_OVERLAP_LEAVE,
                 new Class[]{LeaveRequest.class, LocalDate.class, LocalDate.class},
@@ -707,7 +705,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testCalculateOverlapLeaveDays_notApproved() throws Exception {
+    void testCalculateOverlapLeaveDaysNotApproved() throws Exception {
         ManagerController ctrl = new ManagerController();
         LeaveRequest lr = new LeaveRequest();
         lr.setStatus("Pending");
@@ -720,7 +718,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testCalculateOverlapLeaveDays_approvedFullOverlap() throws Exception {
+    void testCalculateOverlapLeaveDaysApprovedFullOverlap() throws Exception {
         ManagerController ctrl = new ManagerController();
         LeaveRequest lr = new LeaveRequest();
         lr.setStatus(STATUS_APPROVED_VAL);
@@ -733,7 +731,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testCalculateOverlapLeaveDays_approvedPartialOverlap() throws Exception {
+    void testCalculateOverlapLeaveDaysApprovedPartialOverlap() throws Exception {
         ManagerController ctrl = new ManagerController();
         LeaveRequest lr = new LeaveRequest();
         lr.setStatus(STATUS_APPROVED_VAL);
@@ -746,7 +744,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testCalculateOverlapLeaveDays_noOverlap() throws Exception {
+    void testCalculateOverlapLeaveDaysNoOverlap() throws Exception {
         ManagerController ctrl = new ManagerController();
         LeaveRequest lr = new LeaveRequest();
         lr.setStatus(STATUS_APPROVED_VAL);
@@ -759,7 +757,7 @@ class CrmApplicationTests {
     }
 
     @Test
-    void testCalculateOverlapLeaveDays_nullDates() throws Exception {
+    void testCalculateOverlapLeaveDaysNullDates() throws Exception {
         ManagerController ctrl = new ManagerController();
         LeaveRequest lr = new LeaveRequest();
         lr.setStatus(STATUS_APPROVED_VAL);
