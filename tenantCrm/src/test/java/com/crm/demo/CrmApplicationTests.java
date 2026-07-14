@@ -114,6 +114,30 @@ class CrmApplicationTests {
     }
 
     @Test
+    void testManagerControllerProcessAttachmentsNullAndEmpty() throws Exception {
+        ManagerController managerController = new ManagerController();
+        List<Object> attachmentInfos = new ArrayList<>();
+
+        Method method = ManagerController.class.getDeclaredMethod(
+            "processAttachments", 
+            MultipartFile[].class, 
+            List.class
+        );
+        method.setAccessible(true);
+
+        method.invoke(managerController, (Object) null, attachmentInfos);
+        assertTrue(attachmentInfos.isEmpty());
+
+        MultipartFile fileNull = null;
+        MultipartFile fileEmpty = mock(MultipartFile.class);
+        when(fileEmpty.isEmpty()).thenReturn(true);
+
+        MultipartFile[] attachments = new MultipartFile[]{fileNull, fileEmpty};
+        method.invoke(managerController, attachments, attachmentInfos);
+        assertTrue(attachmentInfos.isEmpty());
+    }
+
+    @Test
     void testManagerControllerProcessAttachmentsException() throws Exception {
         ManagerController managerController = new ManagerController();
 
@@ -167,5 +191,61 @@ class CrmApplicationTests {
         method.invoke(managerController, report, attachments);
 
         verify(reportAttachmentRepository, times(1)).save(any(ReportAttachment.class));
+    }
+
+    @Test
+    void testManagerControllerProcessReportAttachmentsNullAndEmpty() throws Exception {
+        ManagerController managerController = new ManagerController();
+        Report report = new Report();
+
+        Method method = ManagerController.class.getDeclaredMethod(
+            "processReportAttachments", 
+            Report.class,
+            MultipartFile[].class
+        );
+        method.setAccessible(true);
+
+        method.invoke(managerController, report, (Object) null);
+
+        MultipartFile fileNull = null;
+        MultipartFile fileEmpty = mock(MultipartFile.class);
+        when(fileEmpty.isEmpty()).thenReturn(true);
+
+        MultipartFile[] attachments = new MultipartFile[]{fileNull, fileEmpty};
+        method.invoke(managerController, report, attachments);
+
+        verifyNoInteractions(reportAttachmentRepository);
+    }
+
+    @Test
+    void testManagerControllerProcessReportAttachmentsException() throws Exception {
+        ManagerController managerController = new ManagerController();
+
+        java.lang.reflect.Field repoField = ManagerController.class.getDeclaredField("reportAttachmentRepository");
+        repoField.setAccessible(true);
+        repoField.set(managerController, reportAttachmentRepository);
+
+        Report report = new Report();
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getBytes()).thenThrow(new IOException("Disk write error"));
+
+        MultipartFile[] attachments = new MultipartFile[]{file};
+
+        Method method = ManagerController.class.getDeclaredMethod(
+            "processReportAttachments", 
+            Report.class,
+            MultipartFile[].class
+        );
+        method.setAccessible(true);
+
+        try {
+            method.invoke(managerController, report, attachments);
+            fail("Expected exception");
+        } catch (Exception e) {
+            Throwable cause = e.getCause();
+            assertTrue(cause instanceof FileUploadException);
+            assertEquals("File upload failed: Disk write error", cause.getMessage());
+        }
     }
 }
