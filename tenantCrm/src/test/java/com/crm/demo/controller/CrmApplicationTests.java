@@ -21,6 +21,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.Authentication;
 
 import com.crm.demo.controller.ManagerController.FileUploadException;
 import com.crm.demo.model.DomainCategory;
@@ -30,6 +34,8 @@ import com.crm.demo.model.ReportAttachment;
 import com.crm.demo.model.Task;
 import com.crm.demo.model.User;
 import com.crm.demo.repository.ReportAttachmentRepository;
+import com.crm.demo.repository.UserRepository;
+import com.crm.demo.service.NotificationService;
 
 @ExtendWith(MockitoExtension.class)
 class CrmApplicationTests {
@@ -53,6 +59,12 @@ class CrmApplicationTests {
 
     @Mock
     private ReportAttachmentRepository reportAttachmentRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private NotificationService notificationService;
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -612,5 +624,177 @@ class CrmApplicationTests {
         lr.setFromDate(null);
         lr.setToDate(null);
         assertEquals(0, ctrl.calculateOverlapLeaveDays(lr, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31)));
+    }
+
+    // =========================================================================
+    // ADDITIONAL TEST CASES FOR AdminController
+    // =========================================================================
+
+    @Test
+    void testAdminControllerAddUserRedirect() {
+        String viewName = adminController.addUserRedirect();
+        assertEquals("redirect:/admin/employees", viewName);
+    }
+
+    @Test
+    void testAdminControllerToggleUserNotFound() {
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+        RedirectAttributes ra = mock(RedirectAttributes.class);
+
+        String viewName = adminController.toggleUser(99L, ra);
+
+        assertEquals("redirect:/admin/employees", viewName);
+        verify(userRepository).findById(99L);
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void testAdminControllerToggleUserAdmin() {
+        User admin = new User();
+        admin.setId(2L);
+        admin.setRole("ADMIN");
+        when(userRepository.findById(2L)).thenReturn(Optional.of(admin));
+        RedirectAttributes ra = mock(RedirectAttributes.class);
+
+        String viewName = adminController.toggleUser(2L, ra);
+
+        assertEquals("redirect:/admin/employees", viewName);
+        verify(userRepository).findById(2L);
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void testAdminControllerToggleUserSuperAdmin() {
+        User superAdmin = new User();
+        superAdmin.setId(3L);
+        superAdmin.setRole("SUPER_ADMIN");
+        when(userRepository.findById(3L)).thenReturn(Optional.of(superAdmin));
+        RedirectAttributes ra = mock(RedirectAttributes.class);
+
+        String viewName = adminController.toggleUser(3L, ra);
+
+        assertEquals("redirect:/admin/employees", viewName);
+        verify(userRepository).findById(3L);
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void testAdminControllerToggleUserActiveToInactive() {
+        User employee = new User();
+        employee.setId(4L);
+        employee.setUsername("emp");
+        employee.setRole("EMPLOYEE");
+        employee.setStatus("active");
+        employee.setEmail("emp.tenant@crm.com");
+
+        User loggedInAdmin = new User();
+        loggedInAdmin.setUsername("adminName");
+        loggedInAdmin.setEmail("admin.tenant@crm.com");
+
+        when(userRepository.findById(4L)).thenReturn(Optional.of(employee));
+        when(userRepository.findByUsername("adminName")).thenReturn(loggedInAdmin);
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn("adminName");
+        SecurityContextHolder.setContext(securityContext);
+
+        RedirectAttributes ra = mock(RedirectAttributes.class);
+
+        String viewName = adminController.toggleUser(4L, ra);
+
+        assertEquals("redirect:/admin/employees", viewName);
+        assertEquals("inactive", employee.getStatus());
+        verify(userRepository).save(employee);
+        verify(notificationService).notifyEmployeeManagementChanged("tenant", "updated", "emp");
+        verify(ra).addFlashAttribute("successMessage", "emp is now inactive.");
+    }
+
+    @Test
+    void testAdminControllerToggleUserInactiveToActive() {
+        User employee = new User();
+        employee.setId(4L);
+        employee.setUsername("emp");
+        employee.setRole("EMPLOYEE");
+        employee.setStatus("inactive");
+        employee.setEmail("emp.tenant@crm.com");
+
+        User loggedInAdmin = new User();
+        loggedInAdmin.setUsername("adminName");
+        loggedInAdmin.setEmail("admin.tenant@crm.com");
+
+        when(userRepository.findById(4L)).thenReturn(Optional.of(employee));
+        when(userRepository.findByUsername("adminName")).thenReturn(loggedInAdmin);
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn("adminName");
+        SecurityContextHolder.setContext(securityContext);
+
+        RedirectAttributes ra = mock(RedirectAttributes.class);
+
+        String viewName = adminController.toggleUser(4L, ra);
+
+        assertEquals("redirect:/admin/employees", viewName);
+        assertEquals("active", employee.getStatus());
+        verify(userRepository).save(employee);
+        verify(notificationService).notifyEmployeeManagementChanged("tenant", "updated", "emp");
+        verify(ra).addFlashAttribute("successMessage", "emp is now active.");
+    }
+
+    @Test
+    void testAdminControllerDeleteEmployeeNotFound() {
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+        RedirectAttributes ra = mock(RedirectAttributes.class);
+
+        String viewName = adminController.deleteEmployee(99L, ra);
+
+        assertEquals("redirect:/admin/employees", viewName);
+        verify(userRepository).findById(99L);
+        verify(userRepository, never()).delete(any(User.class));
+    }
+
+    @Test
+    void testAdminControllerDeleteEmployeeAdmin() {
+        User admin = new User();
+        admin.setId(2L);
+        admin.setRole("ADMIN");
+        when(userRepository.findById(2L)).thenReturn(Optional.of(admin));
+        RedirectAttributes ra = mock(RedirectAttributes.class);
+
+        String viewName = adminController.deleteEmployee(2L, ra);
+
+        assertEquals("redirect:/admin/employees", viewName);
+        verify(userRepository).findById(2L);
+        verify(userRepository, never()).delete(any(User.class));
+    }
+
+    @Test
+    void testAdminControllerDeleteEmployeeSuccess() {
+        User employee = new User();
+        employee.setId(4L);
+        employee.setUsername("emp");
+        employee.setRole("EMPLOYEE");
+        employee.setEmail("emp.tenant@crm.com");
+
+        when(userRepository.findById(4L)).thenReturn(Optional.of(employee));
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getName()).thenReturn("adminName");
+        SecurityContextHolder.setContext(securityContext);
+
+        RedirectAttributes ra = mock(RedirectAttributes.class);
+
+        String viewName = adminController.deleteEmployee(4L, ra);
+
+        assertEquals("redirect:/admin/employees", viewName);
+        verify(notificationService).deleteAllForUser(4L);
+        verify(userRepository).delete(employee);
+        verify(notificationService).notifyEmployeeManagementChanged("", "deleted", "emp");
+        verify(ra).addFlashAttribute("successMessage", "Employee 'emp' deleted.");
     }
 }
