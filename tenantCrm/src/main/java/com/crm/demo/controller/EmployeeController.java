@@ -316,68 +316,12 @@ public class EmployeeController extends BaseController {
     }
 
     private Map<String, Object> buildDashboardAnalytics(List<Task> tasks, List<User> teammates) {
-        var data = new LinkedHashMap<String, Object>();
-        var scopedTasks = tasks != null ? tasks : Collections.<Task>emptyList();
-        var scopedTeammates = teammates != null ? teammates : Collections.<User>emptyList();
-
-        var statusDone = scopedTasks.stream().filter(t -> STATUS_DONE.equalsIgnoreCase(t.getStatus())).count();
-        var statusInProgress = scopedTasks.stream().filter(t -> STATUS_IN_PROGRESS.equalsIgnoreCase(t.getStatus())).count();
-        var statusPending = scopedTasks.stream().filter(t -> STATUS_PENDING.equalsIgnoreCase(t.getStatus())).count();
-        var statusReview = scopedTasks.stream().filter(t -> STATUS_WAITING_FOR_REVIEW.equalsIgnoreCase(t.getStatus())).count();
-        var priorityHigh = scopedTasks.stream().filter(t -> "High".equalsIgnoreCase(t.getPriority())).count();
-        var priorityMedium = scopedTasks.stream().filter(t -> "Medium".equalsIgnoreCase(t.getPriority())).count();
-        var priorityLow = scopedTasks.stream().filter(t -> "Low".equalsIgnoreCase(t.getPriority())).count();
-
-        var creatorCounts = new LinkedHashMap<String, Long>();
-        for (var task : scopedTasks) {
-            var creator = task.getCreatedBy() == null || task.getCreatedBy().isBlank() ? "Unassigned" : task.getCreatedBy();
-            creatorCounts.put(creator, creatorCounts.getOrDefault(creator, 0L) + 1);
-        }
-
-        var activeCount = scopedTeammates.stream().filter(User::isActive).count();
-        var inactiveCount = scopedTeammates.size() - activeCount;
-        var verified = scopedTasks.stream().filter(t -> "approved".equalsIgnoreCase(t.getVerificationStatus())).count();
-        var rejected = scopedTasks.stream().filter(t -> STATUS_REJECTED.equalsIgnoreCase(t.getVerificationStatus())).count();
-        var waiting = scopedTasks.stream().filter(t -> STATUS_WAITING_FOR_REVIEW.equalsIgnoreCase(t.getVerificationStatus())).count();
-        var unverified = scopedTasks.size() - verified - rejected - waiting;
-
-        data.put(STATUS_DONE_KEY, statusDone);
-        data.put("statusInProgress", statusInProgress);
-        data.put("statusPending", statusPending);
-        data.put("statusReview", statusReview);
-        data.put("priorityHigh", priorityHigh);
-        data.put("priorityMedium", priorityMedium);
-        data.put("priorityLow", priorityLow);
-        data.put("memberLabels", new ArrayList<>(creatorCounts.keySet()));
-        data.put("memberTaskCounts", new ArrayList<>(creatorCounts.values()));
-        data.put("activeTeam", activeCount);
-        data.put("inactiveTeam", inactiveCount);
-        data.put("verified", verified);
-        data.put(STATUS_REJECTED, rejected);
-        data.put("waiting", waiting);
-        data.put("unverified", Math.max(unverified, 0));
-        data.put("totalMyTasks", scopedTasks.size());
-        return data;
+        return buildAnalyticsMap(tasks, teammates, true, false);
     }
 
     private void addAnalyticsAttributes(Model model, Map<String, Object> data) {
-        model.addAttribute("chartStatusDone", data.get(STATUS_DONE_KEY));
-        model.addAttribute("chartStatusInProgress", data.get("statusInProgress"));
-        model.addAttribute("chartStatusPending", data.get("statusPending"));
-        model.addAttribute("chartStatusReview", data.get("statusReview"));
-        model.addAttribute("chartPriorityHigh", data.get("priorityHigh"));
-        model.addAttribute("chartPriorityMedium", data.get("priorityMedium"));
-        model.addAttribute("chartPriorityLow", data.get("priorityLow"));
-        model.addAttribute("chartMemberLabels", data.get("memberLabels"));
-        model.addAttribute("chartMemberTaskCounts", data.get("memberTaskCounts"));
-        model.addAttribute("chartActiveTeam", data.get("activeTeam"));
-        model.addAttribute("chartInactiveTeam", data.get("inactiveTeam"));
-        model.addAttribute("chartVerified", data.get("verified"));
-        model.addAttribute("chartRejected", data.get(STATUS_REJECTED));
-        model.addAttribute("chartWaiting", data.get("waiting"));
-        model.addAttribute("chartUnverified", data.get("unverified"));
-        model.addAttribute("chartTotalMyTasks", data.get("totalMyTasks"));
-        model.addAttribute(ATTR_COMPLETED_TASKS, data.get(STATUS_DONE_KEY));
+        populateAnalyticsAttributes(model, data);
+        model.addAttribute(ATTR_COMPLETED_TASKS, data.get("statusDone"));
     }
 
     @GetMapping("/tasks")

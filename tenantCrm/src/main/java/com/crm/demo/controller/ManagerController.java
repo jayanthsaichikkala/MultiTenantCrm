@@ -456,52 +456,7 @@ public class ManagerController extends BaseController {
 	}
 
 	Map<String, Object> buildDashboardAnalytics(List<Task> tasks, List<User> people) {
-		var data = new LinkedHashMap<String, Object>();
-		var scopedTasks = tasks != null ? tasks : Collections.<Task>emptyList();
-		var scopedPeople = people != null ? people : Collections.<User>emptyList();
-
-		var statusDone = scopedTasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
-		var statusInProgress = scopedTasks.stream().filter(t -> STATUS_IN_PROGRESS.equalsIgnoreCase(t.getStatus())).count();
-		var statusPending = scopedTasks.stream().filter(t -> STATUS_PENDING.equalsIgnoreCase(t.getStatus())).count();
-		var statusReview = scopedTasks.stream().filter(t -> STATUS_WAITING_FOR_REVIEW.equalsIgnoreCase(t.getStatus())).count();
-		var priorityHigh = scopedTasks.stream().filter(t -> "High".equalsIgnoreCase(t.getPriority())).count();
-		var priorityMedium = scopedTasks.stream().filter(t -> PRIORITY_MEDIUM.equalsIgnoreCase(t.getPriority())).count();
-		var priorityLow = scopedTasks.stream().filter(t -> "Low".equalsIgnoreCase(t.getPriority())).count();
-
-		var memberLabels = new ArrayList<String>();
-		var memberTaskCounts = new ArrayList<Long>();
-		for (var member : scopedPeople) {
-			var count = scopedTasks.stream()
-					.filter(t -> member.getUsername() != null && member.getUsername().equalsIgnoreCase(t.getAssignedTo()))
-					.count();
-			memberLabels.add(member.getUsername());
-			memberTaskCounts.add(count);
-		}
-
-		var activeCount = scopedPeople.stream().filter(User::isActive).count();
-		var inactiveCount = scopedPeople.size() - activeCount;
-		var verified = scopedTasks.stream().filter(t -> STATUS_APPROVED_LOWER.equalsIgnoreCase(t.getVerificationStatus())).count();
-		var rejected = scopedTasks.stream().filter(t -> STATUS_REJECTED.equalsIgnoreCase(t.getVerificationStatus())).count();
-		var waiting = scopedTasks.stream().filter(t -> STATUS_WAITING_FOR_REVIEW.equalsIgnoreCase(t.getVerificationStatus())).count();
-		var unverified = scopedTasks.size() - verified - rejected - waiting;
-
-		data.put("statusDone", statusDone);
-		data.put("statusInProgress", statusInProgress);
-		data.put("statusPending", statusPending);
-		data.put("statusReview", statusReview);
-		data.put("priorityHigh", priorityHigh);
-		data.put("priorityMedium", priorityMedium);
-		data.put("priorityLow", priorityLow);
-		data.put("memberLabels", memberLabels);
-		data.put("memberTaskCounts", memberTaskCounts);
-		data.put(ATTR_ACTIVE_TEAM, activeCount);
-		data.put(ATTR_INACTIVE_TEAM, inactiveCount);
-		data.put("verified", verified);
-		data.put(STATUS_REJECTED, rejected);
-		data.put("waiting", waiting);
-		data.put("unverified", Math.max(unverified, 0));
-		data.put("totalMyTasks", scopedTasks.size());
-		return data;
+		return buildAnalyticsMap(tasks, people, false, false);
 	}
 
 	String getTenantSegmentFromEmail(String email) {

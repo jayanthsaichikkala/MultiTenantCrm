@@ -402,71 +402,11 @@ public class HrController extends BaseController {
     }
 
     private Map<String, Object> buildDashboardAnalytics(List<Task> tasks, List<User> employees) {
-        var data = new LinkedHashMap<String, Object>();
-        var scopedTasks = tasks != null ? tasks : Collections.<Task>emptyList();
-        var scopedEmployees = employees != null ? employees : Collections.<User>emptyList();
-
-        var statusDone = scopedTasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
-        var statusInProgress = scopedTasks.stream().filter(t -> "in-progress".equalsIgnoreCase(t.getStatus())).count();
-        var statusPending = scopedTasks.stream().filter(t -> "pending".equalsIgnoreCase(t.getStatus())).count();
-        var statusReview = scopedTasks.stream().filter(t -> "waiting-for-review".equalsIgnoreCase(t.getStatus())).count();
-        var priorityHigh = scopedTasks.stream().filter(t -> "High".equalsIgnoreCase(t.getPriority())).count();
-        var priorityMedium = scopedTasks.stream().filter(t -> "Medium".equalsIgnoreCase(t.getPriority())).count();
-        var priorityLow = scopedTasks.stream().filter(t -> "Low".equalsIgnoreCase(t.getPriority())).count();
-
-        var memberLabels = new ArrayList<String>();
-        var memberTaskCounts = new ArrayList<Long>();
-        for (var employee : scopedEmployees) {
-            var count = scopedTasks.stream()
-                    .filter(t -> employee.getUsername() != null && employee.getUsername().equalsIgnoreCase(t.getAssignedTo()))
-                    .count();
-            memberLabels.add(employee.getUsername());
-            memberTaskCounts.add(count);
-        }
-
-        var activeCount = scopedEmployees.stream().filter(User::isActive).count();
-        var inactiveCount = scopedEmployees.size() - activeCount;
-        var verified = scopedTasks.stream().filter(t -> "approved".equalsIgnoreCase(t.getVerificationStatus())).count();
-        var rejected = scopedTasks.stream().filter(t -> STATUS_REJECTED.equalsIgnoreCase(t.getVerificationStatus())).count();
-        var waiting = scopedTasks.stream().filter(t -> "waiting-for-review".equalsIgnoreCase(t.getVerificationStatus())).count();
-        var unverified = scopedTasks.size() - verified - rejected - waiting;
-
-        data.put("statusDone", statusDone);
-        data.put("statusInProgress", statusInProgress);
-        data.put(STATUS_PENDING_ATTR, statusPending);
-        data.put("statusReview", statusReview);
-        data.put("priorityHigh", priorityHigh);
-        data.put("priorityMedium", priorityMedium);
-        data.put("priorityLow", priorityLow);
-        data.put("memberLabels", memberLabels);
-        data.put("memberTaskCounts", memberTaskCounts);
-        data.put("activeTeam", activeCount);
-        data.put("inactiveTeam", inactiveCount);
-        data.put("verified", verified);
-        data.put(STATUS_REJECTED, rejected);
-        data.put("waiting", waiting);
-        data.put("unverified", Math.max(unverified, 0));
-        data.put("totalMyTasks", scopedTasks.size());
-        return data;
+        return buildAnalyticsMap(tasks, employees, false, false);
     }
 
     private void addAnalyticsAttributes(Model model, Map<String, Object> data) {
-        model.addAttribute("chartStatusDone", data.get("statusDone"));
-        model.addAttribute("chartStatusInProgress", data.get("statusInProgress"));
-        model.addAttribute("chartStatusPending", data.get(STATUS_PENDING_ATTR));
-        model.addAttribute("chartStatusReview", data.get("statusReview"));
-        model.addAttribute("chartPriorityHigh", data.get("priorityHigh"));
-        model.addAttribute("chartPriorityMedium", data.get("priorityMedium"));
-        model.addAttribute("chartPriorityLow", data.get("priorityLow"));
-        model.addAttribute("chartMemberLabels", data.get("memberLabels"));
-        model.addAttribute("chartMemberTaskCounts", data.get("memberTaskCounts"));
-        model.addAttribute("chartActiveTeam", data.get("activeTeam"));
-        model.addAttribute("chartInactiveTeam", data.get("inactiveTeam"));
-        model.addAttribute("chartVerified", data.get("verified"));
-        model.addAttribute("chartRejected", data.get(STATUS_REJECTED));
-        model.addAttribute("chartWaiting", data.get("waiting"));
-        model.addAttribute("chartUnverified", data.get("unverified"));
-        model.addAttribute("chartTotalMyTasks", data.get("totalMyTasks"));
+        populateAnalyticsAttributes(model, data);
     }
 
     @GetMapping("/employees")
