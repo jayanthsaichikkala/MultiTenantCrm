@@ -39,7 +39,9 @@ import com.crm.demo.repository.ReportRepository;
 import com.crm.demo.repository.TaskRepository;
 import com.crm.demo.repository.TaskAttachmentRepository;
 import com.crm.demo.repository.TeamRepository;
-
+import com.crm.demo.repository.UserRepository;
+import com.crm.demo.repository.HolidayRepository;
+import com.crm.demo.repository.LeaveRequestRepository;
 import com.crm.demo.repository.PayrollTemplateRepository;
 import com.crm.demo.repository.PayslipRepository;
 import com.crm.demo.service.PayslipService;
@@ -92,20 +94,68 @@ public class EmployeeController extends BaseController {
     @Value("${app.upload.dir:uploads/tasks}")
     private String uploadDir;
 
-    @Autowired private TeamRepository        teamRepository;
-    @Autowired private MeetingRepository     meetingRepository;
-    @Autowired private TaskRepository        taskRepository;
-    @Autowired private TaskAttachmentRepository taskAttachmentRepository;
-    @Autowired private ReportRepository      reportRepository;
-    @Autowired private ReportAttachmentRepository reportAttachmentRepository;
-    @Autowired private ProfileUpdateService  profileUpdateService;
-    @Autowired private NotificationService   notificationService;
-    @Autowired private AttendanceService     attendanceService;
-    @Autowired private PayrollTemplateRepository payrollTemplateRepository;
-    @Autowired private PayslipRepository payslipRepository;
-    @Autowired private PayslipService payslipService;
+    private final TeamRepository teamRepository;
+    private final MeetingRepository meetingRepository;
+    private final TaskRepository taskRepository;
+    private final TaskAttachmentRepository taskAttachmentRepository;
+    private final ReportRepository reportRepository;
+    private final ReportAttachmentRepository reportAttachmentRepository;
+    private final ProfileUpdateService profileUpdateService;
+    private final NotificationService notificationService;
+    private final AttendanceService attendanceService;
+    private final PayrollTemplateRepository payrollTemplateRepository;
+    private final PayslipRepository payslipRepository;
+    private final PayslipService payslipService;
+    private final AttendanceRepository attendanceRepository;
 
-    @Autowired private AttendanceRepository  attendanceRepository;
+    public EmployeeController() {
+        this.teamRepository = null;
+        this.meetingRepository = null;
+        this.taskRepository = null;
+        this.taskAttachmentRepository = null;
+        this.reportRepository = null;
+        this.reportAttachmentRepository = null;
+        this.profileUpdateService = null;
+        this.notificationService = null;
+        this.attendanceService = null;
+        this.payrollTemplateRepository = null;
+        this.payslipRepository = null;
+        this.payslipService = null;
+        this.attendanceRepository = null;
+    }
+
+    @Autowired
+    public EmployeeController(UserRepository userRepository,
+                              HolidayRepository holidayRepository,
+                              LeaveRequestRepository leaveRequestRepository,
+                              TeamRepository teamRepository,
+                              MeetingRepository meetingRepository,
+                              TaskRepository taskRepository,
+                              TaskAttachmentRepository taskAttachmentRepository,
+                              ReportRepository reportRepository,
+                              ReportAttachmentRepository reportAttachmentRepository,
+                              ProfileUpdateService profileUpdateService,
+                              NotificationService notificationService,
+                              AttendanceService attendanceService,
+                              PayrollTemplateRepository payrollTemplateRepository,
+                              PayslipRepository payslipRepository,
+                              PayslipService payslipService,
+                              AttendanceRepository attendanceRepository) {
+        super(userRepository, holidayRepository, leaveRequestRepository);
+        this.teamRepository = teamRepository;
+        this.meetingRepository = meetingRepository;
+        this.taskRepository = taskRepository;
+        this.taskAttachmentRepository = taskAttachmentRepository;
+        this.reportRepository = reportRepository;
+        this.reportAttachmentRepository = reportAttachmentRepository;
+        this.profileUpdateService = profileUpdateService;
+        this.notificationService = notificationService;
+        this.attendanceService = attendanceService;
+        this.payrollTemplateRepository = payrollTemplateRepository;
+        this.payslipRepository = payslipRepository;
+        this.payslipService = payslipService;
+        this.attendanceRepository = attendanceRepository;
+    }
     // ── helpers ───────────────────────────────────────────────────────────
 
     private void injectUser(Model model) {

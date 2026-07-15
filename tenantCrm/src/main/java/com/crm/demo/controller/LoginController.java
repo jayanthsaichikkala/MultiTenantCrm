@@ -32,10 +32,20 @@ public class LoginController {
     private static final String REDIRECT_LOGIN = "redirect:/login";
     private static final String PATH_MEETINGS = "meetings";
 
-    @Autowired private UserRepository      userRepository;
-    @Autowired private BCryptPasswordEncoder passwordEncoder;
-    @Autowired private JwtUtil             jwtUtil;
-    @Autowired private SessionManager      sessionManager;
+    private final UserRepository userRepository;
+    private final BCryptPasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+    private final SessionManager sessionManager;
+
+    public LoginController(UserRepository userRepository,
+                           BCryptPasswordEncoder passwordEncoder,
+                           JwtUtil jwtUtil,
+                           SessionManager sessionManager) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
+        this.sessionManager = sessionManager;
+    }
 
     // ─── Serve the login HTML page ────────────────────────────────────────────────
     @GetMapping("/login")

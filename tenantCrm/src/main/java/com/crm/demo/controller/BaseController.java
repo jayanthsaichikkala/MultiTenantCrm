@@ -12,14 +12,23 @@ import com.crm.demo.repository.LeaveRequestRepository;
 
 public abstract class BaseController {
 
-    @Autowired
     protected UserRepository userRepository;
-
-    @Autowired
     protected HolidayRepository holidayRepository;
-
-    @Autowired
     protected LeaveRequestRepository leaveRequestRepository;
+
+    protected BaseController() {
+        this.userRepository = null;
+        this.holidayRepository = null;
+        this.leaveRequestRepository = null;
+    }
+
+    protected BaseController(UserRepository userRepository,
+                             HolidayRepository holidayRepository,
+                             LeaveRequestRepository leaveRequestRepository) {
+        this.userRepository = userRepository;
+        this.holidayRepository = holidayRepository;
+        this.leaveRequestRepository = leaveRequestRepository;
+    }
 
     protected User getCurrentUser() {
         var auth = SecurityContextHolder.getContext().getAuthentication();

@@ -27,8 +27,13 @@ public class NotificationController {
     private static final String VAL_UNAUTHORIZED = "Unauthorized";
     private static final String KEY_UNREAD_COUNT = "unreadCount";
 
-    @Autowired private NotificationService notificationService;
-    @Autowired private UserRepository userRepository;
+    private final NotificationService notificationService;
+    private final UserRepository userRepository;
+
+    public NotificationController(NotificationService notificationService, UserRepository userRepository) {
+        this.notificationService = notificationService;
+        this.userRepository = userRepository;
+    }
 
     public static class UnauthorizedException extends RuntimeException {
         private static final long serialVersionUID = 1L;

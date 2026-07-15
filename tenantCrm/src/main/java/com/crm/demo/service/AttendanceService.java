@@ -14,11 +14,13 @@ import com.crm.demo.repository.AttendanceRepository;
 @Service
 public class AttendanceService {
 
-    @Autowired
-    private AttendanceRepository attendanceRepository;
+    private final AttendanceRepository attendanceRepository;
+    private final NotificationService notificationService;
 
-    @Autowired
-    private NotificationService notificationService;
+    public AttendanceService(AttendanceRepository attendanceRepository, NotificationService notificationService) {
+        this.attendanceRepository = attendanceRepository;
+        this.notificationService = notificationService;
+    }
 
     /**
      * Run every 10 minutes to auto-punchout active sessions older than 9 hours.

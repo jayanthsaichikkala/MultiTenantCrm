@@ -22,17 +22,20 @@ import com.crm.demo.repository.UserRepository;
 @Service
 public class PayslipService {
 
-    @Autowired
-    private LeaveRequestRepository leaveRequestRepository;
+    private final LeaveRequestRepository leaveRequestRepository;
+    private final PayrollTemplateRepository payrollTemplateRepository;
+    private final PayslipRepository payslipRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private PayrollTemplateRepository payrollTemplateRepository;
-
-    @Autowired
-    private PayslipRepository payslipRepository;
-
-    @Autowired
-    private UserRepository userRepository;
+    public PayslipService(LeaveRequestRepository leaveRequestRepository,
+                          PayrollTemplateRepository payrollTemplateRepository,
+                          PayslipRepository payslipRepository,
+                          UserRepository userRepository) {
+        this.leaveRequestRepository = leaveRequestRepository;
+        this.payrollTemplateRepository = payrollTemplateRepository;
+        this.payslipRepository = payslipRepository;
+        this.userRepository = userRepository;
+    }
 
     public int countApprovedLeaveDays(User user, String leaveType, int month, int year) {
         var leaves = leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(user);

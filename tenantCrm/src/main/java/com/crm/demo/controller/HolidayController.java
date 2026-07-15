@@ -30,9 +30,17 @@ public class HolidayController {
     private static final String RESP_SUCCESS = "success";
     private static final String RESP_MESSAGE = "message";
 
-    @Autowired private HolidayService       holidayService;
-    @Autowired private UserRepository       userRepository;
-    @Autowired private NotificationService  notificationService;
+    private final HolidayService holidayService;
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
+
+    public HolidayController(HolidayService holidayService,
+                             UserRepository userRepository,
+                             NotificationService notificationService) {
+        this.holidayService = holidayService;
+        this.userRepository = userRepository;
+        this.notificationService = notificationService;
+    }
 
     // ── Tenant helper ─────────────────────────────────────────────────────
     private String getTenant(HttpServletRequest request) {

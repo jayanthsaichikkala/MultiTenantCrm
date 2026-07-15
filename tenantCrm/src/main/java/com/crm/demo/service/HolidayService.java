@@ -12,8 +12,11 @@ import com.crm.demo.repository.HolidayRepository;
 @Service
 public class HolidayService {
 
-    @Autowired
-    private HolidayRepository repository;
+    private final HolidayRepository repository;
+
+    public HolidayService(HolidayRepository repository) {
+        this.repository = repository;
+    }
 
     /** All holidays for a tenant, ordered by date. */
     public List<Holiday> getByTenant(String tenantSegment) {

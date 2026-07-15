@@ -48,7 +48,9 @@ import com.crm.demo.repository.PasswordResetTokenRepository;
 import com.crm.demo.repository.PerformanceReviewRepository;
 import com.crm.demo.repository.TaskRepository;
 import com.crm.demo.repository.TeamRepository;
-
+import com.crm.demo.repository.UserRepository;
+import com.crm.demo.repository.HolidayRepository;
+import com.crm.demo.repository.LeaveRequestRepository;
 import com.crm.demo.model.PayrollTemplate;
 import com.crm.demo.repository.PayrollTemplateRepository;
 import com.crm.demo.repository.PayslipRepository;
@@ -65,23 +67,80 @@ import jakarta.validation.Valid;
 @RequestMapping("/hr")
 public class HrController extends BaseController {
 
-    @Autowired private TeamRepository        teamRepository;
-    @Autowired private AttendanceRepository  attendanceRepository;
-    @Autowired private MeetingRepository     meetingRepository;
-    @Autowired private PerformanceReviewRepository performanceReviewRepository;
-    @Autowired private PasswordResetTokenRepository passwordResetTokenRepository;
-    @Autowired private TaskRepository         taskRepository;
-    @Autowired private com.crm.demo.repository.ReportRepository reportRepository;
-    @Autowired private com.crm.demo.repository.ReportAttachmentRepository reportAttachmentRepository;
-    @Autowired private BCryptPasswordEncoder passwordEncoder;
-    @Autowired private AttendanceService     attendanceService;
-    @Autowired private ProfileUpdateService  profileUpdateService;
-    @Autowired private NotificationService   notificationService;
+    private final TeamRepository teamRepository;
+    private final AttendanceRepository attendanceRepository;
+    private final MeetingRepository meetingRepository;
+    private final PerformanceReviewRepository performanceReviewRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final TaskRepository taskRepository;
+    private final com.crm.demo.repository.ReportRepository reportRepository;
+    private final com.crm.demo.repository.ReportAttachmentRepository reportAttachmentRepository;
+    private final BCryptPasswordEncoder passwordEncoder;
+    private final AttendanceService attendanceService;
+    private final ProfileUpdateService profileUpdateService;
+    private final NotificationService notificationService;
+    private final PayrollTemplateRepository payrollTemplateRepository;
+    private final PayslipRepository payslipRepository;
+    private final PayslipService payslipService;
+    private final com.crm.demo.repository.DomainCategoryRepository domainCategoryRepository;
 
-    @Autowired private PayrollTemplateRepository payrollTemplateRepository;
-    @Autowired private PayslipRepository payslipRepository;
-    @Autowired private PayslipService payslipService;
-    @Autowired private com.crm.demo.repository.DomainCategoryRepository domainCategoryRepository;
+    public HrController() {
+        this.teamRepository = null;
+        this.attendanceRepository = null;
+        this.meetingRepository = null;
+        this.performanceReviewRepository = null;
+        this.passwordResetTokenRepository = null;
+        this.taskRepository = null;
+        this.reportRepository = null;
+        this.reportAttachmentRepository = null;
+        this.passwordEncoder = null;
+        this.attendanceService = null;
+        this.profileUpdateService = null;
+        this.notificationService = null;
+        this.payrollTemplateRepository = null;
+        this.payslipRepository = null;
+        this.payslipService = null;
+        this.domainCategoryRepository = null;
+    }
+
+    @Autowired
+    public HrController(UserRepository userRepository,
+                        HolidayRepository holidayRepository,
+                        LeaveRequestRepository leaveRequestRepository,
+                        TeamRepository teamRepository,
+                        AttendanceRepository attendanceRepository,
+                        MeetingRepository meetingRepository,
+                        PerformanceReviewRepository performanceReviewRepository,
+                        PasswordResetTokenRepository passwordResetTokenRepository,
+                        TaskRepository taskRepository,
+                        com.crm.demo.repository.ReportRepository reportRepository,
+                        com.crm.demo.repository.ReportAttachmentRepository reportAttachmentRepository,
+                        BCryptPasswordEncoder passwordEncoder,
+                        AttendanceService attendanceService,
+                        ProfileUpdateService profileUpdateService,
+                        NotificationService notificationService,
+                        PayrollTemplateRepository payrollTemplateRepository,
+                        PayslipRepository payslipRepository,
+                        PayslipService payslipService,
+                        com.crm.demo.repository.DomainCategoryRepository domainCategoryRepository) {
+        super(userRepository, holidayRepository, leaveRequestRepository);
+        this.teamRepository = teamRepository;
+        this.attendanceRepository = attendanceRepository;
+        this.meetingRepository = meetingRepository;
+        this.performanceReviewRepository = performanceReviewRepository;
+        this.passwordResetTokenRepository = passwordResetTokenRepository;
+        this.taskRepository = taskRepository;
+        this.reportRepository = reportRepository;
+        this.reportAttachmentRepository = reportAttachmentRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.attendanceService = attendanceService;
+        this.profileUpdateService = profileUpdateService;
+        this.notificationService = notificationService;
+        this.payrollTemplateRepository = payrollTemplateRepository;
+        this.payslipRepository = payslipRepository;
+        this.payslipService = payslipService;
+        this.domainCategoryRepository = domainCategoryRepository;
+    }
 
     private static final String ROLE_SUPER_ADMIN = "SUPER_ADMIN";
     private static final String ROLE_ADMIN = "ADMIN";

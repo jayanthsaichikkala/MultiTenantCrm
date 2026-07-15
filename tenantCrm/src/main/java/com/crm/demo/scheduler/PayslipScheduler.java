@@ -10,8 +10,11 @@ import com.crm.demo.service.PayslipService;
 @Component
 public class PayslipScheduler {
 
-    @Autowired
-    private PayslipService payslipService;
+    private final PayslipService payslipService;
+
+    public PayslipScheduler(PayslipService payslipService) {
+        this.payslipService = payslipService;
+    }
 
     /**
      * Runs at midnight on the 2nd of every month.

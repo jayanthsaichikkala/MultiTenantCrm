@@ -34,9 +34,17 @@ public class SuperAdminController {
     private static final String REDIRECT_SUPERADMIN_EDIT_ADMIN_PREFIX = "redirect:/superadmin/edit-admin/";
     private static final String MSG_ADMIN_PREFIX = "Admin '";
 
-    @Autowired private UserRepository        userRepository;
-    @Autowired private BCryptPasswordEncoder passwordEncoder;
-    @Autowired private ProfileUpdateService  profileUpdateService;
+    private final UserRepository userRepository;
+    private final BCryptPasswordEncoder passwordEncoder;
+    private final ProfileUpdateService profileUpdateService;
+
+    public SuperAdminController(UserRepository userRepository,
+                               BCryptPasswordEncoder passwordEncoder,
+                               ProfileUpdateService profileUpdateService) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.profileUpdateService = profileUpdateService;
+    }
 
     // ── helper: load admins and stats into model ─────────────────────────────
     private List<User> loadAdmins(Model model) {

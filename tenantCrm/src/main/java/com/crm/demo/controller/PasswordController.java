@@ -26,17 +26,20 @@ public class PasswordController {
 	private static final String ATTR_ERROR = "error";
 	private static final String ATTR_TOKEN = "token";
 
-	@Autowired
-	private JavaMailSender mailSender;
+	private final JavaMailSender mailSender;
+	private final PasswordResetTokenRepository tokenRepository;
+	private final UserRepository userRepository;
+	private final PasswordEncoder passwordEncoder;
 
-	@Autowired
-	private PasswordResetTokenRepository tokenRepository;
-
-	@Autowired
-	private UserRepository userRepository;
-
-	@Autowired
-	private PasswordEncoder passwordEncoder;
+	public PasswordController(JavaMailSender mailSender,
+							  PasswordResetTokenRepository tokenRepository,
+							  UserRepository userRepository,
+							  PasswordEncoder passwordEncoder) {
+		this.mailSender = mailSender;
+		this.tokenRepository = tokenRepository;
+		this.userRepository = userRepository;
+		this.passwordEncoder = passwordEncoder;
+	}
 
 	// Forgot Password Page
 	@GetMapping("/forgot-password")

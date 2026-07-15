@@ -44,10 +44,20 @@ public class NotificationService {
     private static final String TYPE_TASK = "TASK";
     private static final String TYPE_TEAM = "TEAM";
 
-    @Autowired private NotificationRepository notificationRepository;
-    @Autowired private UserRepository userRepository;
-    @Autowired private TeamRepository teamRepository;
-    @Autowired private SimpMessagingTemplate messagingTemplate;
+    private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
+    private final TeamRepository teamRepository;
+    private final SimpMessagingTemplate messagingTemplate;
+
+    public NotificationService(NotificationRepository notificationRepository,
+                               UserRepository userRepository,
+                               TeamRepository teamRepository,
+                               SimpMessagingTemplate messagingTemplate) {
+        this.notificationRepository = notificationRepository;
+        this.userRepository = userRepository;
+        this.teamRepository = teamRepository;
+        this.messagingTemplate = messagingTemplate;
+    }
 
     public Notification notify(User user, String title, String message, String type) {
         if (user == null || user.getId() == null) return null;

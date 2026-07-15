@@ -37,6 +37,9 @@ import com.crm.demo.repository.TaskRepository;
 
 import com.crm.demo.repository.AttendanceRepository;
 import com.crm.demo.repository.TeamRepository;
+import com.crm.demo.repository.UserRepository;
+import com.crm.demo.repository.HolidayRepository;
+import com.crm.demo.repository.LeaveRequestRepository;
 import com.crm.demo.service.NotificationService;
 import com.crm.demo.service.ProfileUpdateService;
 import com.crm.demo.service.AttendanceService;
@@ -78,45 +81,64 @@ public class AdminController extends BaseController {
 	private static final String MSG_MEETING_NOT_FOUND = "Meeting not found.";
 	private static final String REDIRECT_ADMIN_SETTINGS = "redirect:/admin/settings";
 
-	@Autowired
-	private AttendanceService attendanceService;
+	private final AttendanceService attendanceService;
+	private final MeetingRepository meetingRepository;
+	private final ProjectRepository projectRepository;
+	private final TaskRepository taskRepository;
+	private final ReportRepository reportRepository;
+	private final ReportAttachmentRepository reportAttachmentRepository;
+	private final BCryptPasswordEncoder passwordEncoder;
+	private final ProfileUpdateService profileUpdateService;
+	private final NotificationService notificationService;
+	private final AttendanceRepository attendanceRepository;
+	private final TeamRepository teamRepository;
+	private final com.crm.demo.repository.DomainCategoryRepository domainCategoryRepository;
+
+	public AdminController() {
+		this.attendanceService = null;
+		this.meetingRepository = null;
+		this.projectRepository = null;
+		this.taskRepository = null;
+		this.reportRepository = null;
+		this.reportAttachmentRepository = null;
+		this.passwordEncoder = null;
+		this.profileUpdateService = null;
+		this.notificationService = null;
+		this.attendanceRepository = null;
+		this.teamRepository = null;
+		this.domainCategoryRepository = null;
+	}
 
 	@Autowired
-	private MeetingRepository meetingRepository;
-
-	@Autowired
-	private ProjectRepository projectRepository;
-
-	@Autowired
-	private TaskRepository taskRepository;
-
-
-
-	@Autowired
-	private ReportRepository reportRepository;
-
-	@Autowired
-	private ReportAttachmentRepository reportAttachmentRepository;
-
-	@Autowired
-	private BCryptPasswordEncoder passwordEncoder;
-
-	@Autowired
-	private ProfileUpdateService profileUpdateService;
-
-	@Autowired
-	private NotificationService notificationService;
-
-
-
-	@Autowired
-	private AttendanceRepository attendanceRepository;
-
-	@Autowired
-	private TeamRepository teamRepository;
-
-	@Autowired
-	private com.crm.demo.repository.DomainCategoryRepository domainCategoryRepository;
+	public AdminController(UserRepository userRepository,
+						   HolidayRepository holidayRepository,
+						   LeaveRequestRepository leaveRequestRepository,
+						   AttendanceService attendanceService,
+						   MeetingRepository meetingRepository,
+						   ProjectRepository projectRepository,
+						   TaskRepository taskRepository,
+						   ReportRepository reportRepository,
+						   ReportAttachmentRepository reportAttachmentRepository,
+						   BCryptPasswordEncoder passwordEncoder,
+						   ProfileUpdateService profileUpdateService,
+						   NotificationService notificationService,
+						   AttendanceRepository attendanceRepository,
+						   TeamRepository teamRepository,
+						   com.crm.demo.repository.DomainCategoryRepository domainCategoryRepository) {
+		super(userRepository, holidayRepository, leaveRequestRepository);
+		this.attendanceService = attendanceService;
+		this.meetingRepository = meetingRepository;
+		this.projectRepository = projectRepository;
+		this.taskRepository = taskRepository;
+		this.reportRepository = reportRepository;
+		this.reportAttachmentRepository = reportAttachmentRepository;
+		this.passwordEncoder = passwordEncoder;
+		this.profileUpdateService = profileUpdateService;
+		this.notificationService = notificationService;
+		this.attendanceRepository = attendanceRepository;
+		this.teamRepository = teamRepository;
+		this.domainCategoryRepository = domainCategoryRepository;
+	}
 
 	// =========================================================
 	// COMMON USER DETAILS

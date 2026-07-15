@@ -31,11 +31,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private static final String COOKIE_NAME = "jwt_token";
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final JwtUtil jwtUtil;
+    private final SessionManager sessionManager;
 
-    @Autowired
-    private SessionManager sessionManager;
+    public JwtAuthFilter(JwtUtil jwtUtil, SessionManager sessionManager) {
+        this.jwtUtil = jwtUtil;
+        this.sessionManager = sessionManager;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest  request,
