@@ -182,12 +182,10 @@ class CrmApplicationTests {
         when(file.isEmpty()).thenReturn(false);
         when(file.getBytes()).thenThrow(new IOException("Disk error"));
 
-        try {
+        FileUploadException e = assertThrows(FileUploadException.class, () -> {
             managerController.processAttachments(new MultipartFile[]{file}, new ArrayList<>());
-            fail("Expected exception");
-        } catch (FileUploadException e) {
-            assertEquals("File upload failed: Disk error", e.getMessage());
-        }
+        });
+        assertEquals("File upload failed: Disk error", e.getMessage());
     }
 
     // ── ManagerController.processReportAttachments ────────────────────────────
@@ -233,12 +231,10 @@ class CrmApplicationTests {
         when(file.isEmpty()).thenReturn(false);
         when(file.getBytes()).thenThrow(new IOException("Disk write error"));
 
-        try {
+        FileUploadException e = assertThrows(FileUploadException.class, () -> {
             managerController.processReportAttachments(report, new MultipartFile[]{file});
-            fail("Expected exception");
-        } catch (FileUploadException e) {
-            assertEquals("File upload failed: Disk write error", e.getMessage());
-        }
+        });
+        assertEquals("File upload failed: Disk write error", e.getMessage());
     }
 
     // ── ManagerController.validateTaskParams ──────────────────────────────────

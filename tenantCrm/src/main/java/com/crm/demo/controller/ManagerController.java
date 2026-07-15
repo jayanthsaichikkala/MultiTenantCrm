@@ -337,7 +337,7 @@ public class ManagerController extends BaseController {
 				.filter(member -> member != null && member.getId() != null)
 				.collect(Collectors.toMap(User::getId, member -> member, (m1, m2) -> m1, LinkedHashMap::new))
 				.values().stream()
-				.collect(Collectors.toList());
+				.toList();
 	}
 
 	private String getManagedTeamName(User manager) {
@@ -348,7 +348,7 @@ public class ManagerController extends BaseController {
 		if (teams.size() == 1) {
 			return teams.get(0).getName();
 		}
-		return String.join(", ", teams.stream().map(Team::getName).collect(Collectors.toList()));
+		return String.join(", ", teams.stream().map(Team::getName).toList());
 	}
 
 	// =========================
@@ -1001,7 +1001,7 @@ public class ManagerController extends BaseController {
 			var allRecipients = allTenantUsers.stream()
 					.filter(u -> ROLE_HR.equalsIgnoreCase(u.getRole()) || ROLE_ADMIN.equalsIgnoreCase(u.getRole()) || teamMembers.contains(u))
 					.distinct()
-					.collect(Collectors.toList());
+					.toList();
 			model.addAttribute("allRecipients", allRecipients);
 
 			// Sent reports history (for "Send Report" tracking)
@@ -1069,7 +1069,7 @@ public class ManagerController extends BaseController {
 		var validRecipients = allTenantUsers.stream()
 				.filter(u -> recipientIds.contains(u.getId()))
 				.filter(u -> ROLE_HR.equalsIgnoreCase(u.getRole()) || ROLE_ADMIN.equalsIgnoreCase(u.getRole()) || teamMembers.contains(u))
-				.collect(Collectors.toList());
+				.toList();
 
 		if (validRecipients.size() != recipientIds.size()) {
 			ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "One or more selected recipients are invalid or outside your tenant.");
@@ -1175,7 +1175,7 @@ public class ManagerController extends BaseController {
 			if (m.getMeetingTime() == null) return false;
 			int dur = (m.getDuration() != null) ? m.getDuration() : 0;
 			return m.getMeetingTime().plusMinutes(dur).isBefore(now);
-		}).collect(Collectors.toList());
+		}).toList();
 	}
 
 	/** Returns upcoming meetings (today + future) where the user is a participant OR the host,
@@ -1190,7 +1190,7 @@ public class ManagerController extends BaseController {
 			if (m.getMeetingTime() == null) return true;
 			int dur = (m.getDuration() != null) ? m.getDuration() : 0;
 			return !m.getMeetingTime().plusMinutes(dur).isBefore(now);
-		}).collect(Collectors.toList());
+		}).toList();
 	}
 
 	/** GET /manager/meetings — show schedule form + list of meetings where manager is a participant */
@@ -1446,7 +1446,7 @@ public class ManagerController extends BaseController {
 		if (status != null && !status.isBlank() && !"all".equalsIgnoreCase(status)) {
 			filteredDays = allDays.stream()
 					.filter(d -> d.getStatus().equalsIgnoreCase(status))
-					.collect(Collectors.toList());
+					.toList();
 		}
 
 		// Stats from all-time records
@@ -1734,7 +1734,7 @@ public class ManagerController extends BaseController {
 
 		var teamMembers = getManagedTeamMembers(manager).stream()
 				.filter(u -> ROLE_EMPLOYEE.equalsIgnoreCase(u.getRole()))
-				.collect(Collectors.toList());
+				.toList();
 		var perfList = computeEmployeePerformance(teamMembers, ym, tenant);
 
 		// Pre-compute summary stats (lambdas not supported in Thymeleaf SpEL)

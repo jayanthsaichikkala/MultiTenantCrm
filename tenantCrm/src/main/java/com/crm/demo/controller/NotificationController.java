@@ -2,7 +2,6 @@ package com.crm.demo.controller;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -70,7 +69,7 @@ public class NotificationController {
         var items = notificationService.getRecentForUser(user.getId())
                 .stream()
                 .map(this::toDto)
-                .collect(Collectors.toList());
+                .toList();
 
         return ResponseEntity.ok(Map.of(
                 "notifications", items,
