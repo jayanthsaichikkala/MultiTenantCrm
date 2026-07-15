@@ -143,6 +143,183 @@ public abstract class BaseController {
         return data;
     }
 
+    // =========================================================
+    // SHARED ATTENDANCE DAY LIST BUILDER
+    // =========================================================
+
+    /**
+     * Builds a merged day-by-day attendance list for the given date range, newest-first.
+     * Priority: holiday > weekend > real record > approved-leave > absent (past weekday).
+     *
+     * @param records   attendance records already fetched from DB for [from, to]
+     * @param from      range start (inclusive)
+     * @param to        range end   (inclusive)
+     * @param holidays  map of date → holiday name (from fetchHolidays)
+     * @param user      user whose approved leaves are factored in (may be null → no leave check)
+     */
+    protected java.util.List<com.crm.demo.model.AttendanceDay> buildDayList(
+            java.util.List<com.crm.demo.model.Attendance> records,
+            LocalDate from, LocalDate to,
+            Map<LocalDate, String> holidays,
+            com.crm.demo.model.User user) {
+
+        var byDate = new java.util.LinkedHashMap<LocalDate, com.crm.demo.model.Attendance>();
+        if (records != null) {
+            for (var a : records) {
+                if (a != null && a.getDate() != null) byDate.put(a.getDate(), a);
+            }
+        }
+
+        // Collect approved leave dates for this user in [from, to]
+        var approvedLeaveDates = new java.util.LinkedHashSet<LocalDate>();
+        if (user != null) {
+            for (var leave : leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(user)) {
+                if (!"Approved".equalsIgnoreCase(leave.getStatus())
+                        || leave.getFromDate() == null || leave.getToDate() == null) continue;
+                var cursor = leave.getFromDate();
+                while (!cursor.isAfter(leave.getToDate())) {
+                    if (from != null && to != null && !cursor.isBefore(from) && !cursor.isAfter(to)) {
+                        approvedLeaveDates.add(cursor);
+                    }
+                    cursor = cursor.plusDays(1);
+                }
+            }
+        }
+
+        var days = new java.util.ArrayList<com.crm.demo.model.AttendanceDay>();
+        if (from == null || to == null) return days;
+
+        var today  = LocalDate.now();
+        var cursor = to;
+        while (!cursor.isBefore(from)) {
+            if (holidays != null && holidays.containsKey(cursor)) {
+                days.add(new com.crm.demo.model.AttendanceDay(cursor, holidays.get(cursor), true));
+            } else {
+                var dow = cursor.getDayOfWeek();
+                if (dow == java.time.DayOfWeek.SATURDAY || dow == java.time.DayOfWeek.SUNDAY) {
+                    days.add(new com.crm.demo.model.AttendanceDay(cursor, "weekend"));
+                } else if (byDate.containsKey(cursor)) {
+                    days.add(new com.crm.demo.model.AttendanceDay(byDate.get(cursor)));
+                } else if (approvedLeaveDates.contains(cursor)) {
+                    days.add(new com.crm.demo.model.AttendanceDay(cursor, "leave"));
+                } else if (!cursor.isAfter(today)) {
+                    days.add(new com.crm.demo.model.AttendanceDay(cursor, "absent"));
+                }
+            }
+            cursor = cursor.minusDays(1);
+        }
+        return days;
+    }
+
+    /**
+     * Overload without leave-date support (used by Admin modal where leave data is not needed).
+     */
+    protected java.util.List<com.crm.demo.model.AttendanceDay> buildDayList(
+            java.util.List<com.crm.demo.model.Attendance> records,
+            LocalDate from, LocalDate to,
+            Map<LocalDate, String> holidays) {
+        return buildDayList(records, from, to, holidays, null);
+    }
+
+    // =========================================================
+    // SHARED VALIDATION HELPERS
+    // =========================================================
+
+    /**
+     * Validates a username: non-blank, 3-50 chars, letters/numbers/dots/hyphens/underscores.
+     * Returns an error message string, or null if valid.
+     */
+    protected String validateUsername(String username) {
+        if (username == null || username.trim().isBlank()) {
+            return "Username is required.";
+        }
+        if (!username.trim().matches("^[A-Za-z0-9._-]{3,50}$")) {
+            return "Username must be 3-50 characters and contain only letters, numbers, dots, hyphens, or underscores.";
+        }
+        return null;
+    }
+
+    /**
+     * Validates an email address and optionally checks that it belongs to the given tenant domain.
+     * Returns an error message string, or null if valid.
+     */
+    protected String validateEmail(String email, String tenant, String domainSuffix) {
+        if (email == null || email.trim().isBlank()) {
+            return "Email is required.";
+        }
+        if (!email.trim().matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
+            return "Please provide a valid email address.";
+        }
+        if (tenant != null && !tenant.isBlank() && !email.trim().contains("." + tenant + "@")) {
+            return "Email must belong to your tenant domain (expected format: name." + tenant + domainSuffix;
+        }
+        return null;
+    }
+
+    /**
+     * Validates a new-user password: non-null, min 4 chars, alphanumeric only, matches confirm.
+     * Returns an error message string, or null if valid.
+     */
+    protected String validatePassword(String password, String confirmPassword) {
+        if (password == null || password.length() < 4) {
+            return "Password must be at least 4 characters long.";
+        }
+        if (!password.matches("^[A-Za-z0-9]+$")) {
+            return "Password must contain only letters and numbers (no special characters).";
+        }
+        if (!password.equals(confirmPassword)) {
+            return "Passwords do not match.";
+        }
+        return null;
+    }
+
+    // =========================================================
+    // SHARED ATTENDANCE ROW BUILDER
+    // =========================================================
+
+    /**
+     * Converts a list of AttendanceDay objects into a list of string maps
+     * suitable for JSON attendance modals used in Admin, HR, and Manager controllers.
+     */
+    protected java.util.List<java.util.Map<String, String>> buildAttendanceRows(
+            java.util.List<com.crm.demo.model.AttendanceDay> days) {
+        var rows = new java.util.ArrayList<java.util.Map<String, String>>();
+        for (var d : days) {
+            var row = new java.util.LinkedHashMap<String, String>();
+            row.put("date",      d.getDate().toString());
+            row.put("checkIn",   d.getCheckInDisplay());
+            row.put("checkOut",  d.getCheckOutDisplay());
+            row.put("worked",    d.getWorkedHours());
+            row.put("breakTime", d.getBreakDuration());
+            row.put("dayType",   d.isReal() && d.getRecord().getCheckOut() != null ? d.getRecord().getDayType() : "—");
+            row.put("status",    d.getStatus());
+            rows.add(row);
+        }
+        return rows;
+    }
+
+    // =========================================================
+    // SHARED ATTACHMENT RESPONSE BUILDER
+    // =========================================================
+
+    /**
+     * Builds a ResponseEntity for serving a file attachment.
+     *
+     * @param disposition "inline" or "attachment"
+     * @param filename    original filename
+     * @param data        file bytes
+     * @param contentType MIME type (null falls back to application/octet-stream)
+     */
+    protected org.springframework.http.ResponseEntity<byte[]> buildFileResponse(
+            String disposition, String filename, byte[] data, String contentType) {
+        var ct = (contentType != null && !contentType.isBlank()) ? contentType : "application/octet-stream";
+        return org.springframework.http.ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                        disposition + "; filename=\"" + filename + "\"")
+                .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, ct)
+                .body(data);
+    }
+
     protected void populateAnalyticsAttributes(org.springframework.ui.Model model, Map<String, Object> data) {
         model.addAttribute("chartStatusDone", data.get("statusDone"));
         model.addAttribute("chartStatusInProgress", data.get("statusInProgress"));

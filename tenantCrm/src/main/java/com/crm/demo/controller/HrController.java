@@ -135,7 +135,7 @@ public class HrController extends BaseController {
         var usernameError = validateUsername(username);
         if (usernameError != null) return usernameError;
 
-        var emailError = validateEmail(email, segment);
+        var emailError = validateEmail(email, segment, DOMAIN_SUFFIX);
         if (emailError != null) return emailError;
 
         var passwordError = validatePassword(password, confirmPassword);
@@ -170,7 +170,7 @@ public class HrController extends BaseController {
         var usernameError = validateUsername(username);
         if (usernameError != null) return usernameError;
 
-        var emailError = validateEmail(email, segment);
+        var emailError = validateEmail(email, segment, DOMAIN_SUFFIX);
         if (emailError != null) return emailError;
 
         // Block promoting to ADMIN / SUPER_ADMIN
@@ -219,41 +219,7 @@ public class HrController extends BaseController {
         return opt.get();
     }
 
-    private String validateUsername(String username) {
-        if (username == null || username.trim().isBlank()) {
-            return "Username is required.";
-        }
-        if (!username.trim().matches("^[A-Za-z0-9._-]{3,50}$")) {
-            return "Username must be 3-50 characters and contain only letters, numbers, dots, hyphens, or underscores.";
-        }
-        return null;
-    }
-
-    private String validateEmail(String email, String segment) {
-        if (email == null || email.trim().isBlank()) {
-            return "Email is required.";
-        }
-        if (!email.trim().matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")) {
-            return "Please provide a valid email address.";
-        }
-        if (segment != null && !segment.isBlank() && !email.trim().contains("." + segment + "@")) {
-            return "Email must belong to your tenant domain (expected format: name." + segment + DOMAIN_SUFFIX;
-        }
-        return null;
-    }
-
-    private String validatePassword(String password, String confirmPassword) {
-        if (password == null || password.length() < 4) {
-            return "Password must be at least 4 characters long.";
-        }
-        if (!password.matches("^[A-Za-z0-9]+$")) {
-            return "Password must contain only letters and numbers (no special characters).";
-        }
-        if (!password.equals(confirmPassword)) {
-            return "Passwords do not match.";
-        }
-        return null;
-    }
+    // validateUsername, validateEmail, validatePassword are inherited from BaseController.
 
     // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -280,37 +246,7 @@ public class HrController extends BaseController {
         return super.getTenantSegment(user);
     }
 
-    /**
-     * Build a merged day list for the given date range.
-     * Priority: holiday > weekend > real record > absent.
-     * Result is sorted newest-first.
-     */
-    private List<AttendanceDay> buildDayList(List<Attendance> records,
-                                              LocalDate from, LocalDate to,
-                                              Map<LocalDate, String> holidays) {
-        var byDate = new LinkedHashMap<LocalDate, Attendance>();
-        for (var a : records) byDate.put(a.getDate(), a);
-
-        var days = new ArrayList<AttendanceDay>();
-        var today  = LocalDate.now();
-        var cursor = to;
-        while (!cursor.isBefore(from)) {
-            if (holidays.containsKey(cursor)) {
-                days.add(new AttendanceDay(cursor, holidays.get(cursor), true));
-            } else {
-                var dow = cursor.getDayOfWeek();
-                if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
-                    days.add(new AttendanceDay(cursor, "weekend"));
-                } else if (byDate.containsKey(cursor)) {
-                    days.add(new AttendanceDay(byDate.get(cursor)));
-                } else if (!cursor.isAfter(today)) {
-                    days.add(new AttendanceDay(cursor, STATUS_ABSENT));
-                }
-            }
-            cursor = cursor.minusDays(1);
-        }
-        return days;
-    }
+    // buildDayList is inherited from BaseController.
 
 
     /** Returns true for roles that HR should manage (not ADMIN / SUPER_ADMIN). */

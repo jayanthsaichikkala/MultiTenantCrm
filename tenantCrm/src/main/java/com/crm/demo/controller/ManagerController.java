@@ -1327,32 +1327,7 @@ public class ManagerController extends BaseController {
 		return getCurrentUser();
 	}
 
-	/**
-	 * Build a merged day list for the given date range.
-	 * Priority: holiday > weekend > real record > absent.
-	 * Result is sorted newest-first.
-	 */
-	private List<AttendanceDay> buildDayList(List<Attendance> records,
-	                                          LocalDate from, LocalDate to,
-	                                          Map<LocalDate, String> holidays,
-	                                          User user) {
-		var byDate = new LinkedHashMap<LocalDate, Attendance>();
-		for (var a : records) byDate.put(a.getDate(), a);
-
-		var approvedLeaveDates = getApprovedLeaveDates(user, from, to);
-
-		var days = new ArrayList<AttendanceDay>();
-		var today  = LocalDate.now();
-		var cursor = to;
-		while (!cursor.isBefore(from)) {
-			var day = buildAttendanceDayForDate(cursor, holidays, byDate, approvedLeaveDates, today);
-			if (day != null) {
-				days.add(day);
-			}
-			cursor = cursor.minusDays(1);
-		}
-		return days;
-	}
+	// buildDayList is inherited from BaseController.
 
 
 	@GetMapping("/attendance")
@@ -2082,49 +2057,7 @@ public class ManagerController extends BaseController {
 		}
 	}
 
-	private Set<LocalDate> getApprovedLeaveDates(User user, LocalDate from, LocalDate to) {
-		Set<LocalDate> approvedLeaveDates = new LinkedHashSet<>();
-		if (user == null) {
-			return approvedLeaveDates;
-		}
-		for (LeaveRequest leave : leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(user)) {
-			addApprovedLeaveDates(leave, from, to, approvedLeaveDates);
-		}
-		return approvedLeaveDates;
-	}
-
-	private void addApprovedLeaveDates(LeaveRequest leave, LocalDate from, LocalDate to, Set<LocalDate> approvedLeaveDates) {
-		if (leave == null || !STATUS_APPROVED.equalsIgnoreCase(leave.getStatus()) || leave.getFromDate() == null || leave.getToDate() == null) {
-			return;
-		}
-		LocalDate cursor = leave.getFromDate();
-		while (!cursor.isAfter(leave.getToDate())) {
-			if (!cursor.isBefore(from) && !cursor.isAfter(to)) {
-				approvedLeaveDates.add(cursor);
-			}
-			cursor = cursor.plusDays(1);
-		}
-	}
-
-	private AttendanceDay buildAttendanceDayForDate(LocalDate cursor, Map<LocalDate, String> holidays, Map<LocalDate, Attendance> byDate, Set<LocalDate> approvedLeaveDates, LocalDate today) {
-		if (holidays.containsKey(cursor)) {
-			return new AttendanceDay(cursor, holidays.get(cursor), true);
-		}
-		var dow = cursor.getDayOfWeek();
-		if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
-			return new AttendanceDay(cursor, "weekend");
-		}
-		if (byDate.containsKey(cursor)) {
-			return new AttendanceDay(byDate.get(cursor));
-		}
-		if (approvedLeaveDates.contains(cursor)) {
-			return new AttendanceDay(cursor, "leave");
-		}
-		if (!cursor.isAfter(today)) {
-			return new AttendanceDay(cursor, STATUS_ABSENT);
-		}
-		return null;
-	}
+	// getApprovedLeaveDates, addApprovedLeaveDates, and buildAttendanceDayForDate are inherited from BaseController.
 
 	// ── PAYROLL ───────────────────────────────────────────────────────────
 
