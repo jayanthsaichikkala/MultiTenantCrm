@@ -331,11 +331,11 @@ public class HrController extends BaseController {
                         .filter(u -> isNonAdminRole(u.getRole()))
                         .filter(u -> !u.getUsername().equals(currentUsername))
                         .sorted(java.util.Comparator.comparing(User::getId).reversed())
-                        .collect(Collectors.toList())
+                        .toList()
                 : userRepository.findByTenantSegment(tenant).stream()
                         .filter(u -> isNonAdminRole(u.getRole()))
                         .filter(u -> !u.getUsername().equals(currentUsername))
-                        .collect(Collectors.toList());
+                        .toList();
 
         var active   = employees.stream().filter(User::isActive).count();
         var inactive = employees.size() - active;
@@ -387,11 +387,11 @@ public class HrController extends BaseController {
                 ? userRepository.findAll().stream()
                         .filter(u -> isNonAdminRole(u.getRole()))
                         .filter(u -> currentUsername == null || !u.getUsername().equals(currentUsername))
-                        .collect(Collectors.toList())
+                        .toList()
                 : userRepository.findByTenantSegment(tenant).stream()
                         .filter(u -> isNonAdminRole(u.getRole()))
                         .filter(u -> currentUsername == null || !u.getUsername().equals(currentUsername))
-                        .collect(Collectors.toList());
+                        .toList();
 
         var tasks = tenant.isBlank()
                 ? taskRepository.findAll()
@@ -987,7 +987,7 @@ public class HrController extends BaseController {
         if (status != null && !status.isBlank() && !"all".equalsIgnoreCase(status)) {
             filteredDays = allDays.stream()
                     .filter(d -> d.getStatus().equalsIgnoreCase(status))
-                    .collect(Collectors.toList());
+                    .toList();
         }
 
         // Stats from all-time records
@@ -1305,10 +1305,10 @@ public class HrController extends BaseController {
                 ? userRepository.findAll()
                 : userRepository.findByTenantSegment(tenant);
 
-        var managers  = tenantUsers.stream()
-                .filter(u -> "MANAGER".equalsIgnoreCase(u.getRole()) && u.isActive()).collect(Collectors.toList());
+        var managers = tenantUsers.stream()
+                .filter(u -> "MANAGER".equalsIgnoreCase(u.getRole()) && u.isActive()).toList();
         var employees = tenantUsers.stream()
-                .filter(u -> ROLE_EMPLOYEE.equalsIgnoreCase(u.getRole()) && u.isActive()).collect(Collectors.toList());
+                .filter(u -> ROLE_EMPLOYEE.equalsIgnoreCase(u.getRole()) && u.isActive()).toList();
 
         model.addAttribute(ATTR_TEAMS,     teams);
         model.addAttribute("managers",  managers);
@@ -1471,7 +1471,7 @@ public class HrController extends BaseController {
             if (m.getMeetingTime() == null) return false;
             var dur = (m.getDuration() != null) ? m.getDuration() : 0;
             return m.getMeetingTime().plusMinutes(dur).isBefore(now);
-        }).collect(Collectors.toList());
+        }).toList();
     }
 
     /** Returns upcoming meetings (today + future) where the user is a participant OR the host,
@@ -1486,7 +1486,7 @@ public class HrController extends BaseController {
             if (m.getMeetingTime() == null) return true;
             var dur = (m.getDuration() != null) ? m.getDuration() : 0;
             return !m.getMeetingTime().plusMinutes(dur).isBefore(now);
-        }).collect(Collectors.toList());
+        }).toList();
     }
 
     /** GET /hr/meetings — side-by-side schedule form + meetings list */
@@ -1508,7 +1508,7 @@ public class HrController extends BaseController {
                 .filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole())
                           && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole())
                           && !u.getUsername().equalsIgnoreCase(currentUsername))
-                .collect(Collectors.toList()));
+                .toList());
 
         if (!model.containsAttribute(ATTR_MEETING_FORM)) {
             model.addAttribute(ATTR_MEETING_FORM, new Meeting());
@@ -1542,7 +1542,7 @@ public class HrController extends BaseController {
                     .filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole())
                               && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole())
                               && !u.getUsername().equalsIgnoreCase(currentUsername))
-                    .collect(Collectors.toList()));
+                    .toList());
             model.addAttribute(ATTR_ERROR_MESSAGE, "Please fix the errors below.");
             return PAGE_MEETINGS;
         }
@@ -1582,7 +1582,7 @@ public class HrController extends BaseController {
                 .filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole())
                           && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole())
                           && !u.getUsername().equalsIgnoreCase(currentUsername))
-                .collect(Collectors.toList()));
+                .toList());
         return PAGE_MEETINGS;
     }
 
@@ -1613,7 +1613,7 @@ public class HrController extends BaseController {
                     .filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole())
                               && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole())
                               && !u.getUsername().equalsIgnoreCase(currentUsername))
-                    .collect(Collectors.toList()));
+                    .toList());
             model.addAttribute(ATTR_ERROR_MESSAGE, "Please fix the errors below.");
             return PAGE_MEETINGS;
         }
@@ -1666,7 +1666,7 @@ public class HrController extends BaseController {
         if (allEmployees != null) {
             var onlyEmployees = allEmployees.stream()
                     .filter(u -> ROLE_EMPLOYEE.equalsIgnoreCase(u.getRole()))
-                    .collect(Collectors.toList());
+                    .toList();
             model.addAttribute(ATTR_EMPLOYEES, onlyEmployees);
         }
         
@@ -1690,9 +1690,9 @@ public class HrController extends BaseController {
         // For the create/edit modal — list of employees without a template yet
         var tenantEmployees = userRepository.findEmployeesAndManagersByTenant(tenant);
         var existingIds = payrolls.stream()
-                .map(p -> p.getEmployee().getId()).collect(Collectors.toList());
+                .map(p -> p.getEmployee().getId()).toList();
         var unassigned = tenantEmployees.stream()
-                .filter(u -> !existingIds.contains(u.getId())).collect(Collectors.toList());
+                .filter(u -> !existingIds.contains(u.getId())).toList();
         model.addAttribute("unassignedEmployees", unassigned);
 
         var payslips = payslipRepository.findByTenantSegmentOrderByIdDesc(tenant);

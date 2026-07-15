@@ -246,7 +246,7 @@ public class EmployeeController extends BaseController {
             pendingTasks = allTasks.stream()
                 .filter(t -> !STATUS_DONE.equalsIgnoreCase(t.getStatus()))
                 .sorted(java.util.Comparator.comparing(Task::getId).reversed())
-                .collect(java.util.stream.Collectors.toList());
+                .toList();
         }
         model.addAttribute("myProjects",           Collections.emptyList());
         model.addAttribute(ATTR_PENDING_TASKS,         pendingTasks);
@@ -573,7 +573,7 @@ public class EmployeeController extends BaseController {
         if (status != null && !status.isBlank() && !"all".equalsIgnoreCase(status)) {
             filteredDays = allDays.stream()
                 .filter(d -> d.getStatus().equalsIgnoreCase(status))
-                .collect(Collectors.toList());
+                .toList();
         }
 
         // Stats from all-time records
@@ -777,7 +777,7 @@ public class EmployeeController extends BaseController {
             if (m.getMeetingTime() == null) return true;
             int dur = (m.getDuration() != null) ? m.getDuration() : 0;
             return !m.getMeetingTime().plusMinutes(dur).isBefore(now);
-        }).collect(Collectors.toList());
+        }).toList();
     }
 
     private List<Meeting> filterPastMeetings(List<Meeting> all, LocalDate today, LocalTime now) {
@@ -787,7 +787,7 @@ public class EmployeeController extends BaseController {
             if (m.getMeetingTime() == null) return false;
             int dur = (m.getDuration() != null) ? m.getDuration() : 0;
             return m.getMeetingTime().plusMinutes(dur).isBefore(now);
-        }).collect(Collectors.toList());
+        }).toList();
     }
 
     @GetMapping("/meetings")
