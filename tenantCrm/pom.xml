@@ -23,8 +23,8 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<sonar.sources>src/main/java,src/main/resources</sonar.sources>
 		<sonar.tests>src/test/java</sonar.tests>
-		<sonar.exclusions>**/templates/**,**/static/**</sonar.exclusions>
-		<sonar.coverage.exclusions>**/src/test/java/**,**/static/**,**/templates/**,**/*Test*.java,**/*Tests*.java</sonar.coverage.exclusions>
+		<sonar.exclusions>src/main/resources/static/**/*,src/main/resources/templates/**/*</sonar.exclusions>
+		<sonar.coverage.exclusions>src/test/java/**/*,src/main/resources/static/**/*,src/main/resources/templates/**/*,**/*Test*.java,**/*Tests*.java</sonar.coverage.exclusions>
 		<sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
 	</properties>
 
