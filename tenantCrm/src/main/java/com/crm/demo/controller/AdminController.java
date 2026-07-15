@@ -25,6 +25,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.crm.demo.model.Meeting;
 import com.crm.demo.model.Project;
 import com.crm.demo.model.Report;
+import com.crm.demo.model.ReportAttachment;
 import com.crm.demo.model.Task;
 import com.crm.demo.model.User;
 import com.crm.demo.model.Attendance;
@@ -145,7 +146,7 @@ public class AdminController extends BaseController {
 				userRepository.findByTenantSegment(tenant).stream()
 						.filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole())
 								  && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole()))
-						.toList());
+						.collect(Collectors.toList()));
 		model.addAttribute(ATTR_ACTIVE_PAGE, PAGE_SCHEDULE_MEETING);
 	}
 
@@ -307,7 +308,7 @@ public class AdminController extends BaseController {
 		var employees = users.stream()
 				.filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole()))
 				.filter(u -> !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole()))
-				.toList();
+				.collect(Collectors.toList());
 		var tasks = tenant.isBlank()
 				? taskRepository.findAll()
 				: taskRepository.findByTenantSegment(tenant);
@@ -407,7 +408,7 @@ public class AdminController extends BaseController {
 		var users = userRepository.findByTenantSegment(tenant).stream()
 				.filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole())
 						  && !ROLE_SUPER_ADMIN.equalsIgnoreCase(u.getRole()))
-				.toList();
+				.collect(Collectors.toList());
 
 		var active   = users.stream().filter(User::isActive).count();
 		var inactive = users.size() - active;
@@ -1025,7 +1026,7 @@ public class AdminController extends BaseController {
 			if (m.getMeetingTime() == null) return true;
 			int dur = (m.getDuration() != null) ? m.getDuration() : 0;
 			return !m.getMeetingTime().plusMinutes(dur).isBefore(now);
-		}).toList();
+		}).collect(Collectors.toList());
 	}
 
 	private List<Meeting> getPastMeetingsForUser(String tenant, String username) {
@@ -1039,7 +1040,7 @@ public class AdminController extends BaseController {
 			if (m.getMeetingTime() == null) return false;
 			int dur = (m.getDuration() != null) ? m.getDuration() : 0;
 			return m.getMeetingTime().plusMinutes(dur).isBefore(now);
-		}).toList();
+		}).collect(Collectors.toList());
 	}
 
 	@GetMapping("/schedule-meeting")

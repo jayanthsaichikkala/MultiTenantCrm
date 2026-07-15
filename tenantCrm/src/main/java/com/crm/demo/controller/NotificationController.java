@@ -70,7 +70,7 @@ public class NotificationController {
         var items = notificationService.getRecentForUser(user.getId())
                 .stream()
                 .map(this::toDto)
-                .toList();
+                .collect(Collectors.toList());
 
         return ResponseEntity.ok(Map.of(
                 "notifications", items,

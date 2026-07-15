@@ -43,7 +43,7 @@ public class SuperAdminController {
         var admins = userRepository.findAll().stream()
                 .filter(u -> ROLE_ADMIN.equalsIgnoreCase(u.getRole()))
                 .sorted(java.util.Comparator.comparing(User::getId).reversed())
-                .toList();
+                .collect(Collectors.toList());
         var activeCount = admins.stream().filter(User::isActive).count();
         model.addAttribute("admins",       admins);
         model.addAttribute("totalAdmins",  admins.size());
@@ -90,7 +90,7 @@ public class SuperAdminController {
         var allUsers = userRepository.findAll();
         var admins   = allUsers.stream()
                 .filter(u -> ROLE_ADMIN.equalsIgnoreCase(u.getRole()))
-                .toList();
+                .collect(Collectors.toList());
 
         var activeAdmins   = admins.stream().filter(User::isActive).count();
         var inactiveAdmins = admins.size() - activeAdmins;
@@ -236,7 +236,7 @@ public class SuperAdminController {
         var tenant = getTenantSegment(admin.getEmail());
         var employees = userRepository.findByTenantSegment(tenant).stream()
                 .filter(u -> !ROLE_ADMIN.equalsIgnoreCase(u.getRole()) && !"SUPER_ADMIN".equalsIgnoreCase(u.getRole()))
-                .toList();
+                .collect(Collectors.toList());
         model.addAttribute("employees", employees);
 
         return "superadmin-edit-admin";
