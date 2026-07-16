@@ -27,9 +27,9 @@ public abstract class BaseController {
     public static final String PRIORITY_MEDIUM = "Medium";
     public static final String PRIORITY_LOW = "Low";
 
-    protected UserRepository userRepository;
-    protected HolidayRepository holidayRepository;
-    protected LeaveRequestRepository leaveRequestRepository;
+    protected final UserRepository userRepository;
+    protected final HolidayRepository holidayRepository;
+    protected final LeaveRequestRepository leaveRequestRepository;
 
     protected BaseController(UserRepository userRepository,
                              HolidayRepository holidayRepository,
@@ -50,11 +50,11 @@ public abstract class BaseController {
     protected String getTenantSegment(User user) {
         if (user == null || user.getEmail() == null) return "";
         String email = user.getEmail();
-        try {
-            return email.split("\\.")[1].split("@")[0];
-        } catch (Exception e) {
-            return "";
+        String[] parts = email.split("\\.");
+        if (parts.length >= 2) {
+            return parts[1].split("@")[0];
         }
+        return "";
     }
 
     protected boolean hasApprovedLeave(User user, LocalDate date) {
@@ -81,16 +81,11 @@ public abstract class BaseController {
         LocalDate today = LocalDate.now();
         LocalDate filterFrom = (fromStr != null && !fromStr.isBlank()) ? LocalDate.parse(fromStr) : today.minusDays(29);
         LocalDate filterTo   = (toStr   != null && !toStr.isBlank())   ? LocalDate.parse(toStr)   : today;
-        if (filterFrom == null) {
-            filterFrom = today.minusDays(29);
-        }
-        if (filterTo == null) {
+        
+        if (filterTo.isAfter(today)) {
             filterTo = today;
         }
-        if (filterTo != null && filterTo.isAfter(today)) {
-            filterTo = today;
-        }
-        if (filterFrom != null && filterTo != null && filterFrom.isAfter(filterTo)) {
+        if (filterFrom.isAfter(filterTo)) {
             filterFrom = filterTo;
         }
         return new LocalDate[]{filterFrom, filterTo};
@@ -181,6 +176,9 @@ public abstract class BaseController {
             Map<LocalDate, String> holidays,
             com.crm.demo.model.User user) {
 
+        var days = new java.util.ArrayList<com.crm.demo.model.AttendanceDay>();
+        if (from == null || to == null) return days;
+
         var byDate = new java.util.LinkedHashMap<LocalDate, com.crm.demo.model.Attendance>();
         if (records != null) {
             for (var a : records) {
@@ -196,16 +194,13 @@ public abstract class BaseController {
                         || leave.getFromDate() == null || leave.getToDate() == null) continue;
                 var cursor = leave.getFromDate();
                 while (!cursor.isAfter(leave.getToDate())) {
-                    if (from != null && to != null && !cursor.isBefore(from) && !cursor.isAfter(to)) {
+                    if (!cursor.isBefore(from) && !cursor.isAfter(to)) {
                         approvedLeaveDates.add(cursor);
                     }
                     cursor = cursor.plusDays(1);
                 }
             }
         }
-
-        var days = new java.util.ArrayList<com.crm.demo.model.AttendanceDay>();
-        if (from == null || to == null) return days;
 
         var today  = LocalDate.now();
         var cursor = to;
