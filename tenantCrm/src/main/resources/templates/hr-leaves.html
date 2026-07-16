@@ -51,7 +51,7 @@
 		<div class="topbar">
 			<h1>Leave Requests</h1>
 			<div class="topbar-right">
-				<div class="search-box"><input type="text" placeholder="Search requestsâ€¦"></div>
+				<div class="search-box"><input type="text" placeholder="Search requests..."></div>
 				<div class="user-badge" th:text="${#strings.substring(adminName ?: 'H', 0, 1).toUpperCase()}">H</div>
 			</div>
 		</div>
@@ -88,7 +88,7 @@
 
 			<!-- Filter Bar -->
 			<div class="lf-filter-bar">
-				<input type="text" id="lhSearch" placeholder="Search by name or typeâ€¦">
+				<input type="text" id="lhSearch" placeholder="Search by name or type...">
 				<select id="lhStatusFilter">
 					<option value="all">All Status</option>
 					<option value="Pending">Pending</option>
@@ -283,7 +283,7 @@
 			return d + ' day' + (d > 1 ? 's' : '');
 		}
 
-		/* â”€â”€ Modal â”€â”€ */
+		/* -- Modal -- */
 		var activeItem = null;
 		function openModal(btn) {
 			activeItem = btn.closest('.leave-item');
@@ -354,7 +354,7 @@
 			if (e.target === this) closeModal();
 		});
 
-		/* â”€â”€ Filter â”€â”€ */
+		/* -- Filter -- */
 		function applyFilters() {
 			var search = document.getElementById('lhSearch').value.toLowerCase();
 			var status = document.getElementById('lhStatusFilter').value;
@@ -379,7 +379,7 @@
 		document.getElementById('lhStatusFilter').addEventListener('change', applyFilters);
 		document.getElementById('lhTypeFilter').addEventListener('change', applyFilters);
 
-		/* â”€â”€ Init: hide buttons for already-decided items â”€â”€ */
+		/* -- Init: hide buttons for already-decided items -- */
 		document.querySelectorAll('#lhList .leave-item').forEach(function (el) {
 			var s = el.dataset.status;
 			if (s === 'Approved' || s === 'Rejected') {
@@ -387,7 +387,7 @@
 			}
 		});
 
-		/* ── Auto-dismiss toasts ── */
+		/* -- Auto-dismiss toasts -- */
 		document.querySelectorAll('.toast').forEach(function (t) {
 			requestAnimationFrame(function () {
 				t.classList.add('toast-show');
@@ -401,7 +401,7 @@
 			}, 3500);
 		});
 
-		/* â”€â”€ Init stats â”€â”€ */
+		/* -- Init stats -- */
 		updateStats();
 	</script>
 	<script th:src="@{/auth.js}"></script>
