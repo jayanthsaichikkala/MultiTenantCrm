@@ -186,42 +186,64 @@ public abstract class BaseController {
             }
         }
 
-        // Collect approved leave dates for this user in [from, to]
-        var approvedLeaveDates = new java.util.LinkedHashSet<LocalDate>();
-        if (user != null) {
-            for (var leave : leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(user)) {
-                if (!"Approved".equalsIgnoreCase(leave.getStatus())
-                        || leave.getFromDate() == null || leave.getToDate() == null) continue;
-                var cursor = leave.getFromDate();
-                while (!cursor.isAfter(leave.getToDate())) {
-                    if (!cursor.isBefore(from) && !cursor.isAfter(to)) {
-                        approvedLeaveDates.add(cursor);
-                    }
-                    cursor = cursor.plusDays(1);
-                }
-            }
-        }
-
+        var approvedLeaveDates = collectApprovedLeaveDates(user, from, to);
         var today  = LocalDate.now();
         var cursor = to;
         while (!cursor.isBefore(from)) {
-            if (holidays != null && holidays.containsKey(cursor)) {
-                days.add(new com.crm.demo.model.AttendanceDay(cursor, holidays.get(cursor), true));
-            } else {
-                var dow = cursor.getDayOfWeek();
-                if (dow == java.time.DayOfWeek.SATURDAY || dow == java.time.DayOfWeek.SUNDAY) {
-                    days.add(new com.crm.demo.model.AttendanceDay(cursor, "weekend"));
-                } else if (byDate.containsKey(cursor)) {
-                    days.add(new com.crm.demo.model.AttendanceDay(byDate.get(cursor)));
-                } else if (approvedLeaveDates.contains(cursor)) {
-                    days.add(new com.crm.demo.model.AttendanceDay(cursor, "leave"));
-                } else if (!cursor.isAfter(today)) {
-                    days.add(new com.crm.demo.model.AttendanceDay(cursor, "absent"));
-                }
+            var day = resolveAttendanceDay(cursor, holidays, byDate, approvedLeaveDates, today);
+            if (day != null) {
+                days.add(day);
             }
             cursor = cursor.minusDays(1);
         }
         return days;
+    }
+
+    private java.util.Set<LocalDate> collectApprovedLeaveDates(com.crm.demo.model.User user, LocalDate from, LocalDate to) {
+        var approvedLeaveDates = new java.util.LinkedHashSet<LocalDate>();
+        if (user == null) {
+            return approvedLeaveDates;
+        }
+        for (var leave : leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(user)) {
+            if (!"Approved".equalsIgnoreCase(leave.getStatus())
+                    || leave.getFromDate() == null || leave.getToDate() == null) {
+                continue;
+            }
+            var cursor = leave.getFromDate();
+            while (!cursor.isAfter(leave.getToDate())) {
+                if (!cursor.isBefore(from) && !cursor.isAfter(to)) {
+                    approvedLeaveDates.add(cursor);
+                }
+                cursor = cursor.plusDays(1);
+            }
+        }
+        return approvedLeaveDates;
+    }
+
+    private com.crm.demo.model.AttendanceDay resolveAttendanceDay(
+            LocalDate date,
+            Map<LocalDate, String> holidays,
+            Map<LocalDate, com.crm.demo.model.Attendance> byDate,
+            java.util.Set<LocalDate> approvedLeaveDates,
+            LocalDate today) {
+
+        if (holidays != null && holidays.containsKey(date)) {
+            return new com.crm.demo.model.AttendanceDay(date, holidays.get(date), true);
+        }
+        var dow = date.getDayOfWeek();
+        if (dow == java.time.DayOfWeek.SATURDAY || dow == java.time.DayOfWeek.SUNDAY) {
+            return new com.crm.demo.model.AttendanceDay(date, "weekend");
+        }
+        if (byDate.containsKey(date)) {
+            return new com.crm.demo.model.AttendanceDay(byDate.get(date));
+        }
+        if (approvedLeaveDates.contains(date)) {
+            return new com.crm.demo.model.AttendanceDay(date, "leave");
+        }
+        if (!date.isAfter(today)) {
+            return new com.crm.demo.model.AttendanceDay(date, "absent");
+        }
+        return null;
     }
 
     /**
