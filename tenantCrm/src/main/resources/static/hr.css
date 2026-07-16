@@ -1899,3 +1899,225 @@ tbody tr.row-holiday:hover {
 }
 .toggle-btn.active   .toggle-knob { transform: translateX(18px); }
 .toggle-btn.inactive .toggle-knob { transform: translateX(0); }
+
+/* ── Leave Flow Modal (hr-leaves) ── */
+.lf-modal-overlay {
+	display: none;
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.45);
+	z-index: 9999;
+	align-items: center;
+	justify-content: center;
+	backdrop-filter: blur(3px);
+}
+
+.lf-modal-overlay.open {
+	display: flex;
+}
+
+.lf-modal {
+	background: white;
+	border-radius: 22px;
+	padding: 28px;
+	width: 100%;
+	max-width: 440px;
+	box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	box-sizing: border-box;
+}
+
+.lf-modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	border-bottom: 1px solid #edf3f6;
+	padding-bottom: 14px;
+}
+
+.lf-modal-header h3 {
+	font-size: 17px;
+	font-weight: 700;
+	color: #163647;
+	margin: 0;
+}
+
+.lf-modal-close {
+	border: none;
+	background: transparent;
+	cursor: pointer;
+	color: #6b7280;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 4px;
+	border-radius: 50%;
+	transition: background .2s, color .2s;
+}
+
+.lf-modal-close:hover {
+	background: #f1f5f9;
+	color: #163647;
+}
+
+.lf-modal-body {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	max-height: 70vh;
+	overflow-y: auto;
+	padding-right: 4px;
+}
+
+.lf-modal-body::-webkit-scrollbar {
+	width: 4px;
+}
+
+.lf-modal-body::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.lf-modal-body::-webkit-scrollbar-thumb {
+	background: #d1dce3;
+	border-radius: 4px;
+}
+
+.lf-detail-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 10px 0;
+	border-bottom: 1.5px solid #edf3f6;
+	font-size: 13px;
+}
+
+.lf-detail-row span:first-child {
+	font-weight: 600;
+	color: #6b7280;
+}
+
+.lf-detail-row span:last-child {
+	font-weight: 600;
+	color: #163647;
+}
+
+.lf-reason-box {
+	background: #f8fafc;
+	border: 1.5px solid #e5edf2;
+	border-radius: 10px;
+	padding: 12px;
+	font-size: 13px;
+	color: #4b6a7a;
+	line-height: 1.5;
+	text-align: left;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.lf-modal-footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 12px;
+	border-top: 1px solid #edf3f6;
+	padding-top: 16px;
+}
+
+.lf-modal-footer form {
+	margin: 0;
+}
+
+.lf-btn-reject-modal {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	border: none;
+	height: 40px;
+	padding: 0 18px;
+	border-radius: 10px;
+	font-size: 13px;
+	font-weight: 600;
+	font-family: 'Poppins', sans-serif;
+	cursor: pointer;
+	background: #fdecec;
+	color: #d11a2a;
+	transition: background .2s, transform .15s;
+}
+
+.lf-btn-reject-modal:hover {
+	background: #fcd9d9;
+	transform: translateY(-1px);
+}
+
+.lf-btn-approve-modal {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	border: none;
+	height: 40px;
+	padding: 0 18px;
+	border-radius: 10px;
+	font-size: 13px;
+	font-weight: 600;
+	font-family: 'Poppins', sans-serif;
+	cursor: pointer;
+	background: #17455e;
+	color: white;
+	box-shadow: 0 4px 14px rgba(23, 69, 94, 0.25);
+	transition: background .2s, transform .15s;
+}
+
+.lf-btn-approve-modal:hover {
+	background: #12374c;
+	transform: translateY(-1px);
+}
+
+/* ── Filter select/input elements (tasks, leaves, etc.) ── */
+.filter-select {
+	height: 38px;
+	padding: 0 30px 0 12px;
+	border: 1.5px solid #e2e8f0;
+	border-radius: 10px;
+	font-size: 13px;
+	font-family: inherit;
+	color: #334155;
+	background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 10px center;
+	appearance: none;
+	cursor: pointer;
+	outline: none;
+	transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.filter-select:focus {
+	border-color: #17455e;
+	box-shadow: 0 0 0 3px rgba(23, 69, 94, 0.1);
+}
+
+.filter-input {
+	height: 38px;
+	padding: 0 12px;
+	border: 1.5px solid #e2e8f0;
+	border-radius: 10px;
+	font-size: 13px;
+	font-family: inherit;
+	color: #334155;
+	background: #fff;
+	outline: none;
+	transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.filter-input:focus {
+	border-color: #17455e;
+	box-shadow: 0 0 0 3px rgba(23, 69, 94, 0.1);
+}
+
+.lf-filter-bar {
+	display: flex;
+	gap: 12px;
+	align-items: center;
+	margin-bottom: 20px;
+	flex-wrap: wrap;
+}
