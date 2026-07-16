@@ -56,19 +56,12 @@ import jakarta.servlet.http.HttpServletResponse;
 @RequestMapping("/employee")
 public class EmployeeController extends BaseController {
 
-    private static final String STATUS_APPROVED = "Approved";
-    private static final String STATUS_PENDING_UPPER = "Pending";
-    private static final String STATUS_REJECTED_UPPER = "Rejected";
     private static final String ATTR_COMPLETED_TASKS = "completedTasks";
     private static final String ATTR_PENDING_TASKS = "pendingTasks";
     private static final String ATTR_MY_TEAM_NAME = "myTeamName";
     private static final String ATTR_MY_TEAM_MANAGER = "myTeamManager";
     private static final String ATTR_MY_TEAM_MEMBERS = "myTeamMembers";
     private static final String ATTR_MY_TEAM_SIZE = "myTeamSize";
-    private static final String STATUS_DONE = "done";
-    private static final String STATUS_IN_PROGRESS = "in-progress";
-    private static final String STATUS_PENDING = "pending";
-    private static final String STATUS_WAITING_FOR_REVIEW = "waiting-for-review";
     private static final String ATTR_ERROR_MESSAGE = "errorMessage";
     private static final String ATTR_SUCCESS_MESSAGE = "successMessage";
     private static final String REDIRECT_EMPLOYEE_TASKS = "redirect:/employee/tasks";
@@ -77,7 +70,6 @@ public class EmployeeController extends BaseController {
     private static final String TIME_FORMAT = "%02d:%02d";
     private static final String MSG_NOT_PUNCHED_IN = "You haven't punched in today.";
     private static final String REDIRECT_EMPLOYEE_LEAVES = "redirect:/employee/leaves";
-    private static final String STATUS_ACTIVE = "active";
     private static final String ATTR_ACTIVE_PAGE = "activePage";
     private static final String PAYROLL = "payroll";
     private static final String STATUS_DONE_KEY = "statusDone";
@@ -167,10 +159,11 @@ public class EmployeeController extends BaseController {
         model.addAttribute(ATTR_COMPLETED_TASKS, 0);
         model.addAttribute("attendanceRate", "0%");
         var emp = getCurrentEmployee();
-        var pendingLeaves = emp != null ? leaveRequestRepository.countByEmployeeAndStatus(emp, STATUS_PENDING_UPPER)
-                : 0;
-        var approvedLeaves = emp != null ? leaveRequestRepository.countByEmployeeAndStatus(emp, STATUS_APPROVED) : 0;
-        var rejectedLeaves = emp != null ? leaveRequestRepository.countByEmployeeAndStatus(emp, STATUS_REJECTED_UPPER)
+        var pendingLeaves = emp != null ? leaveRequestRepository.countByEmployeeAndStatus(emp, STATUS_PENDING)
+                : 0L;
+        var approvedLeaves = emp != null ? leaveRequestRepository.countByEmployeeAndStatus(emp, STATUS_APPROVED)
+                : 0L;
+        var rejectedLeaves = emp != null ? leaveRequestRepository.countByEmployeeAndStatus(emp, STATUS_REJECTED)
                 : 0;
 
         model.addAttribute("pendingLeaves", pendingLeaves);
@@ -204,9 +197,8 @@ public class EmployeeController extends BaseController {
 
         var emp = getCurrentEmployee();
         if (emp != null) {
-            model.addAttribute("employeeStatus", emp.getStatus());
-        } else {
-            model.addAttribute("employeeStatus", STATUS_ACTIVE);
+            model.addAttribute("employeeStatus", User.STATUS_ACTIVE);
+            model.addAttribute("employeeEmail",  emp.getEmail());
         }
 
         // ── Team info ─────────────────────────────────────────────────────
@@ -286,7 +278,7 @@ public class EmployeeController extends BaseController {
 
             var completed = myTasks.stream().filter(t -> STATUS_DONE.equalsIgnoreCase(t.getStatus())).count();
             var inProgress = myTasks.stream().filter(t -> STATUS_IN_PROGRESS.equalsIgnoreCase(t.getStatus())).count();
-            var pending = myTasks.stream().filter(t -> STATUS_PENDING.equalsIgnoreCase(t.getStatus())).count();
+            var pending = myTasks.stream().filter(t -> STATUS_PENDING_LOWER.equalsIgnoreCase(t.getStatus())).count();
 
             model.addAttribute("myTasks", myTasks);
             model.addAttribute("taskHistory", myTasks);
@@ -368,8 +360,8 @@ public class EmployeeController extends BaseController {
         }
 
         // Update task status
-        var normalizedStatus = STATUS_PENDING;
-        if (STATUS_DONE.equalsIgnoreCase(status)) {
+        var normalizedStatus = STATUS_PENDING_LOWER;
+        if (status != null && STATUS_DONE.equalsIgnoreCase(status)) {
             normalizedStatus = STATUS_DONE;
         } else if (STATUS_IN_PROGRESS.equalsIgnoreCase(status)) {
             normalizedStatus = STATUS_IN_PROGRESS;
@@ -776,7 +768,7 @@ public class EmployeeController extends BaseController {
         leave.setFromDate(from);
         leave.setToDate(to);
         leave.setReason(reason.trim());
-        leave.setStatus(STATUS_PENDING_UPPER);
+        leave.setStatus(STATUS_PENDING);
 
         if (attachment != null && !attachment.isEmpty()) {
             try {

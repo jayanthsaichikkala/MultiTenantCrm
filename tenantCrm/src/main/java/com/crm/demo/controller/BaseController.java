@@ -11,9 +11,21 @@ import com.crm.demo.repository.LeaveRequestRepository;
 
 public abstract class BaseController {
 
-    private static final String STATUS_WAITING_FOR_REVIEW = "waiting-for-review";
-    private static final String STATUS_APPROVED_LOWER = "approved";
-    private static final String STATUS_REJECTED_LOWER = "rejected";
+    public static final String STATUS_APPROVED = "Approved";
+    public static final String STATUS_PENDING = "Pending";
+    public static final String STATUS_PENDING_LOWER = "pending";
+    public static final String STATUS_REJECTED = "Rejected";
+    public static final String STATUS_DONE = "done";
+    public static final String STATUS_IN_PROGRESS = "in-progress";
+    public static final String STATUS_WAITING_FOR_REVIEW = "waiting-for-review";
+    public static final String STATUS_APPROVED_LOWER = "approved";
+    public static final String STATUS_REJECTED_LOWER = "rejected";
+    public static final String STATUS_PRESENT = "present";
+    public static final String STATUS_ABSENT = "absent";
+
+    public static final String PRIORITY_HIGH = "High";
+    public static final String PRIORITY_MEDIUM = "Medium";
+    public static final String PRIORITY_LOW = "Low";
 
     protected UserRepository userRepository;
     protected HolidayRepository holidayRepository;
@@ -89,13 +101,13 @@ public abstract class BaseController {
         var scopedTasks = tasks != null ? tasks : java.util.Collections.<com.crm.demo.model.Task>emptyList();
         var scopedPeople = people != null ? people : java.util.Collections.<com.crm.demo.model.User>emptyList();
 
-        var statusDone = scopedTasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
-        var statusInProgress = scopedTasks.stream().filter(t -> "in-progress".equalsIgnoreCase(t.getStatus())).count();
-        var statusPending = scopedTasks.stream().filter(t -> "pending".equalsIgnoreCase(t.getStatus())).count();
+        var statusDone = scopedTasks.stream().filter(t -> STATUS_DONE.equalsIgnoreCase(t.getStatus())).count();
+        var statusInProgress = scopedTasks.stream().filter(t -> STATUS_IN_PROGRESS.equalsIgnoreCase(t.getStatus())).count();
+        var statusPending = scopedTasks.stream().filter(t -> STATUS_PENDING_LOWER.equalsIgnoreCase(t.getStatus())).count();
         var statusReview = scopedTasks.stream().filter(t -> STATUS_WAITING_FOR_REVIEW.equalsIgnoreCase(t.getStatus())).count();
-        var priorityHigh = scopedTasks.stream().filter(t -> "High".equalsIgnoreCase(t.getPriority())).count();
-        var priorityMedium = scopedTasks.stream().filter(t -> "Medium".equalsIgnoreCase(t.getPriority())).count();
-        var priorityLow = scopedTasks.stream().filter(t -> "Low".equalsIgnoreCase(t.getPriority())).count();
+        var priorityHigh = scopedTasks.stream().filter(t -> PRIORITY_HIGH.equalsIgnoreCase(t.getPriority())).count();
+        var priorityMedium = scopedTasks.stream().filter(t -> PRIORITY_MEDIUM.equalsIgnoreCase(t.getPriority())).count();
+        var priorityLow = scopedTasks.stream().filter(t -> PRIORITY_LOW.equalsIgnoreCase(t.getPriority())).count();
 
         var memberLabels = new java.util.ArrayList<String>();
         var memberTaskCounts = new java.util.ArrayList<Long>();
@@ -343,5 +355,10 @@ public abstract class BaseController {
         model.addAttribute("chartWaiting", data.get("waiting"));
         model.addAttribute("chartUnverified", data.get("unverified"));
         model.addAttribute("chartTotalMyTasks", data.get("totalMyTasks"));
+    }
+
+    protected boolean isNonAdminRole(String role) {
+        if (role == null) return false;
+        return !"ADMIN".equalsIgnoreCase(role) && !"SUPER_ADMIN".equalsIgnoreCase(role);
     }
 }

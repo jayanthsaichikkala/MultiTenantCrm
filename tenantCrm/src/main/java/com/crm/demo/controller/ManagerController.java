@@ -82,15 +82,6 @@ public class ManagerController extends BaseController {
 	private static final String REDIRECT_MANAGER_ATTENDANCE = "redirect:/manager/attendance";
 	private static final String REDIRECT_LOGIN = "redirect:/login";
 	private static final String PARAM_ERROR = "?error";
-	private static final String STATUS_PENDING = "pending";
-	private static final String STATUS_APPROVED = "Approved";
-	private static final String STATUS_APPROVED_LOWER = "approved";
-	private static final String STATUS_REJECTED = "rejected";
-	private static final String STATUS_IN_PROGRESS = "in-progress";
-	private static final String STATUS_WAITING_FOR_REVIEW = "waiting-for-review";
-	private static final String PRIORITY_MEDIUM = "Medium";
-	private static final String STATUS_PRESENT = "present";
-	private static final String STATUS_ABSENT = "absent";
 	private static final String OCTET_STREAM = "application/octet-stream";
 	private static final String TIME_FORMAT = "%02d:%02d";
 	private static final String MSG_SESSION_EXPIRED = "Session expired. Please log in again.";
@@ -227,7 +218,7 @@ public class ManagerController extends BaseController {
 		var tasks    = taskRepository.findAll();
 
 		var doneCount = tasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
-		var pending = tasks.stream().filter(t -> STATUS_PENDING.equalsIgnoreCase(t.getStatus())).count();
+		var pending = tasks.stream().filter(t -> STATUS_PENDING_LOWER.equalsIgnoreCase(t.getStatus())).count();
 		var activeP = projects.stream().filter(p -> "active".equalsIgnoreCase(p.getStatus())).count();
 		var completedP = projects.stream().filter(p -> "completed".equalsIgnoreCase(p.getStatus())).count();
 
@@ -260,7 +251,7 @@ public class ManagerController extends BaseController {
 		if (priority == null || (!"High".equalsIgnoreCase(priority) && !PRIORITY_MEDIUM.equalsIgnoreCase(priority) && !"Low".equalsIgnoreCase(priority))) {
 			return "Invalid priority selected.";
 		}
-		if (status == null || (!STATUS_PENDING.equalsIgnoreCase(status) && !STATUS_IN_PROGRESS.equalsIgnoreCase(status) && !"done".equalsIgnoreCase(status))) {
+		if (status == null || (!STATUS_PENDING_LOWER.equalsIgnoreCase(status) && !STATUS_IN_PROGRESS.equalsIgnoreCase(status) && !"done".equalsIgnoreCase(status))) {
 			return "Invalid status selected.";
 		}
 		if (dueDate == null || dueDate.trim().isBlank() || !dueDate.trim().matches(DATE_REGEX)) {
@@ -379,7 +370,7 @@ public class ManagerController extends BaseController {
 			// Task status breakdown
 			var statusDone       = myTasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
 			var statusInProgress = myTasks.stream().filter(t -> STATUS_IN_PROGRESS.equalsIgnoreCase(t.getStatus())).count();
-			var statusPending    = myTasks.stream().filter(t -> STATUS_PENDING.equalsIgnoreCase(t.getStatus())).count();
+			var statusPending    = myTasks.stream().filter(t -> STATUS_PENDING_LOWER.equalsIgnoreCase(t.getStatus())).count();
 			var statusReview     = myTasks.stream().filter(t -> STATUS_WAITING_FOR_REVIEW.equalsIgnoreCase(t.getStatus())).count();
 
 			model.addAttribute("chartStatusDone",       statusDone);
@@ -417,7 +408,7 @@ public class ManagerController extends BaseController {
 
 			// Verification status breakdown
 			var verified = myTasks.stream().filter(t -> STATUS_APPROVED_LOWER.equalsIgnoreCase(t.getVerificationStatus())).count();
-			var rejected = myTasks.stream().filter(t -> STATUS_REJECTED.equalsIgnoreCase(t.getVerificationStatus())).count();
+			var rejected = myTasks.stream().filter(t -> STATUS_REJECTED_LOWER.equalsIgnoreCase(t.getVerificationStatus())).count();
 			var waiting  = myTasks.stream().filter(t -> STATUS_WAITING_FOR_REVIEW.equalsIgnoreCase(t.getVerificationStatus())).count();
 			var unverified = myTasks.size() - verified - rejected - waiting;
 
@@ -557,7 +548,7 @@ public class ManagerController extends BaseController {
 			List<Task> tasks = taskRepository.findByTenantSegment(tenant);
 			tasks.sort(java.util.Comparator.comparing(Task::getId).reversed());
 			long done    = tasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
-			long pending = tasks.stream().filter(t -> STATUS_PENDING.equalsIgnoreCase(t.getStatus())).count();
+			long pending = tasks.stream().filter(t -> STATUS_PENDING_LOWER.equalsIgnoreCase(t.getStatus())).count();
 			model.addAttribute(ATTR_TASKS,            tasks);
 			model.addAttribute(ATTR_TOTAL_TASKS,       tasks.size());
 			model.addAttribute(ATTR_DONE_TASKS,        done);
@@ -780,7 +771,7 @@ public class ManagerController extends BaseController {
 			}
 			// Manager returns the task — employee must redo and resubmit
 			task.setStatus(STATUS_IN_PROGRESS);
-			task.setVerificationStatus(STATUS_REJECTED);
+			task.setVerificationStatus(STATUS_REJECTED_LOWER);
 			task.setLastVerifiedBy(manager.getUsername());
 			task.setLastVerifiedAt(timestamp);
 			task.setVerificationReason(reason.trim());
@@ -789,7 +780,7 @@ public class ManagerController extends BaseController {
 		} else if ("reopen".equalsIgnoreCase(action)) {
 			// Manager re-opens a previously verified task
 			task.setStatus(STATUS_IN_PROGRESS);
-			task.setVerificationStatus(STATUS_PENDING);
+			task.setVerificationStatus(STATUS_PENDING_LOWER);
 			task.setLastVerifiedBy(manager.getUsername());
 			task.setLastVerifiedAt(timestamp);
 			task.setVerificationReason(null);
@@ -1879,7 +1870,7 @@ public class ManagerController extends BaseController {
 		var tasks = taskRepository.findByAssignedToAndTenantSegment(emp.getUsername(), tenant);
 		p.setTotalTasks(tasks.size());
 		p.setDoneTasks((int) tasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count());
-		p.setPendingTasks((int) tasks.stream().filter(t -> STATUS_PENDING.equalsIgnoreCase(t.getStatus())).count());
+		p.setPendingTasks((int) tasks.stream().filter(t -> STATUS_PENDING_LOWER.equalsIgnoreCase(t.getStatus())).count());
 		p.setOverdueTasks((int) tasks.stream()
 				.filter(t -> !"done".equalsIgnoreCase(t.getStatus())
 						&& t.getDueDate() != null

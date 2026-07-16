@@ -42,7 +42,7 @@ public class PayslipService {
         var startOfMonth = LocalDate.of(year, month, 1);
         var endOfMonth = startOfMonth.plusMonths(1).minusDays(1);
         for (LeaveRequest leave : leaves) {
-            if ("Approved".equalsIgnoreCase(leave.getStatus()) && leaveType.equalsIgnoreCase(leave.getType())) {
+            if (com.crm.demo.controller.BaseController.STATUS_APPROVED.equalsIgnoreCase(leave.getStatus()) && leaveType.equalsIgnoreCase(leave.getType())) {
                 count += calculateOverlapDays(leave, startOfMonth, endOfMonth);
             }
         }

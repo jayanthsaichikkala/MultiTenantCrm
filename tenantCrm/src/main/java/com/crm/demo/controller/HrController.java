@@ -126,12 +126,7 @@ public class HrController extends BaseController {
     private static final String ROLE_ADMIN = "ADMIN";
     private static final String ROLE_EMPLOYEE = "EMPLOYEE";
     private static final String ATTR_LOGGED_IN_USER = "loggedInUser";
-    private static final String STATUS_ABSENT = "absent";
-    private static final String STATUS_APPROVED = "Approved";
     private static final String STATUS_PENDING_ATTR = "statusPending";
-    private static final String STATUS_REJECTED = "rejected";
-    private static final String STATUS_ACTIVE = "active";
-    private static final String STATUS_PRESENT = "present";
     private static final String ATTR_ERROR_MESSAGE = "errorMessage";
     private static final String ATTR_SUCCESS_MESSAGE = "successMessage";
     private static final String ATTR_ACTIVE_PAGE = "activePage";
@@ -288,11 +283,7 @@ public class HrController extends BaseController {
     // buildDayList is inherited from BaseController.
 
 
-    /** Returns true for roles that HR should manage (not ADMIN / SUPER_ADMIN). */
-    private boolean isNonAdminRole(String role) {
-        if (role == null) return false;
-        return !role.equalsIgnoreCase(ROLE_ADMIN) && !role.equalsIgnoreCase(ROLE_SUPER_ADMIN);
-    }
+
 
     private void injectStats(HttpServletRequest request, Model model) {
         var tenant = getTenantSegment(request);
@@ -466,7 +457,7 @@ public class HrController extends BaseController {
         user.setEmail(email.trim());
         user.setPassword(passwordEncoder.encode(password));
         user.setRole(role.toUpperCase());
-        user.setStatus(STATUS_ACTIVE);
+        user.setStatus(User.STATUS_ACTIVE);
         
         if (domain != null && !domain.trim().isEmpty()) {
             user.setDomain(domain.trim());
@@ -560,7 +551,7 @@ public class HrController extends BaseController {
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
         user.setRole(role.toUpperCase());
-        user.setStatus(STATUS_ACTIVE);
+        user.setStatus(User.STATUS_ACTIVE);
         toSave.add(user);
     }
 
@@ -643,7 +634,7 @@ public class HrController extends BaseController {
         var hr = getCurrentHr();
         var user = userRepository.findById(id).orElse(null);
         if (user != null && isNonAdminRole(user.getRole())) {
-            var newStatus = STATUS_ACTIVE.equalsIgnoreCase(user.getStatus()) ? "inactive" : STATUS_ACTIVE;
+            var newStatus = User.STATUS_ACTIVE.equalsIgnoreCase(user.getStatus()) ? "inactive" : User.STATUS_ACTIVE;
             user.setStatus(newStatus);
             userRepository.save(user);
             notificationService.notifyEmployeeManagementChanged(getTenantSegmentFromUser(hr), "updated", user.getUsername());
@@ -1105,7 +1096,7 @@ public class HrController extends BaseController {
                 ra.addFlashAttribute(ATTR_ERROR_MESSAGE, "Rejection message/reason cannot exceed 255 characters.");
                 return REDIRECT_HR_LEAVES + "?error=message";
             }
-            leave.setStatus(STATUS_REJECTED);
+            leave.setStatus(STATUS_REJECTED_LOWER);
             leave.setRejectionMessage(rejectionMessage != null ? rejectionMessage.trim() : "");
             ra.addFlashAttribute(ATTR_SUCCESS_MESSAGE, "Leave request rejected.");
         } else {

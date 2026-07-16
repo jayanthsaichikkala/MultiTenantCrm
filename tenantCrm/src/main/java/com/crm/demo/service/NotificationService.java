@@ -308,12 +308,12 @@ public class NotificationService {
                                     LocalDate from, LocalDate to, String reviewer) {
         if (employee == null) return;
         var period = from + " to " + to;
-        if ("Approved".equalsIgnoreCase(status)) {
+        if (com.crm.demo.controller.BaseController.STATUS_APPROVED.equalsIgnoreCase(status)) {
             notify(employee,
                     "Leave Request Approved",
                     "Your " + leaveType + " leave (" + period + ") was approved by " + reviewer + ".",
                     TYPE_LEAVE);
-        } else if ("Rejected".equalsIgnoreCase(status)) {
+        } else if (com.crm.demo.controller.BaseController.STATUS_REJECTED.equalsIgnoreCase(status)) {
             notify(employee,
                     "Leave Request Rejected",
                     "Your " + leaveType + " leave (" + period + ") was rejected by " + reviewer + ".",

@@ -56,11 +56,9 @@ public class AdminController extends BaseController {
 	private static final String ROLE_MANAGER = "MANAGER";
 	private static final String ROLE_EMPLOYEE = "EMPLOYEE";
 	private static final String ROLE_HR = "HR";
-	private static final String STATUS_ACTIVE = "active";
-	private static final String STATUS_PENDING = "pending";
 	private static final String TOTAL_EMPLOYEES = "totalEmployees";
 	private static final String STATUS_DONE = "statusDone";
-	private static final String STATUS_PENDING_LOWER = "statusPending";
+	private static final String ATTR_STATUS_PENDING = "statusPending";
 	private static final String REDIRECT_ADMIN_EMPLOYEES = "redirect:/admin/employees";
 	private static final String ATTR_ERROR_MESSAGE = "errorMessage";
 	private static final String REDIRECT_ADMIN_ADD_EMPLOYEE = "redirect:/admin/add-employee";
@@ -243,9 +241,9 @@ public class AdminController extends BaseController {
 		var projects  = projectRepository.findAll();
 		var tasks     = tenant.isBlank() ? taskRepository.findAll() : taskRepository.findByTenantSegment(tenant);
 
-		var activeProjects = projects.stream().filter(p -> STATUS_ACTIVE.equalsIgnoreCase(p.getStatus())).count();
-		var tasksDone      = tasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
-		var pendingTasks   = tasks.stream().filter(t -> STATUS_PENDING.equalsIgnoreCase(t.getStatus())).count();
+		var activeProjects = projects.stream().filter(p -> User.STATUS_ACTIVE.equalsIgnoreCase(p.getStatus())).count();
+		var tasksDone      = tasks.stream().filter(t -> BaseController.STATUS_DONE.equalsIgnoreCase(t.getStatus())).count();
+		var pendingTasks   = tasks.stream().filter(t -> BaseController.STATUS_PENDING_LOWER.equalsIgnoreCase(t.getStatus())).count();
 
 		model.addAttribute(TOTAL_EMPLOYEES,  employees.size());
 		model.addAttribute("employeeCount",   employees.size());
@@ -283,11 +281,14 @@ public class AdminController extends BaseController {
 
 		var data = buildDashboardAnalytics(tasks, employees);
 		data.put(TOTAL_EMPLOYEES, employees.size());
+		var activeTeamCount = employees.stream()
+				.filter(p -> User.STATUS_ACTIVE.equalsIgnoreCase(p.getStatus()))
+				.count();
 		data.put("activeProjects", projectRepository.findAll().stream()
-				.filter(p -> STATUS_ACTIVE.equalsIgnoreCase(p.getStatus()))
+				.filter(p -> User.STATUS_ACTIVE.equalsIgnoreCase(p.getStatus()))
 				.count());
 		data.put("tasksDone", data.get(STATUS_DONE));
-		data.put("pendingTaskTotal", data.get(STATUS_PENDING_LOWER));
+		data.put("pendingTaskTotal", data.get(ATTR_STATUS_PENDING));
 		return data;
 	}
 
@@ -452,7 +453,7 @@ public class AdminController extends BaseController {
 		user.setUsername(username.trim());
 		user.setPassword(passwordEncoder.encode(password));
 		user.setRole(role.toUpperCase());
-		user.setStatus(STATUS_ACTIVE);
+		user.setStatus(User.STATUS_ACTIVE);
 
 		if (domain != null && !domain.trim().isEmpty()) {
 			user.setDomain(domain.trim());
@@ -596,7 +597,7 @@ public class AdminController extends BaseController {
 		user.setEmail(email);
 		user.setPassword(passwordEncoder.encode(pwd));
 		user.setRole(role.toUpperCase());
-		user.setStatus(STATUS_ACTIVE);
+		user.setStatus(User.STATUS_ACTIVE);
 		toSave.add(user);
 	}
 
@@ -617,10 +618,8 @@ public class AdminController extends BaseController {
 	@PostMapping("/toggle-user/{id}")
 	public String toggleUser(@PathVariable Long id, RedirectAttributes ra) {
 		var user = userRepository.findById(id).orElse(null);
-		if (user != null
-				&& !ROLE_ADMIN.equalsIgnoreCase(user.getRole())
-				&& !ROLE_SUPER_ADMIN.equalsIgnoreCase(user.getRole())) {
-			var newStatus = STATUS_ACTIVE.equalsIgnoreCase(user.getStatus()) ? "inactive" : STATUS_ACTIVE;
+		if (user != null && isNonAdminRole(user.getRole())) {
+			var newStatus = User.STATUS_ACTIVE.equalsIgnoreCase(user.getStatus()) ? "inactive" : User.STATUS_ACTIVE;
 			user.setStatus(newStatus);
 			userRepository.save(user);
 
@@ -756,7 +755,7 @@ public class AdminController extends BaseController {
 		tasks.sort(java.util.Comparator.comparing(Task::getId).reversed());
 
 		var done    = tasks.stream().filter(t -> "done".equalsIgnoreCase(t.getStatus())).count();
-		var pending = tasks.stream().filter(t -> STATUS_PENDING.equalsIgnoreCase(t.getStatus())).count();
+		var pending = tasks.stream().filter(t -> STATUS_PENDING_LOWER.equalsIgnoreCase(t.getStatus())).count();
 
 		var teams = tenant.isBlank()
 				? teamRepository.findAll()
