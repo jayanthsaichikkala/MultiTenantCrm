@@ -27,8 +27,7 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
     @Query("SELECT DISTINCT t FROM Team t LEFT JOIN FETCH t.members LEFT JOIN FETCH t.manager WHERE :user MEMBER OF t.members AND t.tenantSegment = :tenant")
     List<Team> findByMemberAndTenant(@Param("user") User user, @Param("tenant") String tenant);
 
-    /** Find the team(s) assigned to a specific manager, with members eagerly loaded. */
-    @Query("SELECT DISTINCT t FROM Team t LEFT JOIN FETCH t.members LEFT JOIN FETCH t.manager WHERE t.manager = :manager")
+    @Query("SELECT DISTINCT t FROM Team t LEFT JOIN FETCH t.members LEFT JOIN FETCH t.manager WHERE t.manager.id = :#{#manager.id}")
     List<Team> findByManagerWithMembers(@Param("manager") User manager);
     boolean existsByNameAndTenantSegment(String name, String tenantSegment);
 
