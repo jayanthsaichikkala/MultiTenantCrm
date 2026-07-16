@@ -6,11 +6,9 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,7 +31,6 @@ import org.springframework.validation.BindingResult;
 import java.util.stream.Collectors;
 
 import com.crm.demo.model.Attendance;
-import com.crm.demo.model.AttendanceDay;
 import com.crm.demo.model.LeaveRequest;
 import com.crm.demo.model.Meeting;
 import com.crm.demo.model.PerformanceReview;

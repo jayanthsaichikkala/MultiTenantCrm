@@ -1,6 +1,5 @@
 package com.crm.demo.controller;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -36,7 +35,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.crm.demo.model.Attendance;
-import com.crm.demo.model.AttendanceDay;
 import com.crm.demo.model.Meeting;
 import com.crm.demo.model.Task;
 import com.crm.demo.model.Team;

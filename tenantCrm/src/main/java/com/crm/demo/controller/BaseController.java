@@ -3,7 +3,6 @@ package com.crm.demo.controller;
 import java.time.LocalDate;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import com.crm.demo.model.User;
 import com.crm.demo.repository.UserRepository;

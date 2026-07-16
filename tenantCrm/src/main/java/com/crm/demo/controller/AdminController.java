@@ -26,8 +26,6 @@ import com.crm.demo.model.Project;
 import com.crm.demo.model.Report;
 import com.crm.demo.model.Task;
 import com.crm.demo.model.User;
-import com.crm.demo.model.Attendance;
-import com.crm.demo.model.AttendanceDay;
 
 import com.crm.demo.repository.MeetingRepository;
 import com.crm.demo.repository.ProjectRepository;
@@ -43,7 +41,6 @@ import com.crm.demo.repository.LeaveRequestRepository;
 import com.crm.demo.service.NotificationService;
 import com.crm.demo.service.ProfileUpdateService;
 import com.crm.demo.service.AttendanceService;
-import java.time.DayOfWeek;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
