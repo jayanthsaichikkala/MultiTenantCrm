@@ -58,7 +58,6 @@ public class AdminController extends BaseController {
 	private static final String ROLE_HR = "HR";
 	private static final String STATUS_ACTIVE = "active";
 	private static final String STATUS_PENDING = "pending";
-	private static final String STATUS_REJECTED = "rejected";
 	private static final String TOTAL_EMPLOYEES = "totalEmployees";
 	private static final String STATUS_DONE = "statusDone";
 	private static final String STATUS_PENDING_LOWER = "statusPending";

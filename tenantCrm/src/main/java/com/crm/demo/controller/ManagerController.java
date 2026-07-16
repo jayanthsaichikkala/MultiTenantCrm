@@ -113,8 +113,6 @@ public class ManagerController extends BaseController {
 	private static final String REDIRECT_MANAGER_REPORTS = "redirect:/manager/reports";
 	private static final String REDIRECT_MANAGER_PERFORMANCE = "redirect:/manager/performance?month=";
 
-	@Value("${app.upload.dir:uploads/tasks}")
-	private String uploadDir;
 
 	private final AttendanceService attendanceService;
 	private final ProjectRepository projectRepository;

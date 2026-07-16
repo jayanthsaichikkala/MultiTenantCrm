@@ -69,7 +69,6 @@ public class EmployeeController extends BaseController {
     private static final String STATUS_IN_PROGRESS = "in-progress";
     private static final String STATUS_PENDING = "pending";
     private static final String STATUS_WAITING_FOR_REVIEW = "waiting-for-review";
-    private static final String STATUS_REJECTED = "rejected";
     private static final String ATTR_ERROR_MESSAGE = "errorMessage";
     private static final String ATTR_SUCCESS_MESSAGE = "successMessage";
     private static final String REDIRECT_EMPLOYEE_TASKS = "redirect:/employee/tasks";
@@ -86,8 +85,6 @@ public class EmployeeController extends BaseController {
     private static final String SUCCESS = "?success";
     private static final String ERROR_INVALID = "?error=invalid";
 
-    @Value("${app.upload.dir:uploads/tasks}")
-    private String uploadDir;
 
     private final TeamRepository teamRepository;
     private final MeetingRepository meetingRepository;
