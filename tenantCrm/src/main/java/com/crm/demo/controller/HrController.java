@@ -82,24 +82,6 @@ public class HrController extends BaseController {
     private final PayslipService payslipService;
     private final com.crm.demo.repository.DomainCategoryRepository domainCategoryRepository;
 
-    public HrController() {
-        this.teamRepository = null;
-        this.attendanceRepository = null;
-        this.meetingRepository = null;
-        this.performanceReviewRepository = null;
-        this.passwordResetTokenRepository = null;
-        this.taskRepository = null;
-        this.reportRepository = null;
-        this.reportAttachmentRepository = null;
-        this.passwordEncoder = null;
-        this.attendanceService = null;
-        this.profileUpdateService = null;
-        this.notificationService = null;
-        this.payrollTemplateRepository = null;
-        this.payslipRepository = null;
-        this.payslipService = null;
-        this.domainCategoryRepository = null;
-    }
 
     @Autowired
     public HrController(UserRepository userRepository,

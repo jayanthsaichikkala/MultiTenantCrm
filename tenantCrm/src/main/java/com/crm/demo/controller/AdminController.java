@@ -90,20 +90,6 @@ public class AdminController extends BaseController {
 	private final TeamRepository teamRepository;
 	private final com.crm.demo.repository.DomainCategoryRepository domainCategoryRepository;
 
-	public AdminController() {
-		this.attendanceService = null;
-		this.meetingRepository = null;
-		this.projectRepository = null;
-		this.taskRepository = null;
-		this.reportRepository = null;
-		this.reportAttachmentRepository = null;
-		this.passwordEncoder = null;
-		this.profileUpdateService = null;
-		this.notificationService = null;
-		this.attendanceRepository = null;
-		this.teamRepository = null;
-		this.domainCategoryRepository = null;
-	}
 
 	@Autowired
 	public AdminController(UserRepository userRepository,

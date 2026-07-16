@@ -100,21 +100,6 @@ public class EmployeeController extends BaseController {
     private final PayslipService payslipService;
     private final AttendanceRepository attendanceRepository;
 
-    public EmployeeController() {
-        this.teamRepository = null;
-        this.meetingRepository = null;
-        this.taskRepository = null;
-        this.taskAttachmentRepository = null;
-        this.reportRepository = null;
-        this.reportAttachmentRepository = null;
-        this.profileUpdateService = null;
-        this.notificationService = null;
-        this.attendanceService = null;
-        this.payrollTemplateRepository = null;
-        this.payslipRepository = null;
-        this.payslipService = null;
-        this.attendanceRepository = null;
-    }
 
     @Autowired
     public EmployeeController(UserRepository userRepository,

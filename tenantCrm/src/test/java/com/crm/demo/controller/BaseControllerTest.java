@@ -32,6 +32,11 @@ import com.crm.demo.repository.UserRepository;
 class BaseControllerTest {
 
     static class ConcreteBaseController extends BaseController {
+        ConcreteBaseController(UserRepository userRepository,
+                               HolidayRepository holidayRepository,
+                               LeaveRequestRepository leaveRequestRepository) {
+            super(userRepository, holidayRepository, leaveRequestRepository);
+        }
     }
 
     @InjectMocks

@@ -68,6 +68,17 @@ class CrmApplicationTests {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+    private ManagerController createManagerController(ReportAttachmentRepository repo) {
+        return new ManagerController(
+                null, null, null, null, null, null, null, null, null, null, null,
+                repo, null, null, null, null, null, null
+        );
+    }
+
+    private ManagerController createManagerController() {
+        return createManagerController(null);
+    }
+
     static Stream<String> contentTypeVariants() {
         return Stream.of(APP_PDF, null);
     }
@@ -147,7 +158,7 @@ class CrmApplicationTests {
     @ParameterizedTest
     @MethodSource("contentTypeVariants")
     void testManagerControllerProcessAttachments(String contentType) throws Exception {
-        ManagerController managerController = new ManagerController();
+        ManagerController managerController = createManagerController();
 
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
@@ -162,7 +173,7 @@ class CrmApplicationTests {
 
     @Test
     void testManagerControllerProcessAttachmentsNullAndEmpty() throws Exception {
-        ManagerController managerController = new ManagerController();
+        ManagerController managerController = createManagerController();
         List<ManagerController.TaskAttachmentInfo> attachmentInfos = new ArrayList<>();
 
         managerController.processAttachments(null, attachmentInfos);
@@ -176,7 +187,7 @@ class CrmApplicationTests {
 
     @Test
     void testManagerControllerProcessAttachmentsException() throws Exception {
-        ManagerController managerController = new ManagerController();
+        ManagerController managerController = createManagerController();
 
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
@@ -193,8 +204,7 @@ class CrmApplicationTests {
     @ParameterizedTest
     @MethodSource("contentTypeVariants")
     void testManagerControllerProcessReportAttachments(String contentType) throws Exception {
-        ManagerController managerController = new ManagerController();
-        managerController.reportAttachmentRepository = reportAttachmentRepository;
+        ManagerController managerController = createManagerController(reportAttachmentRepository);
 
         Report report = new Report();
         MultipartFile file = mock(MultipartFile.class);
@@ -209,7 +219,7 @@ class CrmApplicationTests {
 
     @Test
     void testManagerControllerProcessReportAttachmentsNullAndEmpty() throws Exception {
-        ManagerController managerController = new ManagerController();
+        ManagerController managerController = createManagerController();
         Report report = new Report();
 
         managerController.processReportAttachments(report, null);
@@ -223,8 +233,7 @@ class CrmApplicationTests {
 
     @Test
     void testManagerControllerProcessReportAttachmentsException() throws Exception {
-        ManagerController managerController = new ManagerController();
-        managerController.reportAttachmentRepository = reportAttachmentRepository;
+        ManagerController managerController = createManagerController(reportAttachmentRepository);
 
         Report report = new Report();
         MultipartFile file = mock(MultipartFile.class);
@@ -241,56 +250,56 @@ class CrmApplicationTests {
 
     @Test
     void testValidateTaskParamsValid() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         String future = LocalDate.now().plusDays(1).toString();
         assertNull(ctrl.validateTaskParams(TASK_TITLE, "desc", "High", STATUS_PENDING_VAL, future));
     }
 
     @Test
     void testValidateTaskParamsBlankTitle() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         String future = LocalDate.now().plusDays(1).toString();
         assertEquals("Task title is required.", ctrl.validateTaskParams("  ", "desc", "High", STATUS_PENDING_VAL, future));
     }
 
     @Test
     void testValidateTaskParamsNullTitle() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         String future = LocalDate.now().plusDays(1).toString();
         assertEquals("Task title is required.", ctrl.validateTaskParams(null, "desc", "High", STATUS_PENDING_VAL, future));
     }
 
     @Test
     void testValidateTaskParamsLongTitle() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         String future = LocalDate.now().plusDays(1).toString();
         assertEquals("Task title cannot exceed 255 characters.", ctrl.validateTaskParams("a".repeat(256), null, "High", STATUS_PENDING_VAL, future));
     }
 
     @Test
     void testValidateTaskParamsLongDescription() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         String future = LocalDate.now().plusDays(1).toString();
         assertEquals("Description cannot exceed 255 characters.", ctrl.validateTaskParams(TASK_TITLE, "d".repeat(256), "High", STATUS_PENDING_VAL, future));
     }
 
     @Test
     void testValidateTaskParamsInvalidPriority() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         String future = LocalDate.now().plusDays(1).toString();
         assertEquals("Invalid priority selected.", ctrl.validateTaskParams(TASK_TITLE, null, "Critical", STATUS_PENDING_VAL, future));
     }
 
     @Test
     void testValidateTaskParamsInvalidStatus() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         String future = LocalDate.now().plusDays(1).toString();
         assertEquals("Invalid status selected.", ctrl.validateTaskParams(TASK_TITLE, null, "High", "invalid-status", future));
     }
 
     @Test
     void testValidateTaskParamsBlankDueDate() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals("Please select a valid due date.", ctrl.validateTaskParams(TASK_TITLE, null, "High", STATUS_PENDING_VAL, ""));
     }
 
@@ -298,37 +307,37 @@ class CrmApplicationTests {
 
     @Test
     void testValidateLeaveParamsValid() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertNull(ctrl.validateLeaveParams("sick", "flu", LEAVE_FROM, LEAVE_TO));
     }
 
     @Test
     void testValidateLeaveParamsBlankType() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals("Leave type is required.", ctrl.validateLeaveParams("", LEAVE_REASON, LEAVE_FROM, LEAVE_TO));
     }
 
     @Test
     void testValidateLeaveParamsBlankReason() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals("Leave reason is required.", ctrl.validateLeaveParams("sick", "  ", LEAVE_FROM, LEAVE_TO));
     }
 
     @Test
     void testValidateLeaveParamsLongReason() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals("Reason cannot exceed 255 characters.", ctrl.validateLeaveParams("sick", "r".repeat(256), LEAVE_FROM, LEAVE_TO));
     }
 
     @Test
     void testValidateLeaveParamsInvalidFromDate() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals("Invalid start date format.", ctrl.validateLeaveParams("sick", LEAVE_REASON, "not-a-date", LEAVE_TO));
     }
 
     @Test
     void testValidateLeaveParamsInvalidToDate() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals("Invalid end date format.", ctrl.validateLeaveParams("sick", LEAVE_REASON, LEAVE_FROM, "bad"));
     }
 
@@ -336,7 +345,7 @@ class CrmApplicationTests {
 
     @Test
     void testValidateTaskDatesValid() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         String future = LocalDate.now().plusDays(5).toString();
         LocalDate[] parsed = new LocalDate[2];
         assertNull(ctrl.validateTaskDates(null, future, parsed));
@@ -345,7 +354,7 @@ class CrmApplicationTests {
 
     @Test
     void testValidateTaskDatesPastDueDate() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         String past = LocalDate.now().minusDays(1).toString();
         LocalDate[] parsed = new LocalDate[2];
         assertEquals("Due date cannot be in the past.", ctrl.validateTaskDates(null, past, parsed));
@@ -353,14 +362,14 @@ class CrmApplicationTests {
 
     @Test
     void testValidateTaskDatesInvalidDueDate() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         LocalDate[] parsed = new LocalDate[2];
         assertEquals("Invalid due date value.", ctrl.validateTaskDates(null, "not-a-date", parsed));
     }
 
     @Test
     void testValidateTaskDatesStartAfterDue() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         String due   = LocalDate.now().plusDays(2).toString();
         String start = LocalDate.now().plusDays(5).toString();
         LocalDate[] parsed = new LocalDate[2];
@@ -369,7 +378,7 @@ class CrmApplicationTests {
 
     @Test
     void testValidateTaskDatesValidWithStart() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         String start = LocalDate.now().plusDays(1).toString();
         String due   = LocalDate.now().plusDays(5).toString();
         LocalDate[] parsed = new LocalDate[2];
@@ -380,25 +389,25 @@ class CrmApplicationTests {
 
     @Test
     void testGetTenantSegmentFromEmailNormal() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals("tcs", ctrl.getTenantSegmentFromEmail("mgr.tcs@crm.com"));
     }
 
     @Test
     void testGetTenantSegmentFromEmailNoDot() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals("admin", ctrl.getTenantSegmentFromEmail("admin@crm.com"));
     }
 
     @Test
     void testGetTenantSegmentFromEmailNull() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals("", ctrl.getTenantSegmentFromEmail(null));
     }
 
     @Test
     void testGetTenantSegmentFromEmailNoAt() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals("", ctrl.getTenantSegmentFromEmail("notanemail"));
     }
 
@@ -406,14 +415,14 @@ class CrmApplicationTests {
 
     @Test
     void testCalculateWorkingDaysWeekdays() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         // Monday to Friday = 5 working days
         assertEquals(5, ctrl.calculateWorkingDays(LocalDate.of(2025, 1, 6), LocalDate.of(2025, 1, 10)));
     }
 
     @Test
     void testCalculateWorkingDaysWeekend() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         // Saturday only - returns min 1
         LocalDate sat = LocalDate.of(2025, 1, 11);
         assertEquals(1, ctrl.calculateWorkingDays(sat, sat));
@@ -421,7 +430,7 @@ class CrmApplicationTests {
 
     @Test
     void testCalculateWorkingDaysSingleWeekday() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         LocalDate mon = LocalDate.of(2025, 1, 6);
         assertEquals(1, ctrl.calculateWorkingDays(mon, mon));
     }
@@ -430,43 +439,43 @@ class CrmApplicationTests {
 
     @Test
     void testValidateReportParamsValid() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertNull(ctrl.validateReportParams("Q1 Report", "Summary", Arrays.asList(1L, 2L)));
     }
 
     @Test
     void testValidateReportParamsBlankTitle() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals("Report title is required.", ctrl.validateReportParams("", "msg", Arrays.asList(1L)));
     }
 
     @Test
     void testValidateReportParamsNullTitle() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals("Report title is required.", ctrl.validateReportParams(null, "msg", Arrays.asList(1L)));
     }
 
     @Test
     void testValidateReportParamsLongTitle() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals("Report title cannot exceed 200 characters.", ctrl.validateReportParams("t".repeat(201), "msg", Arrays.asList(1L)));
     }
 
     @Test
     void testValidateReportParamsLongMessage() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals("Message cannot exceed 255 characters.", ctrl.validateReportParams(TASK_TITLE, "m".repeat(256), Arrays.asList(1L)));
     }
 
     @Test
     void testValidateReportParamsNoRecipients() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals("Please select at least one recipient.", ctrl.validateReportParams(TASK_TITLE, "msg", Collections.emptyList()));
     }
 
     @Test
     void testValidateReportParamsNullRecipients() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals("Please select at least one recipient.", ctrl.validateReportParams(TASK_TITLE, "msg", null));
     }
 
@@ -474,7 +483,7 @@ class CrmApplicationTests {
 
     @Test
     void testBuildDashboardAnalyticsEmpty() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         java.util.Map<String, Object> result = ctrl.buildDashboardAnalytics(Collections.emptyList(), Collections.emptyList());
 
         assertNotNull(result);
@@ -490,7 +499,7 @@ class CrmApplicationTests {
 
     @Test
     void testBuildDashboardAnalyticsWithTasks() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
 
         Task doneTask = new Task();
         doneTask.setStatus("done");
@@ -521,7 +530,7 @@ class CrmApplicationTests {
 
     @Test
     void testBuildDashboardAnalyticsNullInputs() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         java.util.Map<String, Object> result = ctrl.buildDashboardAnalytics(null, null);
         assertNotNull(result);
         assertEquals(0L, result.get(KEY_STATUS_DONE));
@@ -531,35 +540,35 @@ class CrmApplicationTests {
 
     @Test
     void testDetermineGradeAPlus() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals("A+", ctrl.determineGrade(90));
         assertEquals("A+", ctrl.determineGrade(100));
     }
 
     @Test
     void testDetermineGradeA() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals("A", ctrl.determineGrade(75));
         assertEquals("A", ctrl.determineGrade(89));
     }
 
     @Test
     void testDetermineGradeB() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals("B", ctrl.determineGrade(60));
         assertEquals("B", ctrl.determineGrade(74));
     }
 
     @Test
     void testDetermineGradeC() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals("C", ctrl.determineGrade(45));
         assertEquals("C", ctrl.determineGrade(59));
     }
 
     @Test
     void testDetermineGradeD() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals("D", ctrl.determineGrade(0));
         assertEquals("D", ctrl.determineGrade(44));
     }
@@ -568,13 +577,13 @@ class CrmApplicationTests {
 
     @Test
     void testCalculateOverlapLeaveDaysNull() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         assertEquals(0, ctrl.calculateOverlapLeaveDays(null, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31)));
     }
 
     @Test
     void testCalculateOverlapLeaveDaysNotApproved() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         LeaveRequest lr = new LeaveRequest();
         lr.setStatus("Pending");
         lr.setFromDate(LocalDate.of(2025, 1, 6));
@@ -584,7 +593,7 @@ class CrmApplicationTests {
 
     @Test
     void testCalculateOverlapLeaveDaysApprovedFullOverlap() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         LeaveRequest lr = new LeaveRequest();
         lr.setStatus(STATUS_APPROVED_VAL);
         lr.setFromDate(LocalDate.of(2025, 1, 6));  // Monday
@@ -594,7 +603,7 @@ class CrmApplicationTests {
 
     @Test
     void testCalculateOverlapLeaveDaysApprovedPartialOverlap() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         LeaveRequest lr = new LeaveRequest();
         lr.setStatus(STATUS_APPROVED_VAL);
         lr.setFromDate(LocalDate.of(2025, 1, 1));
@@ -604,7 +613,7 @@ class CrmApplicationTests {
 
     @Test
     void testCalculateOverlapLeaveDaysNoOverlap() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         LeaveRequest lr = new LeaveRequest();
         lr.setStatus(STATUS_APPROVED_VAL);
         lr.setFromDate(LocalDate.of(2025, 2, 1));
@@ -614,7 +623,7 @@ class CrmApplicationTests {
 
     @Test
     void testCalculateOverlapLeaveDaysNullDates() {
-        ManagerController ctrl = new ManagerController();
+        ManagerController ctrl = createManagerController();
         LeaveRequest lr = new LeaveRequest();
         lr.setStatus(STATUS_APPROVED_VAL);
         lr.setFromDate(null);

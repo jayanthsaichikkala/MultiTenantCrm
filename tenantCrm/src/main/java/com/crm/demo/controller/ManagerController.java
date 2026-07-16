@@ -122,31 +122,13 @@ public class ManagerController extends BaseController {
 	private final MeetingRepository meetingRepository;
 	private final TaskAttachmentRepository taskAttachmentRepository;
 	private final ReportRepository reportRepository;
-	ReportAttachmentRepository reportAttachmentRepository;
+	private final ReportAttachmentRepository reportAttachmentRepository;
 	private final PerformanceReviewRepository performanceReviewRepository;
 	private final ProfileUpdateService profileUpdateService;
 	private final NotificationService notificationService;
 	private final PayrollTemplateRepository payrollTemplateRepository;
 	private final PayslipRepository payslipRepository;
 	private final PayslipService payslipService;
-
-	public ManagerController() {
-		this.attendanceService = null;
-		this.projectRepository = null;
-		this.taskRepository = null;
-		this.attendanceRepository = null;
-		this.teamRepository = null;
-		this.meetingRepository = null;
-		this.taskAttachmentRepository = null;
-		this.reportRepository = null;
-		this.reportAttachmentRepository = null;
-		this.performanceReviewRepository = null;
-		this.profileUpdateService = null;
-		this.notificationService = null;
-		this.payrollTemplateRepository = null;
-		this.payslipRepository = null;
-		this.payslipService = null;
-	}
 
 	@Autowired
 	public ManagerController(UserRepository userRepository,
