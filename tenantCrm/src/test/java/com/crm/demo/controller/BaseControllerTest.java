@@ -258,6 +258,46 @@ class BaseControllerTest {
     }
 
     @Test
+    void testBuildDayList_AllBranches() {
+        User user = new User();
+        user.setId(1L);
+
+        LocalDate sat = LocalDate.of(2026, 7, 18);
+        LocalDate sun = LocalDate.of(2026, 7, 19);
+
+        LeaveRequest leave = new LeaveRequest();
+        leave.setStatus("Approved");
+        leave.setFromDate(sat);
+        leave.setToDate(sun);
+        when(leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(user)).thenReturn(List.of(leave));
+
+        List<AttendanceDay> days = controller.buildDayList(null, sat, sun, null, user);
+        assertEquals(2, days.size());
+        assertEquals("weekend", days.get(0).getStatus());
+        assertEquals("weekend", days.get(1).getStatus());
+
+        LocalDate mon = LocalDate.of(2026, 7, 20);
+        LeaveRequest leaveMon = new LeaveRequest();
+        leaveMon.setStatus("Approved");
+        leaveMon.setFromDate(mon);
+        leaveMon.setToDate(mon);
+        when(leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(user)).thenReturn(List.of(leaveMon));
+
+        List<AttendanceDay> daysMon = controller.buildDayList(null, mon, mon, null, user);
+        assertEquals(1, daysMon.size());
+        assertEquals("leave", daysMon.get(0).getStatus());
+
+        LeaveRequest pendingLeave = new LeaveRequest();
+        pendingLeave.setStatus("Pending");
+        pendingLeave.setFromDate(mon);
+        pendingLeave.setToDate(mon);
+        when(leaveRequestRepository.findByEmployeeOrderByCreatedAtDesc(user)).thenReturn(List.of(pendingLeave));
+
+        List<AttendanceDay> daysPending = controller.buildDayList(null, mon, mon, null, user);
+        assertEquals(0, daysPending.size());
+    }
+
+    @Test
     void testIsNonAdminRole() {
         assertFalse(controller.isNonAdminRole("ADMIN"));
         assertFalse(controller.isNonAdminRole("SUPER_ADMIN"));

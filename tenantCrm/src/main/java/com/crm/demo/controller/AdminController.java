@@ -3,7 +3,6 @@ package com.crm.demo.controller;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -281,9 +280,6 @@ public class AdminController extends BaseController {
 
 		var data = buildDashboardAnalytics(tasks, employees);
 		data.put(TOTAL_EMPLOYEES, employees.size());
-		var activeTeamCount = employees.stream()
-				.filter(p -> User.STATUS_ACTIVE.equalsIgnoreCase(p.getStatus()))
-				.count();
 		data.put("activeProjects", projectRepository.findAll().stream()
 				.filter(p -> User.STATUS_ACTIVE.equalsIgnoreCase(p.getStatus()))
 				.count());
