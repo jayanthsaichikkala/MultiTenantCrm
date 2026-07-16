@@ -256,4 +256,14 @@ class BaseControllerTest {
         List<AttendanceDay> days = controller.buildDayList(List.of(a), LocalDate.of(2026, 7, 13), LocalDate.of(2026, 7, 15), holidays);
         assertEquals(3, days.size());
     }
+
+    @Test
+    void testIsNonAdminRole() {
+        assertFalse(controller.isNonAdminRole("ADMIN"));
+        assertFalse(controller.isNonAdminRole("SUPER_ADMIN"));
+        assertTrue(controller.isNonAdminRole("EMPLOYEE"));
+        assertTrue(controller.isNonAdminRole("HR"));
+        assertTrue(controller.isNonAdminRole("MANAGER"));
+        assertFalse(controller.isNonAdminRole(null));
+    }
 }
